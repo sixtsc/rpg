@@ -179,6 +179,23 @@ async function cloudLoadPayload() {
   return { ok: res.ok, data };
 }
 
+
+let cloudUserCache = null;
+async function ensureCloudUser() {
+  if (cloudUserCache) return cloudUserCache;
+  cloudUserCache = await cloudMe();
+  return cloudUserCache;
+}
+
+async function cloudTrySaveCurrentPlayer() {
+  const me = await ensureCloudUser();
+  if (!me) return { ok: false, skipped: true, reason: "unauth" };
+
+  const payload = { v: 1, t: Date.now(), player: state.player };
+  const r = await cloudSavePayload(payload);
+  return { ok: !!r.ok, skipped: false, data: r.data };
+}
+
 /* ===== ui.js ===== */
 const $ = (id) => document.getElementById(id);
 
@@ -559,6 +576,17 @@ function endBattle(reason) {
   }
 
   autosave(state);
+
+  // Also sync to cloud (if logged in) so progress can be used cross-device
+  (async () => {
+    try {
+      const r = await cloudTrySaveCurrentPlayer();
+      if (r.ok) addLog("SAVE", "Cloud save tersinkron (battle selesai).");
+    } catch (e) {
+      console.error("[CLOUD AUTOSAVE] error", e);
+    }
+  })();
+
   refresh(state);
 }
 
@@ -742,6 +770,17 @@ function rest() {
   state.player.mp = state.player.maxMp;
 
   autosave(state);
+
+  // Also sync to cloud (if logged in) so progress can be used cross-device
+  (async () => {
+    try {
+      const r = await cloudTrySaveCurrentPlayer();
+      if (r.ok) addLog("SAVE", "Cloud save tersinkron (battle selesai).");
+    } catch (e) {
+      console.error("[CLOUD AUTOSAVE] error", e);
+    }
+  })();
+
   refresh(state);
 }
 
@@ -1167,8 +1206,20 @@ function startNewGame(){
   byId("log").innerHTML = "";
   addLog("INFO", "Game baru dimulai.");
   autosave(state);
+
+  // Also sync to cloud (if logged in) so progress can be used cross-device
+  (async () => {
+    try {
+      const r = await cloudTrySaveCurrentPlayer();
+      if (r.ok) addLog("SAVE", "Cloud save tersinkron (battle selesai).");
+    } catch (e) {
+      console.error("[CLOUD AUTOSAVE] error", e);
+    }
+  })();
+
   refresh(state);
 }
+
 
 function showMenu(show){
   const el = byId("mainMenu");
@@ -1176,45 +1227,160 @@ function showMenu(show){
   el.classList.toggle("hidden", !show);
 }
 
+function setAuthMsg(msg, isError=false){
+  const el = byId("authMsg");
+  if (!el) return;
+  el.textContent = msg || "";
+  el.style.opacity = "1";
+  el.style.color = isError ? "#ffb4b4" : "";
+}
+
+async function syncCloudOrLocalAndEnter(){
+  // 1) coba load cloud dulu (kalau login)
+  try{
+    const me = await ensureCloudUser();
+    if (me){
+      setAuthMsg("Memuat cloud save...", false);
+      const cloud = await cloudLoadPayload();
+      if (cloud.ok && cloud.data && cloud.data.hasSave && cloud.data.data){
+        const payload = (typeof cloud.data.data === "string") ? JSON.parse(cloud.data.data) : cloud.data.data;
+        if (applyLoaded(payload)){
+          showMenu(false);
+          return true;
+        }
+      }
+    }
+  }catch(e){
+    console.error("[CLOUD LOAD] error", e);
+  }
+
+  // 2) kalau cloud belum ada save, upload save lokal (jika ada & sudah login), lalu pakai lokal
+  const local = load();
+  if (local?.player){
+    try{
+      const me = await ensureCloudUser();
+      if (me){
+        setAuthMsg("Cloud kosong. Upload save lokal ke cloud...", false);
+        await cloudSavePayload(local);
+        addLog("CLOUD", "Save lokal berhasil di-upload ke cloud.");
+      }
+    }catch(e){
+      console.error("[CLOUD UPLOAD] error", e);
+    }
+
+    if (applyLoaded(local)){
+      showMenu(false);
+      return true;
+    }
+  }
+
+  // 3) tidak ada apa-apa → mulai baru
+  showMenu(false);
+  startNewGame();
+  return false;
+}
+
 (function boot() {
   bind();
 
-  // Main menu buttons (overlay)
-  const menuNew = byId("menuNew");
-  const menuLoad = byId("menuLoad");
-  const menuExit = byId("menuExit");
+  const userEl = byId("authUser");
+  const passEl = byId("authPass");
+  const btnLogin = byId("authLogin");
+  const btnRegister = byId("authRegister");
+  const btnOffline = byId("authOffline");
 
-  if (menuNew && menuLoad && menuExit) {
-    showMenu(true);
+  // Always show auth overlay first
+  showMenu(true);
 
-    menuNew.onclick = () => {
-      showMenu(false);
+  const getCreds = () => {
+    const username = (userEl?.value || "").toString().trim().toLowerCase();
+    const password = (passEl?.value || "").toString();
+    return { username, password };
+  };
+
+  const doLogin = async () => {
+    const { username, password } = getCreds();
+    if (!username || !password){
+      setAuthMsg("Isi username & password dulu.", true);
+      return;
+    }
+
+    setAuthMsg("Login...", false);
+
+    const { res, data } = await apiJson("/api/login", {
+      method: "POST",
+      body: JSON.stringify({ username, password })
+    });
+
+    if (!res.ok){
+      setAuthMsg(data?.message || "Login gagal.", true);
+      return;
+    }
+
+    // refresh cached user after cookie is set
+    cloudUserCache = null;
+    await ensureCloudUser();
+
+    await syncCloudOrLocalAndEnter();
+  };
+
+  const doRegister = async () => {
+    const { username, password } = getCreds();
+    if (!username || !password){
+      setAuthMsg("Isi username & password dulu.", true);
+      return;
+    }
+
+    setAuthMsg("Register...", false);
+
+    const { res, data } = await apiJson("/api/register", {
+      method: "POST",
+      body: JSON.stringify({ username, password })
+    });
+
+    if (!res.ok){
+      setAuthMsg(data?.message || "Register gagal.", true);
+      return;
+    }
+
+    // auto login after register
+    await doLogin();
+  };
+
+  if (btnLogin) btnLogin.onclick = () => doLogin();
+  if (btnRegister) btnRegister.onclick = () => doRegister();
+
+  if (btnOffline) btnOffline.onclick = () => {
+    showMenu(false);
+    const payload = load();
+    if (!applyLoaded(payload)) {
       startNewGame();
-    };
+    }
+  };
 
-    menuLoad.onclick = () => {
-      const payload = load();
-      if (applyLoaded(payload)) {
-        showMenu(false);
-      } else {
-        alert("Belum ada save.");
-      }
-    };
-
-    menuExit.onclick = () => {
-      // Beberapa browser akan memblokir window.close jika tab tidak dibuka via script
-      try { window.close(); } catch (e) {}
-      alert("Jika tab tidak tertutup otomatis, silakan tutup tab secara manual.");
-    };
-
-    // Jangan autoload otomatis; biarkan user memilih.
-    refresh(state);
-    return;
+  // Enter key triggers login
+  if (passEl){
+    passEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") doLogin();
+    });
   }
 
-  // Fallback: kalau overlay tidak ada, tetap coba autoload seperti sebelumnya.
-  const payload = load();
-  if (!applyLoaded(payload)) addLog("INFO", "Selamat datang! Klik Explore untuk bertarung.");
+  // If already logged in, auto-load cloud save
+  (async () => {
+    try{
+      setAuthMsg("Cek login...", false);
+      const me = await ensureCloudUser();
+      if (me){
+        setAuthMsg("Login terdeteksi. Memuat save...", false);
+        await syncCloudOrLocalAndEnter();
+      }else{
+        setAuthMsg("Silakan login / register untuk cloud save.", false);
+      }
+    }catch(e){
+      console.error("[AUTH INIT] error", e);
+      setAuthMsg("Gagal cek session. Silakan login.", true);
+    }
+  })();
 
   refresh(state);
 })();

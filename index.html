@@ -4,23 +4,31 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Text RPG Turn-Based (Modular)</title>
-  <link rel="stylesheet" href="./styles.css?v=v36" />
+  <link rel="stylesheet" href="./styles.css?v=v37" />
 </head>
 <body>
   
-  <!-- Main Menu Overlay -->
+    <!-- Auth / Cloud Login Overlay -->
   <div id="mainMenu" class="menuOverlay">
     <div class="menuCard">
-      <h2 class="menuTitle">Text RPG Turn-Based</h2>
-      <p class="menuSub" id="menuSub">Pilih opsi:</p>
-      <div class="menuBtns">
-        <button id="menuNew" class="btn primary">New Game</button>
-        <button id="menuLoad" class="btn">Load</button>
-        <button id="menuExit" class="btn danger">Exit</button>
+      <h2 class="menuTitle">Cloud Login</h2>
+      <p class="menuSub" id="authSub">Login untuk load progress dari cloud (bisa dipakai di PC & HP).</p>
+
+      <div class="authForm">
+        <input id="authUser" class="authInput" placeholder="Username" autocomplete="username" />
+        <input id="authPass" class="authInput" type="password" placeholder="Password" autocomplete="current-password" />
       </div>
-      <p class="menuHint">Catatan: “Exit” akan mencoba menutup tab. Jika tidak bisa, silakan tutup tab secara manual.</p>
+
+      <div class="menuBtns">
+        <button id="authLogin" class="btn primary">Login</button>
+        <button id="authRegister" class="btn">Register</button>
+        <button id="authOffline" class="btn danger">Main Offline</button>
+      </div>
+
+      <p class="menuHint" id="authMsg">Tip: Setelah login, game akan otomatis load cloud save. Kalau cloud belum ada save, save lokal akan di-upload.</p>
     </div>
   </div>
+
 
 <div class="wrap">
     <div class="topbar">
@@ -158,7 +166,7 @@
     window.__BUNDLE_LOADED__ = false;
   </script>
 
-  <script src="./js/bundle.js?v=v36" defer></script>
+  <script src="./js/bundle.js?v=v37" defer></script>
 
   <script>
     // If bundle didn't run, show hint in-menu (no DevTools needed)

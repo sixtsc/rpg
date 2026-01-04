@@ -536,3 +536,24 @@ body.inTown .grid{ grid-template-columns: 1fr !important; }
     font-size: 16px;
   }
 }
+
+
+/* --- Cloud Auth (Main Menu) --- */
+.authForm{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin:14px 0 10px;
+}
+.authInput{
+  width:100%;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.35);
+  color:#fff;
+  outline:none;
+}
+.authInput::placeholder{
+  color: rgba(255,255,255,0.65);
+}
