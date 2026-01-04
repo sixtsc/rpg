@@ -1,8 +1,6 @@
 import { json, authUserId } from "../_lib.js";
 
-export async function onRequest(ctx) {
-  const { request, env } = ctx;
-
+export async function onRequest({ request, env }) {
   if (request.method === "OPTIONS") {
     return new Response("", {
       status: 204,
@@ -10,8 +8,8 @@ export async function onRequest(ctx) {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Max-Age": "86400"
-      }
+        "Access-Control-Max-Age": "86400",
+      },
     });
   }
 
@@ -19,13 +17,13 @@ export async function onRequest(ctx) {
     return json({ message: "Method tidak didukung. Gunakan GET." }, { status: 405 });
   }
 
-  const { request, env } = ctx;
-  if (!env || !env.DB) return json({ message: "DB binding \"DB\" belum tersedia di environment ini (Preview/Production). Pastikan D1 binding bernama DB ditambahkan di Cloudflare Pages Settings untuk environment yang kamu pakai (Preview atau Production)." }, { status: 500 });
+  if (!env || !env.DB) {
+    return json({ message: "D1 binding 'DB' tidak ditemukan di environment ini. Pastikan Pages -> Settings -> Functions -> D1 bindings sudah di-set untuk environment yang kamu pakai (Preview/Production), lalu redeploy." }, { status: 500 });
+  }
+
   const userId = await authUserId(request, env);
-  if (!userId) return json({ error: "unauthorized" }, { status: 401 });
+  if (!userId) return json({ ok: false, loggedIn: false });
 
-  const user = await env.DB.prepare("SELECT id, username, created_at FROM users WHERE id = ?")
-    .bind(userId).first();
-
-  return json({ user });
+  const row = await env.DB.prepare("SELECT username FROM users WHERE id = ?").bind(userId).first();
+  return json({ ok: true, loggedIn: true, user: { id: userId, username: row?.username || "" } });
 }

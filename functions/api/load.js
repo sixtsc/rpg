@@ -1,8 +1,6 @@
 import { json, authUserId } from "../_lib.js";
 
-export async function onRequest(ctx) {
-  const { request, env } = ctx;
-
+export async function onRequest({ request, env }) {
   if (request.method === "OPTIONS") {
     return new Response("", {
       status: 204,
@@ -10,8 +8,8 @@ export async function onRequest(ctx) {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Max-Age": "86400"
-      }
+        "Access-Control-Max-Age": "86400",
+      },
     });
   }
 
@@ -19,16 +17,22 @@ export async function onRequest(ctx) {
     return json({ message: "Method tidak didukung. Gunakan GET." }, { status: 405 });
   }
 
-  const { request, env } = ctx;
-  if (!env || !env.DB) return json({ message: "DB binding \"DB\" belum tersedia di environment ini (Preview/Production). Pastikan D1 binding bernama DB ditambahkan di Cloudflare Pages Settings untuk environment yang kamu pakai (Preview atau Production)." }, { status: 500 });
+  if (!env || !env.DB) {
+    return json({ message: "D1 binding 'DB' tidak ditemukan di environment ini. Pastikan Pages -> Settings -> Functions -> D1 bindings sudah di-set untuk environment yang kamu pakai (Preview/Production), lalu redeploy." }, { status: 500 });
+  }
+
   const userId = await authUserId(request, env);
   if (!userId) return json({ error: "unauthorized", message: "Belum login." }, { status: 401 });
 
-  const row = await env.DB.prepare(
-    "SELECT data, updated_at, version FROM saves WHERE user_id = ?"
-  ).bind(userId).first();
+  const row = await env.DB.prepare("SELECT data, version, updated_at FROM saves WHERE user_id = ?").bind(userId).first();
+  if (!row) return json({ ok: true, hasSave: false });
 
-  if (!row) return json({ data: null });
+  let parsed = row.data;
+  try {
+    parsed = JSON.parse(row.data);
+  } catch {
+    // keep raw string
+  }
 
-  return json({ data: row.data, updated_at: row.updated_at, version: row.version });
+  return json({ ok: true, hasSave: true, data: parsed, version: row.version, updated_at: row.updated_at });
 }
