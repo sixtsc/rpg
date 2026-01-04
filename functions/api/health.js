@@ -1,5 +1,30 @@
+const json = (obj, status=200) => new Response(JSON.stringify(obj), {
+  status,
+  headers: { "content-type": "application/json; charset=utf-8" }
+});
+
+export async function onRequest(ctx) {
+  const { request } = ctx;
+
+  if (request.method === "OPTIONS") {
+    return new Response("", {
+      status: 204,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Max-Age": "86400"
+      }
+    });
+  }
+
+  if (request.method !== "GET") return json({ message: "Method tidak didukung. Gunakan GET." }, 405);
+  return onRequestGet(ctx);
+}
+
 export async function onRequestGet({ env }) {
-  const json = (obj, status=200) => new Response(JSON.stringify(obj), {
+  // json helper moved to module scope
+// const json ...
     status,
     headers: { "content-type": "application/json; charset=utf-8" }
   });
