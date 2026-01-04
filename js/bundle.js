@@ -20,9 +20,10 @@ const randInt = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
 const randFloat = (a,b) => (Math.random()*(b-a))+a;
 const pick = (arr) => arr[Math.floor(Math.random()*arr.length)];
 const MAX_CHAR_SLOTS = 6;
-const STAT_POINTS_PER_LEVEL = 3;
+const STAT_POINTS_PER_LEVEL = 1;
+const MAX_LEVEL = 10;
 function genEnemy(plv){
-  const lvl = clamp(plv + pick([-1,0,0,1]), 1, 20);
+  const lvl = clamp(plv + pick([-1,0,0,1]), 1, MAX_LEVEL);
   return {
     name: pick(ENEMY_NAMES),
     level:lvl,
@@ -32,7 +33,8 @@ function genEnemy(plv){
     critChance: clamp(5 + Math.floor(lvl/3), 5, 35),
     critDamage: 0,
     acc: 0,
-    luk: 0,
+    foc: 0,
+    combustionChance: 0,
     evasion: clamp(5 + Math.floor((4+lvl)/4), 5, 30),
     xpReward:18 + lvl*6, goldReward:8 + lvl*4
   };
@@ -52,7 +54,7 @@ function resolveAttack(att, def, basePower, opts = {}) {
   const evasion = clamp((def.evasion || 0) + dodgeBonus, 0, 95);
   const rollEv = randInt(1, 100);
   if (rollEv <= evasion) {
-    return { missed: true, crit: false, dmg: 0, evasion, rollEv };
+    return { missed: true, crit: false, combustion: false, dmg: 0, evasion, rollEv, rollCrit: null, rollComb: null };
   }
 
   let dmg = calcDamage(att.atk, def.def, basePower, false);
@@ -69,7 +71,16 @@ function resolveAttack(att, def, basePower, opts = {}) {
     crit = true;
   }
 
-  return { missed: false, crit, dmg, evasion, rollEv };
+  const combustionChance = clamp(att.combustionChance || 0, 0, 100);
+  const rollComb = randInt(1, 100);
+  let combustion = false;
+  if (rollComb <= combustionChance) {
+    const combMult = randFloat(2.0, 2.5);
+    dmg = Math.max(1, Math.round(dmg * combMult));
+    combustion = true;
+  }
+
+  return { missed: false, crit, combustion, dmg, evasion, rollEv, rollCrit, rollComb };
 }
 function escapeChance(p,e){
   return clamp(50 + (p.spd - e.spd)*8, 10, 90);
@@ -89,7 +100,7 @@ function newPlayer(){
     level:1,
 
     // Base stats (for future scaling)
-    str:0, dex:0, int:0, vit:0, luk:0,
+    str:0, dex:0, int:0, vit:0, foc:0,
     statPoints:0,
 
     // Derived / combat stats (currently flat)
@@ -97,7 +108,7 @@ function newPlayer(){
     hp:60, mp:25,
     atk:10, def:4, spd:7,
     acc:0,
-    critChance:5, critDamage:0, evasion:5,
+    critChance:5, critDamage:0, combustionChance:0, evasion:5,
 
     deprecatedSkillCooldown:0,
     xp:0, xpToLevel:50,
@@ -117,11 +128,16 @@ function normalizePlayer(p){
   if (typeof p.dex !== "number") p.dex = 0;
   if (typeof p.int !== "number") p.int = 0;
   if (typeof p.vit !== "number") p.vit = 0;
-  if (typeof p.luk !== "number") p.luk = 0;
+  if (typeof p.foc !== "number") {
+    // migrate from older saves using `luk`
+    if (typeof p.luk === "number") p.foc = p.luk;
+    else p.foc = 0;
+  }
   if (typeof p.statPoints !== "number") p.statPoints = 0;
 
   // Derived / combat stats
   if (typeof p.acc !== "number") p.acc = 0;
+  if (typeof p.combustionChance !== "number") p.combustionChance = 0;
 
   if (typeof p.critDamage !== "number") {
     p.critDamage = 0; // critical damage bonus % (starts at 0)
@@ -749,7 +765,7 @@ function endBattle(reason) {
 function levelUp() {
   const p = state.player;
   if (!p) return;
-  if (p.level >= 20) return;
+  if (p.level >= MAX_LEVEL) return;
 
   const prevMaxHp = p.maxHp;
   const prevMaxMp = p.maxMp;
@@ -779,7 +795,7 @@ function gainXp(amount) {
   addLog("XP", `+${amount} XP`);
   p.xp += amount;
 
-  while (p.level < 20 && p.xp >= p.xpToLevel) {
+  while (p.level < MAX_LEVEL && p.xp >= p.xpToLevel) {
     p.xp -= p.xpToLevel;
     levelUp();
   }
@@ -799,7 +815,7 @@ function winBattle() {
 
 function loseBattle() {
   addLog("LOSE", "Kamu kalah... Game Over.");
-  alert("Kamu kalah... Game Over.\nKamu bisa Load atau New Game.");
+  alert("Kamu kalah... Game Over.\nKamu bisa ganti karakter atau buat karakter baru.");
   endBattle("Kembali ke Town.");
 }
 
@@ -826,8 +842,14 @@ function enemyTurn() {
       addLog("ENEMY", `${e.name} memakai Rage Strike, tapi meleset!`);
     } else {
       p.hp = clamp(p.hp - res.dmg, 0, p.maxHp);
-      if (res.crit) { playCritShake("player"); addLog("ENEMY", `CRITICAL! ${e.name} memakai Rage Strike! Damage ${res.dmg}.`); }
-      else addLog("ENEMY", `${e.name} memakai Rage Strike! Damage ${res.dmg}.`);
+      if (res.crit || res.combustion) {
+        playCritShake("player");
+        if (res.crit && res.combustion) addLog("ENEMY", `CRITICAL + COMBUSTION! ${e.name} memakai Rage Strike! Damage ${res.dmg}.`);
+        else if (res.crit) addLog("ENEMY", `CRITICAL! ${e.name} memakai Rage Strike! Damage ${res.dmg}.`);
+        else addLog("ENEMY", `COMBUSTION! ${e.name} memakai Rage Strike! Damage ${res.dmg}.`);
+      } else {
+        addLog("ENEMY", `${e.name} memakai Rage Strike! Damage ${res.dmg}.`);
+      }
     }
   } else {
     const res = resolveAttack(e, p, 2, { dodgeBonus: state.playerDodging ? 30 : 0 });
@@ -838,8 +860,14 @@ function enemyTurn() {
       addLog("ENEMY", `${e.name} menyerang, tapi meleset!`);
     } else {
       p.hp = clamp(p.hp - res.dmg, 0, p.maxHp);
-      if (res.crit) { playCritShake("player"); addLog("ENEMY", `CRITICAL! ${e.name} menyerang! Damage ${res.dmg}.`); }
-      else addLog("ENEMY", `${e.name} menyerang! Damage ${res.dmg}.`);
+      if (res.crit || res.combustion) {
+        playCritShake("player");
+        if (res.crit && res.combustion) addLog("ENEMY", `CRITICAL + COMBUSTION! ${e.name} menyerang! Damage ${res.dmg}.`);
+        else if (res.crit) addLog("ENEMY", `CRITICAL! ${e.name} menyerang! Damage ${res.dmg}.`);
+        else addLog("ENEMY", `COMBUSTION! ${e.name} menyerang! Damage ${res.dmg}.`);
+      } else {
+        addLog("ENEMY", `${e.name} menyerang! Damage ${res.dmg}.`);
+      }
     }
   }
 
@@ -959,8 +987,14 @@ function attack() {
 
   e.hp = clamp(e.hp - res.dmg, 0, e.maxHp);
 
-  if (res.crit) { playCritShake("enemy"); addLog("YOU", `CRITICAL! Attack Damage ${res.dmg}.`); }
-  else addLog("YOU", `Attack! Damage ${res.dmg}.`);
+  if (res.crit || res.combustion) {
+    playCritShake("enemy");
+    if (res.crit && res.combustion) addLog("YOU", `CRITICAL + COMBUSTION! Attack Damage ${res.dmg}.`);
+    else if (res.crit) addLog("YOU", `CRITICAL! Attack Damage ${res.dmg}.`);
+    else addLog("YOU", `COMBUSTION! Attack Damage ${res.dmg}.`);
+  } else {
+    addLog("YOU", `Attack! Damage ${res.dmg}.`);
+  }
 }
 
 function dodge() {
@@ -1054,8 +1088,13 @@ function openSkillModal() {
       addLog("ENEMY", `${state.enemy.name} menghindar! (Evasion ${res.evasion}%)`);
     } else {
       state.enemy.hp = clamp(state.enemy.hp - res.dmg, 0, state.enemy.maxHp);
-      if (res.crit) addLog("YOU", `CRITICAL! ${s.name}! Damage ${res.dmg}.`);
-      else addLog("YOU", `${s.name}! Damage ${res.dmg}.`);
+      if (res.crit || res.combustion) {
+        if (res.crit && res.combustion) addLog("YOU", `CRITICAL + COMBUSTION! ${s.name}! Damage ${res.dmg}.`);
+        else if (res.crit) addLog("YOU", `CRITICAL! ${s.name}! Damage ${res.dmg}.`);
+        else addLog("YOU", `COMBUSTION! ${s.name}! Damage ${res.dmg}.`);
+      } else {
+        addLog("YOU", `${s.name}! Damage ${res.dmg}.`);
+      }
     }
 
     // Set per-skill cooldown
@@ -1108,28 +1147,33 @@ function applyAttributeDelta(statKey, delta){
   p[key] = (p[key] || 0) + delta;
   p.statPoints -= delta;
 
-  // apply derived changes (simple, can be rebalanced later)
+  // apply derived changes (rebalanced)
   if (key === "str") {
-    p.atk = (p.atk || 0) + (1 * delta);
-    p.critDamage = Math.max(0, (p.critDamage || 0) + (1 * delta)); // bonus % (starts at 0)
+    // STR: ATK +2, Combustion Chance +3%
+    p.atk = (p.atk || 0) + (2 * delta);
+    p.combustionChance = clamp((p.combustionChance || 0) + (3 * delta), 0, 100);
   }
   if (key === "dex") {
+    // DEX: Evasion +1%, Accuracy +2, SPD +1
     p.evasion = clamp((p.evasion || 0) + (1 * delta), 0, 100);
-    p.acc = Math.max(0, (p.acc || 0) + (1 * delta));
+    p.acc = Math.max(0, (p.acc || 0) + (2 * delta));
     p.spd = Math.max(0, (p.spd || 0) + (1 * delta));
   }
   if (key === "int") {
-    p.maxMp = Math.max(0, (p.maxMp || 0) + (3 * delta));
-    p.mp = clamp((p.mp || 0) + (3 * delta), 0, p.maxMp);
+    // INT: Max MP +5
+    p.maxMp = Math.max(0, (p.maxMp || 0) + (5 * delta));
+    p.mp = clamp((p.mp || 0) + (5 * delta), 0, p.maxMp);
   }
   if (key === "vit") {
-    p.maxHp = Math.max(1, (p.maxHp || 1) + (5 * delta));
-    p.hp = clamp((p.hp || 0) + (5 * delta), 0, p.maxHp);
-    p.def = Math.max(0, (p.def || 0) + (1 * delta));
+    // VIT: Max HP +8, DEF +2
+    p.maxHp = Math.max(1, (p.maxHp || 1) + (8 * delta));
+    p.hp = clamp((p.hp || 0) + (8 * delta), 0, p.maxHp);
+    p.def = Math.max(0, (p.def || 0) + (2 * delta));
   }
-  if (key === "luk") {
-    p.critChance = clamp((p.critChance || 0) + (1 * delta), 0, 100);
-    // drop rate bonus will be used later (loot system). For now: only crit chance.
+  if (key === "foc") {
+    // FOC: Crit Chance +2%, Crit Damage +5% bonus
+    p.critChance = clamp((p.critChance || 0) + (2 * delta), 0, 100);
+    p.critDamage = Math.max(0, (p.critDamage || 0) + (5 * delta)); // bonus % (starts at 0)
   }
 
   // Hard clamps
@@ -1137,6 +1181,7 @@ function applyAttributeDelta(statKey, delta){
   p.def = Math.max(0, p.def || 0);
   p.spd = Math.max(0, p.spd || 0);
   p.critDamage = Math.max(0, p.critDamage || 0);
+  p.combustionChance = clamp(p.combustionChance || 0, 0, 100);
   p.statPoints = Math.max(0, p.statPoints || 0);
 
   // persist to current slot
@@ -1171,15 +1216,15 @@ function openProfileModal(){
     "Profile",
     [
       { title: `Stat Points : ${pts}`, desc: "Dapatkan dari level up. Gunakan tombol + untuk menambah stat.", meta: "" },
-      mk("str", "STR", "Meningkatkan ATK dan Crit Damage"),
+      mk("str", "STR", "Meningkatkan ATK dan Combustion Chance (DMG x2 - x2.5)"),
       mk("dex", "DEX", "Meningkatkan Evasion, Accuracy, dan SPD"),
       mk("int", "INT", "Meningkatkan MP"),
       mk("vit", "VIT", "Meningkatkan HP dan DEF"),
-      mk("luk", "LUK", "Meningkatkan drop rate item dan Critical Chance"),
+      mk("foc", "FOC", "Meningkatkan Critical Chance dan Critical Damage"),
     ],
     (pick) => {
       const s = String(pick || "");
-      const m = s.match(/^(str|dex|int|vit|luk):([+-]?\d+)$/);
+      const m = s.match(/^(str|dex|int|vit|foc):([+-]?\d+)$/);
       if (!m) return;
 
       const key = m[1];
@@ -1213,7 +1258,7 @@ function openEnemyStatsModal() {
       { title: `DEF : ${e.def}`, desc: "", meta: "" },
       { title: `SPD : ${e.spd}`, desc: "", meta: "" },
       { title: `ACC : ${e.acc || 0}`, desc: "", meta: "" },
-      { title: `LUK : ${e.luk || 0}`, desc: "", meta: "" },
+      { title: `FOC : ${e.foc || 0}`, desc: "", meta: "" },
       { title: `CRIT : ${e.critChance}%`, desc: "", meta: "" },
       { title: `CRIT DMG : ${e.critDamage}%`, desc: "", meta: "" },
       { title: `EVASION : ${e.evasion}%`, desc: "", meta: "" },
@@ -1236,7 +1281,7 @@ function openStatsModal() {
       { title: `DEF : ${p.def}`, desc: "", meta: "" },
       { title: `SPD : ${p.spd}`, desc: "", meta: "" },
       { title: `ACC : ${p.acc || 0}`, desc: "", meta: "" },
-      { title: `LUK : ${p.luk || 0}`, desc: "", meta: "" },
+      { title: `FOC : ${p.foc || 0}`, desc: "", meta: "" },
       { title: `CRIT : ${p.critChance}%`, desc: "", meta: "" },
       { title: `CRIT DMG : ${p.critDamage}%`, desc: "", meta: "" },
       { title: `EVASION : ${p.evasion}%`, desc: "", meta: "" },
@@ -1287,7 +1332,6 @@ function openTownMenu(){
       { title: "Save Cloud", desc: "Save progress ke cloud.", meta: "", value: "cloud_save" },
       { title: "Ganti Karakter", desc: "Pilih slot karakter lain.", meta: "", value: "switch_char" },
       { title: "Log out", desc: "Keluar dari akun cloud dan kembali ke halaman login.", meta: "", value: "logout", className:"danger" },
-      { title: "New Game",  desc: "Memulai baru.", meta: "", value: "new" },
     ],
     (pick) => {
       if (pick === "cloud_save") {
@@ -1392,12 +1436,6 @@ function openTownMenu(){
           showAuth(true);
           setAuthMsg("Kamu sudah logout. Silakan login lagi.", false);
         })();
-        return;
-      }
-
-      if (pick === "new") {
-        if (!confirm("Mulai game baru untuk slot ini? (akan overwrite karakter di slot aktif)")) return;
-        startNewGame(state.activeSlot);
         return;
       }
     }
@@ -1585,9 +1623,15 @@ function renderCharacterSlots(){
   for (let i = 0; i < MAX_CHAR_SLOTS; i++){
     const slot = state.slots && state.slots[i] ? state.slots[i] : null;
 
+    const item = document.createElement("div");
+    item.className = "charSlotWrap";
+
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "charSlot" + (i === state.activeSlot ? " active" : "");
+
+    const actions = document.createElement("div");
+    actions.className = "charSlotActions";
 
     if (slot){
       btn.innerHTML = `
@@ -1598,6 +1642,30 @@ function renderCharacterSlots(){
         <div class="charSlotSub">${escapeHtml(genderLabel(slot.gender))}</div>
       `;
       btn.onclick = () => enterTownWithSlot(i);
+
+      // New game / overwrite -> go to create character UI for this slot
+      const bNew = document.createElement("button");
+      bNew.type = "button";
+      bNew.className = "charSlotMini";
+      bNew.textContent = "New";
+      bNew.onclick = (ev) => {
+        ev.stopPropagation();
+        if (!confirm(`Buat karakter baru untuk overwrite Slot #${i+1}?`)) return;
+        openCreateCharacter(i, true);
+      };
+
+      // Delete character
+      const bDel = document.createElement("button");
+      bDel.type = "button";
+      bDel.className = "charSlotMini danger";
+      bDel.textContent = "Hapus";
+      bDel.onclick = (ev) => {
+        ev.stopPropagation();
+        deleteCharacter(i);
+      };
+
+      actions.appendChild(bNew);
+      actions.appendChild(bDel);
     } else {
       btn.innerHTML = `
         <div class="charSlotTop">
@@ -1606,10 +1674,20 @@ function renderCharacterSlots(){
         </div>
         <div class="charSlotSub">Buat karakter baru</div>
       `;
-      btn.onclick = () => openCreateCharacter(i);
+      btn.onclick = () => openCreateCharacter(i, false);
+
+      // keep layout consistent
+      const spacer = document.createElement("button");
+      spacer.type = "button";
+      spacer.className = "charSlotMini";
+      spacer.textContent = "—";
+      spacer.disabled = true;
+      actions.appendChild(spacer);
     }
 
-    wrap.appendChild(btn);
+    item.appendChild(btn);
+    item.appendChild(actions);
+    wrap.appendChild(item);
   }
 }
 
@@ -1620,18 +1698,22 @@ function openCharacterMenu(msg=""){
   showCharCreate(false);
 }
 
-function openCreateCharacter(slotIdx){
+function openCreateCharacter(slotIdx, overwrite=false){
   pendingCreateSlot = clamp(slotIdx || 0, 0, MAX_CHAR_SLOTS - 1);
 
   const sub = byId("ccSub");
   if (sub) sub.textContent = `Slot #${pendingCreateSlot + 1}`;
 
+  const slot = (state.slots && state.slots[pendingCreateSlot]) ? state.slots[pendingCreateSlot] : null;
+
   const nameEl = byId("ccName");
   const genderEl = byId("ccGender");
-  if (nameEl) nameEl.value = "";
-  if (genderEl) genderEl.value = "male";
 
-  setCcMsg("Isi nama dan gender.");
+  // If overwrite: prefill existing values for convenience
+  if (nameEl) nameEl.value = (overwrite && slot && slot.name) ? String(slot.name) : "";
+  if (genderEl) genderEl.value = (overwrite && slot && slot.gender) ? String(slot.gender) : "male";
+
+  setCcMsg(overwrite ? "Overwrite karakter: isi nama/gender baru." : "Isi nama dan gender.");
   showCharMenu(false);
   showCharCreate(true);
 }
@@ -1640,6 +1722,42 @@ function cancelCreateCharacter(){
   showCharCreate(false);
   showCharMenu(true);
   setCcMsg("");
+}
+
+function deleteCharacter(slotIdx){
+  const idx = clamp(slotIdx || 0, 0, MAX_CHAR_SLOTS - 1);
+  const slot = state.slots && state.slots[idx] ? state.slots[idx] : null;
+  if (!slot) return;
+
+  const nm = slot.name || `Slot #${idx+1}`;
+  if (!confirm(`Hapus karakter "${nm}"? (Slot #${idx+1})`)) return;
+
+  state.slots[idx] = null;
+
+  // If active slot deleted, move active slot to the first available character (or 0)
+  if (idx === state.activeSlot){
+    const next = state.slots.findIndex(Boolean);
+    state.activeSlot = next >= 0 ? next : 0;
+    state.player = state.slots[state.activeSlot]
+      ? normalizePlayer(state.slots[state.activeSlot])
+      : normalizePlayer(newPlayer());
+
+    state.enemy = null;
+    state.inBattle = false;
+    state.playerDefending = false;
+    state.playerDodging = false;
+    setTurn("town");
+    state.battleTurn = 0;
+  }
+
+  autosave(state);
+  (async () => { try { await cloudTrySaveCurrentProfile(); } catch(e) {} })();
+
+  renderCharacterSlots();
+  setCharMsg("Karakter dihapus.", false);
+  showCharMenu(true);
+  showCharCreate(false);
+  refresh(state);
 }
 
 function handleCreateCharacter(){
