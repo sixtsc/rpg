@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Text RPG Turn-Based</title>
+  <link rel="stylesheet" href="./styles.css?v=v33" />
+</head>
+<body>
+  
+  <!-- Main Menu Overlay -->
+  <div id="mainMenu" class="menuOverlay">
+    <div class="menuCard">
+      <h2 class="menuTitle">Text RPG Turn-Based</h2>
+      <p class="menuSub" id="menuSub">Pilih opsi:</p>
+      <div class="menuBtns">
+        <button id="menuNew" class="btn primary">New Game</button>
+        <button id="menuLoad" class="btn">Load</button>
+        <button id="menuExit" class="btn danger">Exit</button>
+      </div>
+      <p class="menuHint">Catatan: “Exit” akan mencoba menutup tab. Jika tidak bisa, silakan tutup tab secara manual.</p>
+    </div>
+  </div>
+
+<div class="wrap">
+    <div class="topbar">
+      <h1>Text RPG Turn-Based <span class="pill" id="modePill">Town</span></h1>
+      <div class="pill muted" id="meta">—</div>
+    </div>
+
+    <div class="grid">
+      <!-- LEFT: Player + Actions -->
+      <div class="card" id="playerCard">
+        <div class="sectionTitle">
+          <div><b id="pNameTitle">Hero</b> <span class="pill" id="pLvl">Lv1</span></div>
+          <div class="pill" id="goldPill">Gold: 0</div>
+        </div>
+
+        <div class="nameSub" id="pSub">—</div>
+        <div class="avatarWrap" id="pAvatarWrap" style="display:none;">
+          <div class="avatarBox" id="pAvatarBox"></div>
+        </div>
+
+<div class="bars">
+          <div>
+            <div class="barRow">
+              <span class="muted">HP</span><span class="muted" id="hpText">0/0</span>
+            </div>
+            <div class="bar"><div class="fill hp" id="hpBar"></div></div>
+          </div>
+          <div>
+            <div class="barRow">
+              <span class="muted">MP</span><span class="muted" id="mpText">0/0</span>
+            </div>
+            <div class="bar"><div class="fill mp" id="mpBar"></div></div>
+          </div>
+
+          <div id="xpGroup">
+            <div class="barRow">
+              <span class="muted">XP</span><span class="muted" id="xpText">0/0</span>
+            </div>
+            <div class="bar"><div class="fill xp" id="xpBar"></div></div>
+          </div>
+        </div>
+              </div>
+
+
+
+      <!-- RIGHT: Enemy ONLY -->
+      <div class="card" id="enemyCard">
+        <div class="sectionTitle">
+          <div><b id="eNameTitle">-</b> <span class="pill" id="eLvl">-</span></div>
+          <button class="pill muted iconPill" id="btnEnemyStats" type="button">?</button>
+        </div>
+
+        <div class="nameSub" id="eSub">—</div>
+        <div class="avatarWrap" id="eAvatarWrap" style="display:none;">
+          <div class="avatarBox" id="eAvatarBox"></div>
+        </div>
+
+<div class="bars" id="enemyBars" style="display:none;">
+          <div>
+            <div class="barRow">
+              <span class="muted">Enemy HP</span><span class="muted" id="eHpText">0/0</span>
+            </div>
+            <div class="bar"><div class="fill hp" id="eHpBar"></div></div>
+          </div>
+          <div>
+            <div class="barRow">
+              <span class="muted">Enemy MP</span><span class="muted" id="eMpText">0/0</span>
+            </div>
+            <div class="bar"><div class="fill mp" id="eMpBar"></div></div>
+          </div>
+        </div>
+</div>
+
+      
+      <!-- ACTION: Battle actions FULL WIDTH -->
+      <div class="card actionCard" id="actionCard" style="display:none;">
+        <div class="sectionTitle">
+          <div><b>ACTION</b></div>
+          <div class="rightPills">
+            <div class="pill muted" id="turnCount">Turn: 0</div>
+            <div class="pill muted" id="actionHint">—</div>
+          </div>
+        </div>
+
+        <!-- Battle buttons -->
+        <div class="battleActions" id="battleBtns" style="display:none;">
+          <div class="battlePrimary">
+            <button class="primary" id="btnAttack">Attack</button>
+            <button id="btnSkill">Skill</button>
+            <button id="btnItem">Item</button>
+            <button id="btnDefend">Dodge</button>
+            <button id="btnStatsBattle">Stats</button>
+            <button class="warn" id="btnRun">Run</button>
+          </div>
+        </div>
+
+        <!-- Town buttons -->
+        <div class="battleActions" id="townBtns" style="display:none;">
+          <div class="battlePrimary">
+            <button class="primary" id="btnExplore">Explore</button>
+            <button id="btnInventory">Inventory</button>
+            <button id="btnProfile">Profile</button>
+            <button id="btnShop">Shop</button>
+            <button id="btnStats">Stats</button>
+            <button class="good" id="btnMenu">Menu</button>
+          </div>
+        </div>
+      </div>
+
+<!-- BOTTOM: Log FULL WIDTH -->
+      <div class="card logCard">
+        <div class="sectionTitle">
+          <div><b>LOG</b></div>
+          <div class="pill muted" id="logHint">Battle log</div>
+        </div>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal (tetap satu kali) -->
+  <div class="modalBackdrop" id="modalBackdrop">
+    <div class="modal">
+      <div class="modalHeader">
+        <div class="modalTitle" id="modalTitle">Pilih</div>
+        <button class="xbtn" id="modalClose">Tutup</button>
+      </div>
+      <div class="modalBody" id="modalBody"></div>
+</div>
+  </div>
+  <!-- Scripts (bundled, non-module) -->
+  <script>
+    // Cache-buster version (update when repackaging)
+    window.__APP_VER__ = "v18";
+    window.__BUNDLE_LOADED__ = false;
+  </script>
+
+  <script src="./js/bundle.js?v=v33" defer></script>
+
+  <script>
+    // If bundle didn't run, show hint in-menu (no DevTools needed)
+    setTimeout(function(){
+      if(!window.__BUNDLE_LOADED__){
+        var el=document.getElementById('menuSub');
+        if(el) el.textContent='JS belum jalan (bundle.js tidak dieksekusi). Coba refresh + matikan cache.';
+      } else {
+        // Optional: show loaded status
+        var el2=document.getElementById('menuSub');
+        if(el2 && el2.textContent.trim()==='Pilih opsi:') el2.textContent='Pilih opsi:';
+      }
+    }, 1200);
+  </script>
+</body>
+
+</html>

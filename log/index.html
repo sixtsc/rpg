@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Cloud Save</title>
+  <link rel="stylesheet" href="/styles.css?v=v33" />
+  <style>
+    body{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;}
+    .card{max-width:520px; width:100%;}
+    .row{display:grid; grid-template-columns: 1fr 1fr; gap:12px;}
+    @media (max-width:520px){ .row{grid-template-columns: 1fr;} }
+    .muted{opacity:.8}
+    .err{color:#ff7b7b; font-weight:700}
+    .ok{color:#63ffa1; font-weight:700}
+    input{width:100%; padding:14px 16px; border-radius:16px; border:1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.04); color:#fff; outline:none;}
+    label{display:block; margin:10px 0 8px; opacity:.8}
+    .actions{display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-top:14px;}
+    .btn{padding:14px 16px; border-radius:18px; border:1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.06); color:#fff; font-weight:800; cursor:pointer;}
+    .btn.primary{background: rgba(66,120,255,.25); border-color: rgba(66,120,255,.45);}
+    .btn.ghost{background: transparent;}
+    .small{margin-top:10px; font-size:14px;}
+    a{color:#7fb5ff;}
+  </style>
+</head>
+<body>
+  <div class="panel card">
+    <div style="font-size:44px; font-weight:900; line-height:1;">Cloud Save</div>
+    <div class="muted" style="margin-top:8px; font-size:18px;">
+      Login untuk menyimpan & memuat progress dari cloud.
+    </div>
+
+    <div style="margin-top:18px;">
+      <label>Username</label>
+      <input id="u" autocomplete="username" placeholder="hero" />
+      <label>Password</label>
+      <input id="p" type="password" autocomplete="current-password" placeholder="••••" />
+      <div class="actions">
+        <button id="btnLogin" class="btn primary">Login</button>
+        <button id="btnReg" class="btn">Register</button>
+      </div>
+
+      <div id="msg" class="small"></div>
+      <div class="small">
+        <a href="/" id="back">Kembali ke game</a>
+      </div>
+    </div>
+  </div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+function setHealth(text, ok=false){
+  const el = $("health");
+  if(!el) return;
+  el.textContent = text || "";
+  el.style.color = ok ? "#9ee6b8" : "#ffb4b4";
+}
+function setMsg(text, ok=false){
+  const el = $("msg");
+  el.textContent = text || "";
+  el.className = "small " + (ok ? "ok" : "err");
+}
+async function post(path, body){
+  const res = await fetch(path, {
+    method: "POST",
+    credentials: "include",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(body)
+  });
+
+  // Cloudflare sometimes returns HTML on errors (404/500). Capture that for debugging.
+  let data = null;
+  let text = "";
+  const ct = (res.headers.get("content-type") || "").toLowerCase();
+  try{
+    if (ct.includes("application/json")) data = await res.json();
+    else text = await res.text();
+  }catch(e){
+    try{ text = await res.text(); }catch(_){}
+  }
+  return { res, data, text };
+}async function login(){
+  const username = $("u").value.trim();
+  const password = $("p").value;
+  if(!username || !password){ setMsg("Username & password wajib diisi."); return; }
+  setMsg("");
+  const {res, data, text} = await post("/api/login", {username, password});
+  if(res.ok){
+    setMsg("Login berhasil. Kamu bisa kembali ke game.", true);
+    setTimeout(()=> location.href="/", 600);
+  }else{
+    setMsg((data && data.message) || (text && (text.slice(0,160))) || (`Gagal login. (HTTP ${res.status})`));
+  }
+}
+async function register(){
+  const username = $("u").value.trim();
+  const password = $("p").value;
+  if(!username || !password){ setMsg("Username & password wajib diisi."); return; }
+  setMsg("");
+  const {res, data, text} = await post("/api/register", {username, password});
+  if(res.ok){
+    setMsg("Register berhasil. Kamu bisa login sekarang.", true);
+  }else{
+    setMsg((data && data.message) || (text && (text.slice(0,160))) || (`Gagal register. (HTTP ${res.status})`));
+  }
+}
+$("btnLogin").addEventListener("click", login);
+$("btnReg").addEventListener("click", register);
+
+
+async function checkHealth(){
+  try{
+    const res = await fetch('/api/health');
+    const data = await res.json().catch(()=>null);
+    if(res.ok && data?.ok){
+      const tbl = (data.tables || []).join(', ') || '(no tables)';
+      setHealth(`DB OK. Tables: ${tbl}`, true);
+    }else{
+      setHealth((data?.message) ? `DB ERROR: ${data.message}` : `DB ERROR (HTTP ${res.status})`);
+    }
+  }catch(e){
+    setHealth('DB ERROR: gagal menghubungi /api/health');
+  }
+}
+checkHealth();
+</script>
+</body>
+</html>
