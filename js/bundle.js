@@ -17,6 +17,7 @@ const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton"];
 /* ===== engine.js ===== */
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const randInt = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
+const randFloat = (a,b) => (Math.random()*(b-a))+a;
 const pick = (arr) => arr[Math.floor(Math.random()*arr.length)];
 function genEnemy(plv){
   const lvl = clamp(plv + pick([-1,0,0,1]), 1, 20);
@@ -27,7 +28,9 @@ function genEnemy(plv){
     hp:25 + lvl*8, mp:10 + lvl*3,
     atk:6 + lvl*2, def:2 + lvl, spd:4 + lvl,
     critChance: clamp(5 + Math.floor(lvl/3), 5, 35),
-    critDamage: 150 + Math.floor(lvl/2) * 2,
+    critDamage: 0,
+    acc: 0,
+    luk: 0,
     evasion: clamp(5 + Math.floor((4+lvl)/4), 5, 30),
     xpReward:18 + lvl*6, goldReward:8 + lvl*4
   };
@@ -56,8 +59,11 @@ function resolveAttack(att, def, basePower, opts = {}) {
   const rollCrit = randInt(1, 100);
   let crit = false;
   if (rollCrit <= critChance) {
-    const mult = (att.critDamage || 150) / 100;
-    dmg = Math.max(1, Math.round(dmg * mult));
+    // Critical damage starts from 0% bonus.
+    // Base crit multiplier: 1.8x - 2.0x, then multiplied by (1 + critDamage%).
+    const baseMult = randFloat(1.8, 2.0);
+    const bonus = Math.max(0, (att.critDamage || 0)) / 100;
+    dmg = Math.max(1, Math.round(dmg * baseMult * (1 + bonus)));
     crit = true;
   }
 
@@ -81,7 +87,8 @@ function newPlayer(){
     maxHp:60, maxMp:25,
     hp:60, mp:25,
     atk:10, def:4, spd:7,
-    critChance:5, critDamage:150, evasion:5,
+    acc:0, luk:0,
+    critChance:5, critDamage:0, evasion:5,
     deprecatedSkillCooldown:0,
     xp:0, xpToLevel:50,
     gold:0,
@@ -89,6 +96,23 @@ function newPlayer(){
     inv: { "Potion": { ...ITEMS.potion, qty:2 }, "Ether": { ...ITEMS.ether, qty:1 } }
   };
 }
+
+function normalizePlayer(p){
+  if (!p) return p;
+  // Backward-compatible defaults for older saves
+  if (typeof p.acc !== "number") p.acc = 0;
+  if (typeof p.luk !== "number") p.luk = 0;
+  if (typeof p.critDamage !== "number") {
+    p.critDamage = 0; // critical damage bonus % (starts at 0)
+  } else if (p.critDamage >= 100) {
+    // Migration from old system (e.g., 150% meaning +50%) → store bonus only.
+    p.critDamage = Math.max(0, p.critDamage - 100);
+  }
+  if (typeof p.critChance !== "number") p.critChance = 0;
+  if (typeof p.evasion !== "number") p.evasion = 0;
+  return p;
+}
+
 function newState(){
   return {
     player: newPlayer(),
@@ -946,6 +970,8 @@ function openEnemyStatsModal() {
       { title: `ATK : ${e.atk}`, desc: "", meta: "" },
       { title: `DEF : ${e.def}`, desc: "", meta: "" },
       { title: `SPD : ${e.spd}`, desc: "", meta: "" },
+      { title: `ACC : ${e.acc || 0}`, desc: "", meta: "" },
+      { title: `LUK : ${e.luk || 0}`, desc: "", meta: "" },
       { title: `CRIT : ${e.critChance}%`, desc: "", meta: "" },
       { title: `CRIT DMG : ${e.critDamage}%`, desc: "", meta: "" },
       { title: `EVASION : ${e.evasion}%`, desc: "", meta: "" },
@@ -967,6 +993,8 @@ function openStatsModal() {
       { title: `ATK : ${p.atk}`, desc: "", meta: "" },
       { title: `DEF : ${p.def}`, desc: "", meta: "" },
       { title: `SPD : ${p.spd}`, desc: "", meta: "" },
+      { title: `ACC : ${p.acc || 0}`, desc: "", meta: "" },
+      { title: `LUK : ${p.luk || 0}`, desc: "", meta: "" },
       { title: `CRIT : ${p.critChance}%`, desc: "", meta: "" },
       { title: `CRIT DMG : ${p.critDamage}%`, desc: "", meta: "" },
       { title: `EVASION : ${p.evasion}%`, desc: "", meta: "" },
@@ -1063,7 +1091,7 @@ function openTownMenu(){
                   (typeof cloud.data.data === "string") ? JSON.parse(cloud.data.data) : cloud.data.data;
 
                 if (payload?.player) {
-                  state.player = payload.player;
+                  state.player = normalizePlayer(payload.player);
                   state.enemy = null;
                   state.inBattle = false;
                   state.playerDefending = false;
@@ -1094,7 +1122,7 @@ function openTownMenu(){
       if (pick === "new") {
         if (!confirm("Mulai game baru?")) return;
 
-        state.player = newPlayer();
+        state.player = normalizePlayer(newPlayer());
         state.enemy = null;
         state.inBattle = false;
         state.playerDefending = false;
@@ -1176,7 +1204,7 @@ function bind() {
 
 function applyLoaded(payload){
   if (payload?.player) {
-    state.player = payload.player;
+    state.player = normalizePlayer(payload.player);
     state.enemy = null;
     state.inBattle = false;
     state.playerDefending = false;
@@ -1192,7 +1220,7 @@ function applyLoaded(payload){
 }
 
 function startNewGame(){
-  state.player = newPlayer();
+  state.player = normalizePlayer(newPlayer());
   state.enemy = null;
   state.inBattle = false;
   state.playerDefending = false;
