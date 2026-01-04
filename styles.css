@@ -519,3 +519,20 @@ body.inTown .grid{ grid-template-columns: 1fr !important; }
   .modalBody.statsGrid .choice{ font-size: 14px; }
   .modalBody.statsGrid .choice strong{ font-size: 15px; }
 }
+
+
+/* --- Smaller Stats text (mobile friendly) --- */
+.modalBody.statsGrid .choice{
+  font-size: 14px;
+}
+.modalBody.statsGrid .choice strong{
+  font-size: 15px;
+}
+@media (min-width: 560px){
+  .modalBody.statsGrid .choice{
+    font-size: 15px;
+  }
+  .modalBody.statsGrid .choice strong{
+    font-size: 16px;
+  }
+}

@@ -10,3 +10,15 @@ export async function onRequestPost(ctx) {
   const clear = setCookie("session", "", { maxAge: 0 });
   return json({ ok: true }, { headers: { "Set-Cookie": clear } });
 }
+export async function onRequestOptions(ctx) {
+  return new Response("", {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Max-Age": "86400"
+    }
+  });
+}
+

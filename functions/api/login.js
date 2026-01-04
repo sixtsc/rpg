@@ -29,3 +29,21 @@ export async function onRequestPost(ctx) {
 
   return json({ ok: true }, { headers: { "Set-Cookie": cookie } });
 }
+
+export async function onRequestGet(ctx) {
+  return json({ message: "Method GET tidak didukung. Gunakan POST ke endpoint ini." }, { status: 405 });
+}
+
+export async function onRequestOptions(ctx) {
+  // CORS preflight (safe even for same-origin)
+  return new Response("", {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Max-Age": "86400"
+    }
+  });
+}
+
