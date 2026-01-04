@@ -972,19 +972,36 @@ function openTownMenu(){
   if (state.inBattle) return;
 
   modal.open(
-    "Menu",
+    "MENU",
     [
-      { title: "Save", desc: "Simpan progress ke perangkat.", meta: "", value: "save" },
-      { title: "Load", desc: "Muat progress terakhir yang tersimpan.", meta: "", value: "load" },
-      { title: "Cloud Save", desc: "Login untuk simpan & muat progress dari cloud.", meta: "", value: "cloud" },
-      { title: "New Game", desc: "Mulai dari awal (progress sekarang tidak otomatis hilang sampai kamu Save).", meta: "", value: "new" },
+      { title: "Save", desc: "Simpan progress (local + cloud).", meta: "", value: "save" },
+      { title: "Load", desc: "Muat dari cloud kalau ada, kalau tidak dari local.", meta: "", value: "load" },
+      { title: "New Game", desc: "Mulai dari awal (save lama tetap tersimpan).", meta: "", value: "new" },
     ],
-    (pick) => {
+    async (pick) => {
       if (pick === "save") {
-        const ok = save(state);
-        addLog(ok ? "SAVE" : "WARN", ok ? "Progress tersimpan." : "Gagal menyimpan (storage diblokir/ penuh).");
+        await saveToLocalAndCloud();
         refresh(state);
+        return;
+      }
 
+      if (pick === "load") {
+        const ok = await loadFromCloudOrLocal();
+        if (!ok) {
+          alert("Belum ada save (cloud maupun lokal).");
+        }
+        return;
+      }
+
+      if (pick === "new") {
+        if (!confirm("Mulai game baru?")) return;
+        startNewGame();
+        return;
+      }
+    }
+  );
+}
+  
         (async () => {
           try {
             const payload = { v: 1, t: Date.now(), player: state.player };
@@ -1139,6 +1156,62 @@ function bind() {
 
 /* ----------------------------- Boot + Main Menu ----------------------------- */
 
+async function loadFromCloudOrLocal() {
+  try {
+    // Coba load dari cloud dulu
+    const r = await cloudLoadPayload(); // { ok, unauth, data }
+    if (r && r.ok && r.data && r.data.hasSave && r.data.data) {
+      const payload = r.data.data; // payload yang kita simpan waktu Save
+      if (applyLoaded(payload)) {
+        addLog("CLOUD", "Progress dimuat dari Cloud.");
+        return true;
+      }
+    } else if (r && r.unauth) {
+      addLog("CLOUD", "Belum login. Pakai save lokal.");
+    }
+  } catch (e) {
+    console.error("[CLOUD] load error", e);
+    addLog("CLOUD", "Cloud Load error, pakai save lokal.");
+  }
+
+  // Fallback ke localStorage
+  const payload = load();
+  if (applyLoaded(payload)) {
+    addLog("LOAD", "Progress dimuat dari perangkat ini.");
+    return true;
+  }
+
+  addLog("LOAD", "Belum ada save (cloud maupun lokal).");
+  return false;
+}
+
+async function saveToLocalAndCloud() {
+  // 1) Save lokal (seperti biasa)
+  const okLocal = save(state);
+  addLog(okLocal ? "SAVE" : "WARN", okLocal ? "Progress tersimpan di perangkat." : "Gagal menyimpan ke perangkat.");
+
+  // 2) Coba kirim ke cloud (kalau login)
+  try {
+    const me = await cloudMe();
+    if (!me) {
+      addLog("CLOUD", "Cloud Save dilewati (belum login).");
+      return;
+    }
+
+    const payload = { v: 1, t: Date.now(), player: state.player };
+    const r = await cloudSavePayload(payload);
+
+    if (r && r.ok) {
+      addLog("CLOUD", "Cloud Save berhasil.");
+    } else {
+      addLog("CLOUD", "Cloud Save gagal.");
+    }
+  } catch (e) {
+    console.error("[CLOUD] save error", e);
+    addLog("CLOUD", "Cloud Save error.");
+  }
+}
+
 function applyLoaded(payload){
   if (payload?.player) {
     state.player = payload.player;
@@ -1192,14 +1265,14 @@ function showMenu(show){
       startNewGame();
     };
 
-    menuLoad.onclick = () => {
-      const payload = load();
-      if (applyLoaded(payload)) {
-        showMenu(false);
-      } else {
-        alert("Belum ada save.");
-      }
-    };
+    menuLoad.onclick = async () => {
+  const ok = await loadFromCloudOrLocal();
+  if (ok) {
+    showMenu(false);
+  } else {
+    alert("Belum ada save (cloud maupun lokal).");
+  }
+};
 
     menuExit.onclick = () => {
       // Beberapa browser akan memblokir window.close jika tab tidak dibuka via script
