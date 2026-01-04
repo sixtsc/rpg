@@ -1013,85 +1013,81 @@ function openTownMenu(){
   modal.open(
     "Menu",
     [
-      { title: "Save", desc: "Simpan progress ke perangkat.", meta: "", value: "save" },
-      { title: "Load", desc: "Muat progress terakhir yang tersimpan.", meta: "", value: "load" },
-      { title: "Cloud Save", desc: "Login untuk simpan & muat progress dari cloud.", meta: "", value: "cloud" },
-      { title: "New Game", desc: "Mulai dari awal (progress sekarang tidak otomatis hilang sampai kamu Save).", meta: "", value: "new" },
+      { title: "Load Cloud", desc: "Load progress dari cloud.", meta: "", value: "cloud_load" },
+      { title: "Save Cloud", desc: "Save progress ke cloud.", meta: "", value: "cloud_save" },
+      { title: "New Game",  desc: "Memulai baru.", meta: "", value: "new" },
     ],
     (pick) => {
-      if (pick === "save") {
-        const ok = save(state);
-        addLog(ok ? "SAVE" : "WARN", ok ? "Progress tersimpan." : "Gagal menyimpan (storage diblokir/ penuh).");
-        refresh(state);
-
+      if (pick === "cloud_save") {
         (async () => {
           try {
-            const payload = { v: 1, t: Date.now(), player: state.player };
-            const cloud = await cloudSavePayload(payload);
-            if (cloud.ok) addLog("SAVE", "Cloud save berhasil.");
-            else if (cloud?.data?.error === "unauthorized") addLog("WARN", "Belum login cloud. Buka Menu > Cloud Save.");
-            else addLog("WARN", "Cloud save gagal.");
+            const r = await cloudTrySaveCurrentPlayer();
+            if (r.skipped && r.reason === "unauth") {
+              addLog("WARN", "Belum login cloud. Silakan login dulu.");
+              // munculkan overlay login yang sudah ada di halaman
+              showMenu(true);
+              return;
+            }
+            addLog(r.ok ? "SAVE" : "WARN", r.ok ? "Cloud save berhasil." : "Cloud save gagal.");
           } catch (e) {
             console.error("[CLOUD SAVE] error", e);
             addLog("WARN", "Cloud save error.");
           }
-        })();
-
-        return;
-      }
-
-      if (pick === "load") {
-        (async () => {
-          // try cloud first
-          const cloud = await cloudLoadPayload();
-          if (cloud.ok && cloud.data && cloud.data.data) {
-            try {
-              const payload = typeof cloud.data.data === "string" ? JSON.parse(cloud.data.data) : cloud.data.data;
-              if (payload?.player) {
-                state.player = payload.player;
-                state.enemy = null;
-                state.inBattle = false;
-                state.playerDefending = false;
-                state.playerDodging = false;
-                setTurn("town");
-                state.battleTurn = 0;
-                addLog("LOAD", "Berhasil load progress (cloud).");
-                refresh(state);
-                return;
-              }
-            } catch (e) {
-              console.error("[CLOUD LOAD] parse error", e);
-            }
-          }
-          if (cloud.unauth) {
-            addLog("WARN", "Belum login cloud. Buka Menu > Cloud Save untuk login.");
-          }
-
-          // fallback local
-          const payload = load();
-          if (!payload) {
-            addLog("LOAD", "Belum ada save.");
-            alert("Belum ada save.");
-            return;
-          }
-
-          state.player = payload.player;
-          state.enemy = null;
-          state.inBattle = false;
-          state.playerDefending = false;
-          state.playerDodging = false;
-          setTurn("town");
-          state.battleTurn = 0;
-
-          addLog("LOAD", "Berhasil load progress.");
           refresh(state);
         })();
         return;
       }
 
+      if (pick === "cloud_load") {
+        (async () => {
+          try {
+            // cek login dulu (biar kalau belum login langsung diarahkan ke overlay login)
+            const me = await ensureCloudUser();
+            if (!me) {
+              addLog("WARN", "Belum login cloud. Silakan login dulu.");
+              showMenu(true);
+              return;
+            }
 
-      if (pick === "cloud") {
-        window.location.href = "/log";
+            const cloud = await cloudLoadPayload();
+
+            if (cloud.unauth) {
+              addLog("WARN", "Session cloud habis. Silakan login lagi.");
+              showMenu(true);
+              return;
+            }
+
+            if (cloud.ok && cloud.data && cloud.data.hasSave && cloud.data.data) {
+              try {
+                const payload =
+                  (typeof cloud.data.data === "string") ? JSON.parse(cloud.data.data) : cloud.data.data;
+
+                if (payload?.player) {
+                  state.player = payload.player;
+                  state.enemy = null;
+                  state.inBattle = false;
+                  state.playerDefending = false;
+                  state.playerDodging = false;
+                  setTurn("town");
+                  state.battleTurn = 0;
+
+                  addLog("LOAD", "Berhasil load progress (cloud).");
+                  refresh(state);
+                  return;
+                }
+              } catch (e) {
+                console.error("[CLOUD LOAD] parse error", e);
+              }
+            }
+
+            addLog("LOAD", "Cloud belum ada save / data tidak valid.");
+          } catch (e) {
+            console.error("[CLOUD LOAD] error", e);
+            addLog("WARN", "Cloud load error.");
+          }
+
+          refresh(state);
+        })();
         return;
       }
 
@@ -1102,9 +1098,9 @@ function openTownMenu(){
         state.enemy = null;
         state.inBattle = false;
         state.playerDefending = false;
-  state.playerDodging = false;
+        state.playerDodging = false;
         setTurn("town");
-  state.battleTurn = 0;
+        state.battleTurn = 0;
 
         byId("log").innerHTML = "";
         addLog("INFO", "Game baru dimulai.");
