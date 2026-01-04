@@ -26,7 +26,43 @@
       </div>
 
       <p class="menuHint" id="authMsg">Tip: Setelah login, game akan otomatis load cloud save. Kalau cloud belum ada save, save lokal akan di-upload.</p>
+    
+  <!-- Character Select Overlay -->
+  <div id="charMenu" class="menuOverlay hidden">
+    <div class="menuCard">
+      <h2 class="menuTitle">Select Character</h2>
+      <p class="menuSub" id="charSub">Pilih slot karakter (6 slot). Slot kosong bisa dibuat karakter baru.</p>
+
+      <div id="charSlots" class="charGrid"></div>
+
+      <p class="menuHint" id="charMsg"></p>
     </div>
+  </div>
+
+  <!-- Create Character Form Overlay -->
+  <div id="charCreateMenu" class="menuOverlay hidden">
+    <div class="menuCard">
+      <h2 class="menuTitle">Create Character</h2>
+      <p class="menuSub" id="ccSub">—</p>
+
+      <div class="authForm">
+        <input id="ccName" class="authInput" placeholder="Nama karakter" autocomplete="off" />
+        <select id="ccGender" class="authInput">
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+
+      <div class="menuBtns">
+        <button id="ccCreate" class="btn primary">Create</button>
+        <button id="ccCancel" class="btn">Cancel</button>
+      </div>
+
+      <p class="menuHint" id="ccMsg"></p>
+    </div>
+  </div>
+</div>
   </div>
 
 

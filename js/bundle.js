@@ -19,6 +19,7 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const randInt = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
 const randFloat = (a,b) => (Math.random()*(b-a))+a;
 const pick = (arr) => arr[Math.floor(Math.random()*arr.length)];
+const MAX_CHAR_SLOTS = 6;
 function genEnemy(plv){
   const lvl = clamp(plv + pick([-1,0,0,1]), 1, 20);
   return {
@@ -83,12 +84,19 @@ function dodgeChance(p,e){
 function newPlayer(){
   return {
     name:"Hero",
+    gender:"other",
     level:1,
+
+    // Base stats (for future scaling)
+    str:0, dex:0, int:0, vit:0, luk:0,
+
+    // Derived / combat stats (currently flat)
     maxHp:60, maxMp:25,
     hp:60, mp:25,
     atk:10, def:4, spd:7,
-    acc:0, luk:0,
+    acc:0,
     critChance:5, critDamage:0, evasion:5,
+
     deprecatedSkillCooldown:0,
     xp:0, xpToLevel:50,
     gold:0,
@@ -97,11 +105,21 @@ function newPlayer(){
   };
 }
 
+
 function normalizePlayer(p){
   if (!p) return p;
-  // Backward-compatible defaults for older saves
-  if (typeof p.acc !== "number") p.acc = 0;
+
+  // Base stats
+  if (typeof p.gender !== "string") p.gender = "other";
+  if (typeof p.str !== "number") p.str = 0;
+  if (typeof p.dex !== "number") p.dex = 0;
+  if (typeof p.int !== "number") p.int = 0;
+  if (typeof p.vit !== "number") p.vit = 0;
   if (typeof p.luk !== "number") p.luk = 0;
+
+  // Derived / combat stats
+  if (typeof p.acc !== "number") p.acc = 0;
+
   if (typeof p.critDamage !== "number") {
     p.critDamage = 0; // critical damage bonus % (starts at 0)
   } else if (p.critDamage >= 100) {
@@ -110,12 +128,23 @@ function normalizePlayer(p){
   }
   if (typeof p.critChance !== "number") p.critChance = 0;
   if (typeof p.evasion !== "number") p.evasion = 0;
+
+  // Safety defaults (older saves)
+  if (typeof p.level !== "number") p.level = 1;
+  if (typeof p.name !== "string") p.name = "Hero";
+
   return p;
 }
 
+
 function newState(){
   return {
-    player: newPlayer(),
+    // Character profiles
+    slots: Array.from({ length: MAX_CHAR_SLOTS }, () => null),
+    activeSlot: 0,
+
+    // Current runtime
+    player: normalizePlayer(newPlayer()),
     enemy: null,
     inBattle: false,
     playerDefending: false,
@@ -124,6 +153,7 @@ function newState(){
     battleTurn: 0 // "town" | "player" | "enemy"
   };
 }
+
 
 
 /* ===== storage.js ===== */
@@ -151,8 +181,68 @@ function safeGet(key){
     return null;
   }
 }
+function emptyProfilePayload(){
+  return {
+    v: 2,
+    t: Date.now(),
+    activeSlot: 0,
+    slots: Array.from({ length: MAX_CHAR_SLOTS }, () => null),
+  };
+}
+
+function normalizeProfilePayload(payload){
+  if (!payload) return emptyProfilePayload();
+
+  // New format: {slots, activeSlot}
+  if (Array.isArray(payload.slots)) {
+    const out = emptyProfilePayload();
+    out.t = payload.t || Date.now();
+    out.activeSlot = clamp(
+      (typeof payload.activeSlot === "number" ? payload.activeSlot : 0),
+      0,
+      MAX_CHAR_SLOTS - 1
+    );
+
+    for (let i = 0; i < MAX_CHAR_SLOTS; i++){
+      const slot = payload.slots[i];
+      out.slots[i] = slot ? normalizePlayer(slot) : null;
+    }
+    return out;
+  }
+
+  // Old format: {player}
+  if (payload.player) {
+    const out = emptyProfilePayload();
+    out.t = payload.t || Date.now();
+    out.activeSlot = 0;
+    out.slots[0] = normalizePlayer(payload.player);
+    return out;
+  }
+
+  return emptyProfilePayload();
+}
+
+function getProfilePayloadFromState(){
+  const out = emptyProfilePayload();
+  out.activeSlot = clamp(
+    (typeof state.activeSlot === "number" ? state.activeSlot : 0),
+    0,
+    MAX_CHAR_SLOTS - 1
+  );
+  out.slots = Array.from({ length: MAX_CHAR_SLOTS }, (_, i) => {
+    const slot = state.slots && state.slots[i];
+    return slot ? normalizePlayer(slot) : null;
+  });
+
+  // Persist current player into active slot
+  if (state.player) out.slots[out.activeSlot] = normalizePlayer(state.player);
+
+  out.t = Date.now();
+  return out;
+}
+
 function autosave(state){
-  const payload = { v:1, t:Date.now(), player: state.player };
+  const payload = getProfilePayloadFromState();
   return safeSet(SAVE_KEY, JSON.stringify(payload));
 }
 function save(state){
@@ -163,7 +253,7 @@ function load(){
   if(!raw) return null;
   try{
     const payload = JSON.parse(raw);
-    return payload?.player ? payload : null;
+    return payload || null;
   }catch{
     return null;
   }
@@ -211,11 +301,11 @@ async function ensureCloudUser() {
   return cloudUserCache;
 }
 
-async function cloudTrySaveCurrentPlayer() {
+async function cloudTrySaveCurrentProfile() {
   const me = await ensureCloudUser();
   if (!me) return { ok: false, skipped: true, reason: "unauth" };
 
-  const payload = { v: 1, t: Date.now(), player: state.player };
+  const payload = getProfilePayloadFromState();
   const r = await cloudSavePayload(payload);
   return { ok: !!r.ok, skipped: false, data: r.data };
 }
@@ -604,7 +694,7 @@ function endBattle(reason) {
   // Also sync to cloud (if logged in) so progress can be used cross-device
   (async () => {
     try {
-      const r = await cloudTrySaveCurrentPlayer();
+      const r = await cloudTrySaveCurrentProfile();
       if (r.ok) addLog("SAVE", "Cloud save tersinkron (battle selesai).");
     } catch (e) {
       console.error("[CLOUD AUTOSAVE] error", e);
@@ -798,7 +888,7 @@ function rest() {
   // Also sync to cloud (if logged in) so progress can be used cross-device
   (async () => {
     try {
-      const r = await cloudTrySaveCurrentPlayer();
+      const r = await cloudTrySaveCurrentProfile();
       if (r.ok) addLog("SAVE", "Cloud save tersinkron (battle selesai).");
     } catch (e) {
       console.error("[CLOUD AUTOSAVE] error", e);
@@ -959,6 +1049,24 @@ function openItemModal() {
 
 /* --------------------------- Read-only modals --------------------------- */
 
+
+function openProfileModal(){
+  const p = state.player || {};
+  modal.open(
+    "Profile",
+    [
+      { title: `STR : ${p.str || 0}`, desc: "Meningkatkan ATK dan Crit Damage", meta: "" },
+      { title: `DEX : ${p.dex || 0}`, desc: "Meningkatkan Evasion, Accuracy, dan SPD", meta: "" },
+      { title: `INT : ${p.int || 0}`, desc: "Meningkatkan MP", meta: "" },
+      { title: `VIT : ${p.vit || 0}`, desc: "Meningkatkan HP dan DEF", meta: "" },
+      { title: `LUK : ${p.luk || 0}`, desc: "Meningkatkan drop rate item dan Critical Chance", meta: "" },
+    ],
+    () => {}
+  );
+}
+
+
+
 function openEnemyStatsModal() {
   const e = state.enemy;
   if (!state.inBattle || !e) return;
@@ -1049,7 +1157,7 @@ function openTownMenu(){
       if (pick === "cloud_save") {
         (async () => {
           try {
-            const r = await cloudTrySaveCurrentPlayer();
+            const r = await cloudTrySaveCurrentProfile();
             if (r.skipped && r.reason === "unauth") {
               addLog("WARN", "Belum login cloud. Silakan login dulu.");
               // munculkan overlay login yang sudah ada di halaman
@@ -1090,8 +1198,16 @@ function openTownMenu(){
                 const payload =
                   (typeof cloud.data.data === "string") ? JSON.parse(cloud.data.data) : cloud.data.data;
 
-                if (payload?.player) {
-                  state.player = normalizePlayer(payload.player);
+                {
+                  const profile = normalizeProfilePayload(payload);
+
+                  state.slots = profile.slots;
+                  state.activeSlot = profile.activeSlot;
+
+                  state.player = state.slots[state.activeSlot]
+                    ? normalizePlayer(state.slots[state.activeSlot])
+                    : normalizePlayer(newPlayer());
+
                   state.enemy = null;
                   state.inBattle = false;
                   state.playerDefending = false;
@@ -1099,7 +1215,11 @@ function openTownMenu(){
                   setTurn("town");
                   state.battleTurn = 0;
 
-                  addLog("LOAD", "Berhasil load progress (cloud).");
+                  byId("log").innerHTML = "";
+                  addLog("LOAD", "Cloud dimuat. Pilih karakter.");
+
+                  autosave(state);
+                  openCharacterMenu("Cloud berhasil dimuat. Pilih karakter.");
                   refresh(state);
                   return;
                 }
@@ -1120,21 +1240,8 @@ function openTownMenu(){
       }
 
       if (pick === "new") {
-        if (!confirm("Mulai game baru?")) return;
-
-        state.player = normalizePlayer(newPlayer());
-        state.enemy = null;
-        state.inBattle = false;
-        state.playerDefending = false;
-        state.playerDodging = false;
-        setTurn("town");
-        state.battleTurn = 0;
-
-        byId("log").innerHTML = "";
-        addLog("INFO", "Game baru dimulai.");
-
-        autosave(state);
-        refresh(state);
+        if (!confirm("Mulai game baru untuk slot ini? (akan overwrite karakter di slot aktif)")) return;
+        startNewGame(state.activeSlot);
         return;
       }
     }
@@ -1162,11 +1269,18 @@ function bind() {
   const btnMenu = byId("btnMenu");
   if (btnMenu) btnMenu.onclick = openTownMenu;
 
-  // Profile & Shop (placeholder)
+  // Profile & Shop
   const btnProfile = byId("btnProfile");
-  if (btnProfile) btnProfile.onclick = () => addLog("INFO", "Profile (coming soon).");
+  if (btnProfile) btnProfile.onclick = openProfileModal;
   const btnShop = byId("btnShop");
   if (btnShop) btnShop.onclick = () => addLog("INFO", "Shop (coming soon).");
+
+  // Character create menu buttons
+  const ccCreate = byId("ccCreate");
+  if (ccCreate) ccCreate.onclick = handleCreateCharacter;
+  const ccCancel = byId("ccCancel");
+  if (ccCancel) ccCancel.onclick = cancelCreateCharacter;
+
 
   // Battle
   byId("btnAttack").onclick = () => {
@@ -1203,53 +1317,77 @@ function bind() {
 /* ----------------------------- Boot + Main Menu ----------------------------- */
 
 function applyLoaded(payload){
-  if (payload?.player) {
-    state.player = normalizePlayer(payload.player);
-    state.enemy = null;
-    state.inBattle = false;
-    state.playerDefending = false;
-  state.playerDodging = false;
-    setTurn("town");
-  state.battleTurn = 0;
-    byId("log").innerHTML = "";
-    addLog("LOAD", "Progress dimuat.");
-    refresh(state);
-    return true;
-  }
-  return false;
-}
+  const profile = normalizeProfilePayload(payload);
+  state.slots = profile.slots;
+  state.activeSlot = profile.activeSlot;
 
-function startNewGame(){
-  state.player = normalizePlayer(newPlayer());
+  state.player = state.slots[state.activeSlot]
+    ? normalizePlayer(state.slots[state.activeSlot])
+    : normalizePlayer(newPlayer());
+
   state.enemy = null;
   state.inBattle = false;
   state.playerDefending = false;
   state.playerDodging = false;
   setTurn("town");
   state.battleTurn = 0;
+
+  return state.slots.some(Boolean);
+}
+
+
+function startNewGame(slotIdx){
+  const idx = clamp(
+    (typeof slotIdx === "number" ? slotIdx : (state.activeSlot || 0)),
+    0,
+    MAX_CHAR_SLOTS - 1
+  );
+
+  const prev = (state.slots && state.slots[idx]) ? state.slots[idx] : state.player;
+
+  const p = normalizePlayer(newPlayer());
+  if (prev){
+    if (prev.name) p.name = prev.name;
+    if (prev.gender) p.gender = prev.gender;
+  }
+
+  state.slots[idx] = p;
+  state.activeSlot = idx;
+  state.player = p;
+
+  state.enemy = null;
+  state.inBattle = false;
+  state.playerDefending = false;
+  state.playerDodging = false;
+  setTurn("town");
+  state.battleTurn = 0;
+
   byId("log").innerHTML = "";
-  addLog("INFO", "Game baru dimulai.");
+  addLog("INFO", "Game baru dimulai (slot di-reset).");
+
   autosave(state);
 
-  // Also sync to cloud (if logged in) so progress can be used cross-device
   (async () => {
-    try {
-      const r = await cloudTrySaveCurrentPlayer();
-      if (r.ok) addLog("SAVE", "Cloud save tersinkron (battle selesai).");
-    } catch (e) {
-      console.error("[CLOUD AUTOSAVE] error", e);
-    }
+    try { await cloudTrySaveCurrentProfile(); } catch (e) {}
   })();
 
   refresh(state);
 }
 
 
-function showMenu(show){
-  const el = byId("mainMenu");
+
+function showOverlay(id, show){
+  const el = byId(id);
   if (!el) return;
   el.classList.toggle("hidden", !show);
 }
+
+// Backward-compat: showMenu() used for auth overlay
+function showMenu(show){ showOverlay("mainMenu", show); }
+
+function showAuth(show){ showOverlay("mainMenu", show); }
+function showCharMenu(show){ showOverlay("charMenu", show); }
+function showCharCreate(show){ showOverlay("charCreateMenu", show); }
 
 function setAuthMsg(msg, isError=false){
   const el = byId("authMsg");
@@ -1259,50 +1397,234 @@ function setAuthMsg(msg, isError=false){
   el.style.color = isError ? "#ffb4b4" : "";
 }
 
-async function syncCloudOrLocalAndEnter(){
+
+let pendingCreateSlot = 0;
+
+function setCharMsg(msg, isError=false){
+  const el = byId("charMsg");
+  if (!el) return;
+  el.textContent = msg || "";
+  el.style.color = isError ? "#ffb4b4" : "";
+}
+function setCcMsg(msg, isError=false){
+  const el = byId("ccMsg");
+  if (!el) return;
+  el.textContent = msg || "";
+  el.style.color = isError ? "#ffb4b4" : "";
+}
+
+function genderLabel(g){
+  const v = String(g || "other").toLowerCase();
+  if (v === "male") return "Male";
+  if (v === "female") return "Female";
+  return "Other";
+}
+
+function renderCharacterSlots(){
+  const wrap = byId("charSlots");
+  if (!wrap) return;
+
+  wrap.innerHTML = "";
+
+  for (let i = 0; i < MAX_CHAR_SLOTS; i++){
+    const slot = state.slots && state.slots[i] ? state.slots[i] : null;
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "charSlot" + (i === state.activeSlot ? " active" : "");
+
+    if (slot){
+      btn.innerHTML = `
+        <div class="charSlotTop">
+          <span class="charName">${escapeHtml(slot.name || "Hero")}</span>
+          <span class="pill muted">Lv${slot.level || 1}</span>
+        </div>
+        <div class="charSlotSub">${escapeHtml(genderLabel(slot.gender))}</div>
+      `;
+      btn.onclick = () => enterTownWithSlot(i);
+    } else {
+      btn.innerHTML = `
+        <div class="charSlotTop">
+          <span class="charName muted">Empty Slot</span>
+          <span class="pill muted">#${i+1}</span>
+        </div>
+        <div class="charSlotSub">Buat karakter baru</div>
+      `;
+      btn.onclick = () => openCreateCharacter(i);
+    }
+
+    wrap.appendChild(btn);
+  }
+}
+
+function openCharacterMenu(msg=""){
+  renderCharacterSlots();
+  setCharMsg(msg || "Pilih karakter atau buat baru.");
+  showCharMenu(true);
+  showCharCreate(false);
+}
+
+function openCreateCharacter(slotIdx){
+  pendingCreateSlot = clamp(slotIdx || 0, 0, MAX_CHAR_SLOTS - 1);
+
+  const sub = byId("ccSub");
+  if (sub) sub.textContent = `Slot #${pendingCreateSlot + 1}`;
+
+  const nameEl = byId("ccName");
+  const genderEl = byId("ccGender");
+  if (nameEl) nameEl.value = "";
+  if (genderEl) genderEl.value = "male";
+
+  setCcMsg("Isi nama dan gender.");
+  showCharMenu(false);
+  showCharCreate(true);
+}
+
+function cancelCreateCharacter(){
+  showCharCreate(false);
+  showCharMenu(true);
+  setCcMsg("");
+}
+
+function handleCreateCharacter(){
+  const nameEl = byId("ccName");
+  const genderEl = byId("ccGender");
+  const name = (nameEl?.value || "").toString().trim();
+  const gender = (genderEl?.value || "other").toString();
+
+  if (!name){
+    setCcMsg("Nama tidak boleh kosong.", true);
+    return;
+  }
+
+  const p = normalizePlayer(newPlayer());
+  p.name = name;
+  p.gender = gender;
+
+  state.slots[pendingCreateSlot] = p;
+  state.activeSlot = pendingCreateSlot;
+  state.player = p;
+
+  // Reset runtime state
+  state.enemy = null;
+  state.inBattle = false;
+  state.playerDefending = false;
+  state.playerDodging = false;
+  setTurn("town");
+  state.battleTurn = 0;
+
+  byId("log").innerHTML = "";
+  addLog("INFO", `Karakter dibuat: ${p.name} (${genderLabel(p.gender)})`);
+  autosave(state);
+
+  // Sync to cloud if logged in
+  (async () => {
+    try { await cloudTrySaveCurrentProfile(); } catch (e) {}
+  })();
+
+  showCharCreate(false);
+  showCharMenu(false);
+  refresh(state);
+}
+
+function enterTownWithSlot(slotIdx){
+  const idx = clamp(slotIdx || 0, 0, MAX_CHAR_SLOTS - 1);
+  const slot = state.slots && state.slots[idx] ? state.slots[idx] : null;
+  if (!slot) return;
+
+  state.activeSlot = idx;
+  state.player = normalizePlayer(slot);
+
+  state.enemy = null;
+  state.inBattle = false;
+  state.playerDefending = false;
+  state.playerDodging = false;
+  setTurn("town");
+  state.battleTurn = 0;
+
+  byId("log").innerHTML = "";
+  addLog("INFO", `Masuk sebagai ${state.player.name} (Lv${state.player.level}).`);
+
+  autosave(state);
+
+  (async () => {
+    try { await cloudTrySaveCurrentProfile(); } catch (e) {}
+  })();
+
+  showCharCreate(false);
+  showCharMenu(false);
+  refresh(state);
+}
+
+
+async function syncCloudOrLocalAndShowCharacterMenu(){
+  let profile = null;
+  let cloudHadSave = false;
+
   // 1) coba load cloud dulu (kalau login)
   try{
     const me = await ensureCloudUser();
     if (me){
       setAuthMsg("Memuat cloud save...", false);
       const cloud = await cloudLoadPayload();
+
       if (cloud.ok && cloud.data && cloud.data.hasSave && cloud.data.data){
-        const payload = (typeof cloud.data.data === "string") ? JSON.parse(cloud.data.data) : cloud.data.data;
-        if (applyLoaded(payload)){
-          showMenu(false);
-          return true;
-        }
+        cloudHadSave = true;
+        const raw = cloud.data.data;
+        const payload = (typeof raw === "string") ? JSON.parse(raw) : raw;
+        profile = normalizeProfilePayload(payload);
       }
     }
   }catch(e){
     console.error("[CLOUD LOAD] error", e);
   }
 
-  // 2) kalau cloud belum ada save, upload save lokal (jika ada & sudah login), lalu pakai lokal
+  // 2) kalau cloud belum ada save, pakai lokal (kalau ada), lalu upload ke cloud
   const local = load();
-  if (local?.player){
+  if (!profile && local){
+    profile = normalizeProfilePayload(local);
+
     try{
       const me = await ensureCloudUser();
-      if (me){
+      if (me && !cloudHadSave){
         setAuthMsg("Cloud kosong. Upload save lokal ke cloud...", false);
-        await cloudSavePayload(local);
+        await cloudSavePayload(profile);
         addLog("CLOUD", "Save lokal berhasil di-upload ke cloud.");
       }
     }catch(e){
       console.error("[CLOUD UPLOAD] error", e);
     }
-
-    if (applyLoaded(local)){
-      showMenu(false);
-      return true;
-    }
   }
 
-  // 3) tidak ada apa-apa → mulai baru
-  showMenu(false);
-  startNewGame();
-  return false;
+  // 3) tidak ada apa-apa → profile kosong (user akan buat karakter)
+  if (!profile) profile = emptyProfilePayload();
+
+  // Apply to runtime state
+  state.slots = profile.slots;
+  state.activeSlot = profile.activeSlot;
+
+  // Set player to active slot if exists, otherwise placeholder (will be replaced after create/select)
+  state.player = state.slots[state.activeSlot]
+    ? normalizePlayer(state.slots[state.activeSlot])
+    : normalizePlayer(newPlayer());
+
+  state.enemy = null;
+  state.inBattle = false;
+  state.playerDefending = false;
+  state.playerDodging = false;
+  setTurn("town");
+  state.battleTurn = 0;
+
+  byId("log").innerHTML = "";
+  refresh(state);
+
+  // Show character menu
+  showAuth(false);
+  openCharacterMenu();
+
+  return true;
 }
+
 
 (function boot() {
   bind();
@@ -1345,7 +1667,7 @@ async function syncCloudOrLocalAndEnter(){
     cloudUserCache = null;
     await ensureCloudUser();
 
-    await syncCloudOrLocalAndEnter();
+    await syncCloudOrLocalAndShowCharacterMenu();
   };
 
   const doRegister = async () => {
@@ -1375,11 +1697,10 @@ async function syncCloudOrLocalAndEnter(){
   if (btnRegister) btnRegister.onclick = () => doRegister();
 
   if (btnOffline) btnOffline.onclick = () => {
-    showMenu(false);
+    showAuth(false);
     const payload = load();
-    if (!applyLoaded(payload)) {
-      startNewGame();
-    }
+    applyLoaded(payload);
+    openCharacterMenu("Mode offline. Pilih karakter / buat baru.");
   };
 
   // Enter key triggers login
@@ -1396,7 +1717,7 @@ async function syncCloudOrLocalAndEnter(){
       const me = await ensureCloudUser();
       if (me){
         setAuthMsg("Login terdeteksi. Memuat save...", false);
-        await syncCloudOrLocalAndEnter();
+        await syncCloudOrLocalAndShowCharacterMenu();
       }else{
         setAuthMsg("Silakan login / register untuk cloud save.", false);
       }
