@@ -20,6 +20,7 @@ const randInt = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
 const randFloat = (a,b) => (Math.random()*(b-a))+a;
 const pick = (arr) => arr[Math.floor(Math.random()*arr.length)];
 const MAX_CHAR_SLOTS = 6;
+const STAT_POINTS_PER_LEVEL = 3;
 function genEnemy(plv){
   const lvl = clamp(plv + pick([-1,0,0,1]), 1, 20);
   return {
@@ -89,6 +90,7 @@ function newPlayer(){
 
     // Base stats (for future scaling)
     str:0, dex:0, int:0, vit:0, luk:0,
+    statPoints:0,
 
     // Derived / combat stats (currently flat)
     maxHp:60, maxMp:25,
@@ -116,6 +118,7 @@ function normalizePlayer(p){
   if (typeof p.int !== "number") p.int = 0;
   if (typeof p.vit !== "number") p.vit = 0;
   if (typeof p.luk !== "number") p.luk = 0;
+  if (typeof p.statPoints !== "number") p.statPoints = 0;
 
   // Derived / combat stats
   if (typeof p.acc !== "number") p.acc = 0;
@@ -293,6 +296,14 @@ async function cloudLoadPayload() {
   return { ok: res.ok, data };
 }
 
+async function cloudLogout(){
+  // Backend may implement /api/logout to clear cookie session.
+  try { await apiJson("/api/logout", { method: "POST" }); } catch (e) {}
+  cloudUserCache = null;
+  return true;
+}
+
+
 
 let cloudUserCache = null;
 async function ensureCloudUser() {
@@ -424,22 +435,53 @@ const modal = {
       if (c.className) row.classList.add(...String(c.className).split(/\s+/).filter(Boolean));
       if (c.style) row.style.cssText += String(c.style);
 
-      row.innerHTML = `
-        <div>
-          <b>${escapeHtml(c.title)}</b>
-          <div class="desc">${escapeHtml(c.desc || "")}</div>
-        </div>
-        <div class="right muted">${escapeHtml(c.meta || "")}</div>
+      const left = document.createElement("div");
+      left.innerHTML = `
+        <b>${escapeHtml(c.title)}</b>
+        <div class="desc">${escapeHtml(c.desc || "")}</div>
       `;
-      // Only clickable if value is provided
-      if (c.value !== undefined) {
+
+      const right = document.createElement("div");
+      right.className = "right muted";
+
+      // Optional: render buttons in right area (used by Profile stat allocation)
+      if (Array.isArray(c.buttons) && c.buttons.length) {
+        right.classList.add("btnGroup");
+        right.innerHTML = c.buttons.map((b, idx) => {
+          const dis = b.disabled ? "disabled" : "";
+          const cls = ["miniBtn", b.className || ""].join(" ").trim();
+          return `<button type="button" class="${escapeHtml(cls)}" data-v="${escapeHtml(String(b.value))}" ${dis}>${escapeHtml(b.text)}</button>`;
+        }).join("");
+      } else {
+        right.textContent = c.meta || "";
+      }
+
+      row.appendChild(left);
+      row.appendChild(right);
+
+      // Clickable row (only if value provided and no buttons)
+      if (c.value !== undefined && !(Array.isArray(c.buttons) && c.buttons.length)) {
         row.onclick = () => {
-          modal.close();
+          if (!c.keepOpen) modal.close();
           onPick(c.value);
         };
       } else {
         row.classList.add("readonly");
       }
+
+      // Button handlers
+      if (Array.isArray(c.buttons) && c.buttons.length) {
+        right.querySelectorAll("button").forEach((btn) => {
+          btn.onclick = (e) => {
+            e.stopPropagation();
+            if (btn.disabled) return;
+            const v = btn.getAttribute("data-v");
+            if (!c.keepOpen) modal.close();
+            onPick(v);
+          };
+        });
+      }
+
       body.appendChild(row);
     });
 
@@ -713,6 +755,7 @@ function levelUp() {
   const prevMaxMp = p.maxMp;
 
   p.level += 1;
+  p.statPoints = (p.statPoints || 0) + STAT_POINTS_PER_LEVEL;
 
   // Level-up growth (simple): HP, MP, slight ATK
   p.maxHp += 10;
@@ -727,7 +770,7 @@ function levelUp() {
 
   const dhp = p.maxHp - prevMaxHp;
   const dmp = p.maxMp - prevMaxMp;
-  addLog("LEVEL", `Naik ke Lv${p.level}! HP/MP Meningkat +${dhp}/+${dmp}.`);
+  addLog("LEVEL", `Naik ke Lv${p.level}! HP/MP Meningkat +${dhp}/+${dmp}. +${STAT_POINTS_PER_LEVEL} Stat Points.`);
 }
 
 function gainXp(amount) {
@@ -1050,20 +1093,111 @@ function openItemModal() {
 /* --------------------------- Read-only modals --------------------------- */
 
 
+function applyAttributeDelta(statKey, delta){
+  const p = state.player;
+  if (!p) return false;
+
+  p.statPoints = (p.statPoints || 0);
+
+  const key = String(statKey || "").toLowerCase();
+
+  if (delta > 0 && p.statPoints < delta) return false;
+  if (delta < 0 && (p[key] || 0) < (-delta)) return false;
+
+  // apply to base attr
+  p[key] = (p[key] || 0) + delta;
+  p.statPoints -= delta;
+
+  // apply derived changes (simple, can be rebalanced later)
+  if (key === "str") {
+    p.atk = (p.atk || 0) + (1 * delta);
+    p.critDamage = Math.max(0, (p.critDamage || 0) + (1 * delta)); // bonus % (starts at 0)
+  }
+  if (key === "dex") {
+    p.evasion = clamp((p.evasion || 0) + (1 * delta), 0, 100);
+    p.acc = Math.max(0, (p.acc || 0) + (1 * delta));
+    p.spd = Math.max(0, (p.spd || 0) + (1 * delta));
+  }
+  if (key === "int") {
+    p.maxMp = Math.max(0, (p.maxMp || 0) + (3 * delta));
+    p.mp = clamp((p.mp || 0) + (3 * delta), 0, p.maxMp);
+  }
+  if (key === "vit") {
+    p.maxHp = Math.max(1, (p.maxHp || 1) + (5 * delta));
+    p.hp = clamp((p.hp || 0) + (5 * delta), 0, p.maxHp);
+    p.def = Math.max(0, (p.def || 0) + (1 * delta));
+  }
+  if (key === "luk") {
+    p.critChance = clamp((p.critChance || 0) + (1 * delta), 0, 100);
+    // drop rate bonus will be used later (loot system). For now: only crit chance.
+  }
+
+  // Hard clamps
+  p.atk = Math.max(0, p.atk || 0);
+  p.def = Math.max(0, p.def || 0);
+  p.spd = Math.max(0, p.spd || 0);
+  p.critDamage = Math.max(0, p.critDamage || 0);
+  p.statPoints = Math.max(0, p.statPoints || 0);
+
+  // persist to current slot
+  if (Array.isArray(state.slots)) state.slots[state.activeSlot] = p;
+
+  autosave(state);
+  (async () => { try { await cloudTrySaveCurrentProfile(); } catch(e) {} })();
+  refresh(state);
+
+  return true;
+}
+
 function openProfileModal(){
   const p = state.player || {};
+  const pts = p.statPoints || 0;
+
+  const mk = (key, label, desc) => {
+    const v = p[key] || 0;
+    return {
+      title: `${label} : ${v}`,
+      desc,
+      meta: "",
+      buttons: [
+        { text: "−", value: `${key}:-1`, disabled: v <= 0 },
+        { text: "+", value: `${key}:+1`, disabled: pts <= 0 },
+      ],
+      keepOpen: true,
+    };
+  };
+
   modal.open(
     "Profile",
     [
-      { title: `STR : ${p.str || 0}`, desc: "Meningkatkan ATK dan Crit Damage", meta: "" },
-      { title: `DEX : ${p.dex || 0}`, desc: "Meningkatkan Evasion, Accuracy, dan SPD", meta: "" },
-      { title: `INT : ${p.int || 0}`, desc: "Meningkatkan MP", meta: "" },
-      { title: `VIT : ${p.vit || 0}`, desc: "Meningkatkan HP dan DEF", meta: "" },
-      { title: `LUK : ${p.luk || 0}`, desc: "Meningkatkan drop rate item dan Critical Chance", meta: "" },
+      { title: `Stat Points : ${pts}`, desc: "Dapatkan dari level up. Gunakan tombol + untuk menambah stat.", meta: "" },
+      mk("str", "STR", "Meningkatkan ATK dan Crit Damage"),
+      mk("dex", "DEX", "Meningkatkan Evasion, Accuracy, dan SPD"),
+      mk("int", "INT", "Meningkatkan MP"),
+      mk("vit", "VIT", "Meningkatkan HP dan DEF"),
+      mk("luk", "LUK", "Meningkatkan drop rate item dan Critical Chance"),
     ],
-    () => {}
+    (pick) => {
+      const s = String(pick || "");
+      const m = s.match(/^(str|dex|int|vit|luk):([+-]?\d+)$/);
+      if (!m) return;
+
+      const key = m[1];
+      const delta = parseInt(m[2], 10) || 0;
+      if (!delta) return;
+
+      const ok = applyAttributeDelta(key, delta);
+      if (!ok){
+        // re-render anyway to refresh disabled buttons
+        openProfileModal();
+        return;
+      }
+      // re-render to update values + points
+      openProfileModal();
+    }
   );
 }
+
 
 
 
@@ -1151,6 +1285,8 @@ function openTownMenu(){
     [
       { title: "Load Cloud", desc: "Load progress dari cloud.", meta: "", value: "cloud_load" },
       { title: "Save Cloud", desc: "Save progress ke cloud.", meta: "", value: "cloud_save" },
+      { title: "Ganti Karakter", desc: "Pilih slot karakter lain.", meta: "", value: "switch_char" },
+      { title: "Log out", desc: "Keluar dari akun cloud dan kembali ke halaman login.", meta: "", value: "logout", className:"danger" },
       { title: "New Game",  desc: "Memulai baru.", meta: "", value: "new" },
     ],
     (pick) => {
@@ -1235,6 +1371,26 @@ function openTownMenu(){
           }
 
           refresh(state);
+        })();
+        return;
+      }
+
+      if (pick === "switch_char") {
+        // Save current progress then open character select
+        autosave(state);
+        (async () => { try { await cloudTrySaveCurrentProfile(); } catch(e) {} })();
+        openCharacterMenu("Pilih karakter yang akan dimainkan.");
+        return;
+      }
+
+      if (pick === "logout") {
+        (async () => {
+          try { await cloudLogout(); } catch(e) {}
+          // Hide any character overlays and show auth overlay
+          showCharCreate(false);
+          showCharMenu(false);
+          showAuth(true);
+          setAuthMsg("Kamu sudah logout. Silakan login lagi.", false);
         })();
         return;
       }
