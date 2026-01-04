@@ -21,6 +21,7 @@ export async function onRequest({ request, env }) {
     return json({ message: "D1 binding 'DB' tidak ditemukan di environment ini. Pastikan Pages -> Settings -> Functions -> D1 bindings sudah di-set untuk environment yang kamu pakai (Preview/Production), lalu redeploy." }, { status: 500 });
   }
 
+  try {
   const token = getCookie(request, "session");
   if (token) {
     try {
@@ -33,4 +34,7 @@ export async function onRequest({ request, env }) {
   // clear cookie
   const cleared = setCookie("session", "", { maxAge: 0 });
   return json({ ok: true }, { headers: { "Set-Cookie": cleared } });
+  } catch (e) {
+    return json({ message: "Server error (logout): " + (e?.message || String(e)) }, { status: 500 });
+  }
 }

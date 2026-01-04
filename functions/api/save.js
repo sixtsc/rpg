@@ -21,6 +21,7 @@ export async function onRequest({ request, env }) {
     return json({ message: "D1 binding 'DB' tidak ditemukan di environment ini. Pastikan Pages -> Settings -> Functions -> D1 bindings sudah di-set untuk environment yang kamu pakai (Preview/Production), lalu redeploy." }, { status: 500 });
   }
 
+  try {
   const userId = await authUserId(request, env);
   if (!userId) return json({ error: "unauthorized", message: "Belum login." }, { status: 401 });
 
@@ -47,4 +48,7 @@ export async function onRequest({ request, env }) {
     .run();
 
   return json({ ok: true });
+  } catch (e) {
+    return json({ message: "Server error (cloud-save): " + (e?.message || String(e)) }, { status: 500 });
+  }
 }

@@ -21,6 +21,7 @@ export async function onRequest({ request, env }) {
     return json({ message: "D1 binding 'DB' tidak ditemukan di environment ini. Pastikan Pages -> Settings -> Functions -> D1 bindings sudah di-set untuk environment yang kamu pakai (Preview/Production), lalu redeploy." }, { status: 500 });
   }
 
+  try {
   let body;
   try {
     body = await request.json();
@@ -48,4 +49,7 @@ export async function onRequest({ request, env }) {
     .run();
 
   return json({ ok: true });
+  } catch (e) {
+    return json({ message: "Server error (register): " + (e?.message || String(e)) }, { status: 500 });
+  }
 }

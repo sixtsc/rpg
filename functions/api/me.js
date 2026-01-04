@@ -21,9 +21,13 @@ export async function onRequest({ request, env }) {
     return json({ message: "D1 binding 'DB' tidak ditemukan di environment ini. Pastikan Pages -> Settings -> Functions -> D1 bindings sudah di-set untuk environment yang kamu pakai (Preview/Production), lalu redeploy." }, { status: 500 });
   }
 
+  try {
   const userId = await authUserId(request, env);
   if (!userId) return json({ ok: false, loggedIn: false });
 
   const row = await env.DB.prepare("SELECT username FROM users WHERE id = ?").bind(userId).first();
   return json({ ok: true, loggedIn: true, user: { id: userId, username: row?.username || "" } });
+  } catch (e) {
+    return json({ message: "Server error (me): " + (e?.message || String(e)) }, { status: 500 });
+  }
 }
