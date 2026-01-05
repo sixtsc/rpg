@@ -45,6 +45,10 @@ h1{ font-size:18px; margin:0; font-weight:800; letter-spacing:.2px; }
   color:#c8d6e6;
   font-size:12px;
 }
+.statusPill[data-tone="good"]{ border-color: rgba(47,218,119,0.55); color: var(--good); }
+.statusPill[data-tone="warn"]{ border-color: rgba(209,123,47,0.65); color: var(--warn); }
+.statusPill[data-tone="danger"]{ border-color: rgba(255,120,120,0.65); color:#ffb4b4; }
+.statusPill[data-tone="muted"]{ color:var(--muted); }
 
 .grid{
   display:grid;
@@ -58,9 +62,6 @@ h1{ font-size:18px; margin:0; font-weight:800; letter-spacing:.2px; }
   .grid{ grid-template-columns:1fr 1fr; }
   .sectionTitle{ flex-wrap:wrap; }
 }
-
-/* log card memanjang 2 kolom (full width) */
-.logCard{ grid-column: 1 / -1; }
 
 .card{
   background:var(--card);
@@ -185,11 +186,7 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
 }
 .choice.xpRow > *{ position:relative; z-index:1; }
 
-/* Log tag colors */
-.log .entry.log-xp .tag{ color: var(--good); border-color: rgba(47,218,119,0.35); }
-.log .entry.log-gold .tag{ color: var(--xp); border-color: rgba(242,201,76,0.40); }
-
-/* Mobile: shrink a bit so log is more visible */
+/* Mobile: tighten layout on smaller screens */
 @media (max-width:520px){
   .wrap{ padding:10px; }
   .card{ padding:10px; }
@@ -200,39 +197,7 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   .battleActions{ gap:8px; }
   .battlePrimary{ gap:8px; }
   .btnRow{ gap:7px; }
-  .log{ height:340px; }
 }
-
-.log{
-  height:360px;
-  overflow:auto;
-  padding:10px;
-  background:#0b0f14;
-  border:1px solid var(--line);
-  border-radius:14px;
-  font-size:13px;
-  line-height:1.4;
-}
-
-@media (max-width:820px){
-  .log{ height:320px; }
-}
-
-.log .entry{ margin:0 0 8px; }
-.log .tag{
-  display:inline-block;
-  font-size:11px;
-  padding:1px 8px;
-  border:1px solid var(--line);
-  border-radius:999px;
-  margin-right:6px;
-  color:#c8d6e6;
-}
-
-/* Log color tweaks */
-.log .entry.log-xp .tag{ color: var(--good); border-color: rgba(47,218,119,.35); }
-.log .entry.log-gold .tag{ color: var(--xp); border-color: rgba(242,201,76,.35); }
-.log .time{ color:var(--muted); font-size:11px; margin-left:6px; }
 
 /* Modal */
 .modalBackdrop{
@@ -326,7 +291,7 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
 /* Read-only modal rows (disable hover/click affordance) */
 .choice.readonly{ cursor: default; }
 
-/* Mobile tighten: make card/buttons a bit smaller so log is more visible */
+/* Mobile tighten: make card/buttons a bit smaller */
 @media (max-width:520px){
   .wrap{ padding:10px; }
   .card{ padding:10px; }
@@ -336,7 +301,6 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   button{ padding:11px 12px; border-radius:13px; }
   .battleActions{ gap:8px; }
   .battlePrimary{ gap:8px; }
-  .log{ height:340px; }
 }
 
 .choice b{ display:block; margin-bottom:2px; }

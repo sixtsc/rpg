@@ -2,6 +2,7 @@ import { newState, newPlayer } from "./state.js";
 import { genEnemy, calcDamage, escapeChance, randInt, clamp } from "./engine.js";
 import { autosave, save, load } from "./storage.js";
 import { addLog, refresh, modal } from "./ui.js";
+import { ITEMS } from "./data.js";
 
 const byId = (id) => document.getElementById(id);
 
@@ -64,16 +65,77 @@ function gainXp(amount) {
   }
 }
 
+function rollBattleDrops(){
+  const table = [
+    { key:"potion", chance:0.35, qty:1 },
+    { key:"ether", chance:0.25, qty:1 },
+  ];
+
+  const drops = [];
+  table.forEach((entry) => {
+    if (Math.random() < entry.chance) {
+      const item = ITEMS[entry.key];
+      if (item) drops.push({ ...item, key: entry.key, qty: entry.qty || 1 });
+    }
+  });
+  return drops;
+}
+
+function applyDropsToInventory(drops){
+  const inv = state.player.inv || {};
+  const rewarded = [];
+
+  drops.forEach((drop) => {
+    if (!drop || !drop.name) return;
+    const name = drop.name;
+    if (!inv[name]) inv[name] = { ...drop, qty: 0 };
+    inv[name].qty = (inv[name].qty || 0) + (drop.qty || 1);
+    rewarded.push({ name, qty: drop.qty || 1, desc: drop.desc || "" });
+  });
+
+  state.player.inv = inv;
+  return rewarded;
+}
+
+function showVictoryPopup(reward){
+  const rows = [
+    { title: "Kemenangan!", desc: reward.enemyName ? `Mengalahkan ${reward.enemyName}.` : "Menang!", meta: "" },
+    { title: `Gold +${reward.gold}`, desc: "", meta: "" },
+    { title: `EXP +${reward.xp}`, desc: "", meta: "" },
+  ];
+
+  if (reward.drops && reward.drops.length){
+    rows.push({ title: "Drop", desc: "", meta: "", className: "readonly" });
+    reward.drops.forEach((d) => rows.push({ title: d.name, desc: d.desc || "Item drop.", meta: `x${d.qty || 1}` }));
+  } else {
+    rows.push({ title: "Drop", desc: "Tidak ada drop.", meta: "" });
+  }
+
+  modal.open("Battle Victory", rows, () => {});
+}
+
 function winBattle() {
   const p = state.player;
   const e = state.enemy;
 
-  addLog("WIN", `Menang melawan ${e.name}!`);
-  p.gold += e.goldReward;
-  addLog("GOLD", `+${e.goldReward} gold (Total: ${p.gold})`);
+  const reward = {
+    enemyName: e?.name || "musuh",
+    gold: e?.goldReward || 0,
+    xp: e?.xpReward || 0,
+    drops: [],
+  };
 
-  gainXp(e.xpReward);
+  addLog("WIN", `Menang melawan ${reward.enemyName}!`);
+  p.gold += reward.gold;
+  addLog("GOLD", `+${reward.gold} gold (Total: ${p.gold})`);
+
+  gainXp(reward.xp);
+
+  const drops = rollBattleDrops(e);
+  reward.drops = applyDropsToInventory(drops);
+
   endBattle("Pertarungan selesai.");
+  showVictoryPopup(reward);
 }
 
 function loseBattle() {
@@ -431,7 +493,8 @@ function openTownMenu(){
         setTurn("town");
   state.battleTurn = 0;
 
-        byId("log").innerHTML = "";
+        const logEl = byId("log");
+        if (logEl) logEl.innerHTML = "";
         addLog("INFO", "Game baru dimulai.");
 
         autosave(state);
@@ -506,7 +569,8 @@ function applyLoaded(payload){
   state.playerDodging = false;
     setTurn("town");
   state.battleTurn = 0;
-    byId("log").innerHTML = "";
+    const logEl = byId("log");
+    if (logEl) logEl.innerHTML = "";
     addLog("LOAD", "Progress dimuat.");
     refresh(state);
     return true;
@@ -522,7 +586,8 @@ function startNewGame(){
   state.playerDodging = false;
   setTurn("town");
   state.battleTurn = 0;
-  byId("log").innerHTML = "";
+  const logEl = byId("log");
+  if (logEl) logEl.innerHTML = "";
   addLog("INFO", "Game baru dimulai.");
   autosave(state);
   refresh(state);

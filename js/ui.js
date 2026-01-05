@@ -2,6 +2,13 @@ import { clamp } from "./engine.js";
 
 const $ = (id) => document.getElementById(id);
 
+function setStatus(msg, tone = "info") {
+  const statusEl = $("meta");
+  if (!statusEl) return;
+  statusEl.textContent = msg || "—";
+  statusEl.dataset.tone = tone;
+}
+
 export function timeStr() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
@@ -17,18 +24,19 @@ export function escapeHtml(s) {
 }
 
 export function addLog(tag, msg) {
-  const logEl = $("log");
-  const div = document.createElement("div");
-  div.className = "entry";
-
-  // Color helpers (tag-based)
-  const t = String(tag || "").toUpperCase();
-  if (t === "XP" || t === "EXP") div.classList.add("log-xp");
-  if (t === "GOLD") div.classList.add("log-gold");
-
-  div.innerHTML = `<span class="tag">${escapeHtml(tag)}</span>${escapeHtml(msg)}<span class="time"> ${timeStr()}</span>`;
-  logEl.prepend(div);
-  logEl.scrollTop = 0;
+  const toneMap = {
+    WARN: "warn",
+    LOAD: "muted",
+    SAVE: "good",
+    WIN: "good",
+    GOLD: "good",
+    XP: "good",
+    EXP: "good",
+    LOSE: "danger",
+  };
+  const tone = toneMap[String(tag || "").toUpperCase()] || "info";
+  const text = tag ? `[${tag}] ${msg}` : msg;
+  setStatus(text, tone);
 }
 
 export function setBar(el, cur, max) {
@@ -101,16 +109,6 @@ export function refresh(state) {
     btnStatsTown.textContent = "Stats";
   }
 
-  // Log hint / Turn indicator
-  const logHint = $("logHint");
-  if (logHint) {
-    if (state.inBattle && state.enemy) {
-      logHint.textContent = state.turn === "enemy" ? "Turn: Musuh" : "Turn: Kamu";
-    } else {
-      logHint.textContent = "Town";
-    }
-  }
-
   // Player title + name
   const pNameTitle = $("pNameTitle");
   if (pNameTitle) pNameTitle.textContent = p.name;
@@ -181,6 +179,7 @@ export function refresh(state) {
   }
 
   const metaEl = $("meta");
-  if (metaEl) metaEl.textContent = "";
+  if (!state.inBattle && metaEl && (!metaEl.textContent || metaEl.textContent.includes("—"))) {
+    setStatus("Siap bertualang.", "info");
+  }
 }
-
