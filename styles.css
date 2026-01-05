@@ -134,6 +134,7 @@ button{
 button.primary{ border-color:var(--accent); background:#19305a; }
 button.good{ border-color:var(--good); background:#122a1e; }
 button.warn{ border-color:var(--warn); background:#2a1e12; }
+button.danger{ border-color: rgba(255, 120, 120, .55); background:#2a1212; color:#ffb4b4; }
 /* Skill button (purple) */
 #btnSkill{ border-color:#8b5cf6; background:rgba(88,28,135,.35); }
 button:disabled{ opacity:.45; cursor:not-allowed; }
@@ -439,6 +440,15 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
 .charSlot.active{
   border-color:#4aa3ff;
   box-shadow: 0 0 0 2px rgba(74,163,255,.22) inset;
+}
+
+.charFooter{ margin-top: 10px; }
+.charActions{
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+  align-items:center;
+  flex-wrap:wrap;
 }
 .charSlotTop{
   display:flex;

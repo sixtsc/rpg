@@ -1593,6 +1593,7 @@ function setAuthMsg(msg, isError=false){
 
 
 let pendingCreateSlot = 0;
+let selectedCharSlot = 0;
 
 function setCharMsg(msg, isError=false){
   const el = byId("charMsg");
@@ -1623,15 +1624,9 @@ function renderCharacterSlots(){
   for (let i = 0; i < MAX_CHAR_SLOTS; i++){
     const slot = state.slots && state.slots[i] ? state.slots[i] : null;
 
-    const item = document.createElement("div");
-    item.className = "charSlotWrap";
-
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "charSlot" + (i === state.activeSlot ? " active" : "");
-
-    const actions = document.createElement("div");
-    actions.className = "charSlotActions";
+    btn.className = "charSlot" + (i === selectedCharSlot ? " active" : "");
 
     if (slot){
       btn.innerHTML = `
@@ -1641,31 +1636,6 @@ function renderCharacterSlots(){
         </div>
         <div class="charSlotSub">${escapeHtml(genderLabel(slot.gender))}</div>
       `;
-      btn.onclick = () => enterTownWithSlot(i);
-
-      // New game / overwrite -> go to create character UI for this slot
-      const bNew = document.createElement("button");
-      bNew.type = "button";
-      bNew.className = "charSlotMini";
-      bNew.textContent = "New";
-      bNew.onclick = (ev) => {
-        ev.stopPropagation();
-        if (!confirm(`Buat karakter baru untuk overwrite Slot #${i+1}?`)) return;
-        openCreateCharacter(i, true);
-      };
-
-      // Delete character
-      const bDel = document.createElement("button");
-      bDel.type = "button";
-      bDel.className = "charSlotMini danger";
-      bDel.textContent = "Hapus";
-      bDel.onclick = (ev) => {
-        ev.stopPropagation();
-        deleteCharacter(i);
-      };
-
-      actions.appendChild(bNew);
-      actions.appendChild(bDel);
     } else {
       btn.innerHTML = `
         <div class="charSlotTop">
@@ -1674,25 +1644,63 @@ function renderCharacterSlots(){
         </div>
         <div class="charSlotSub">Buat karakter baru</div>
       `;
-      btn.onclick = () => openCreateCharacter(i, false);
-
-      // keep layout consistent
-      const spacer = document.createElement("button");
-      spacer.type = "button";
-      spacer.className = "charSlotMini";
-      spacer.textContent = "—";
-      spacer.disabled = true;
-      actions.appendChild(spacer);
     }
 
-    item.appendChild(btn);
-    item.appendChild(actions);
-    wrap.appendChild(item);
+    btn.onclick = () => selectCharSlot(i);
+    wrap.appendChild(btn);
   }
 }
 
-function openCharacterMenu(msg=""){
+function selectCharSlot(i){
+  selectedCharSlot = clamp(i, 0, MAX_CHAR_SLOTS - 1);
   renderCharacterSlots();
+  renderCharActions();
+}
+
+function renderCharActions(){
+  const wrap = byId("charActions");
+  if (!wrap) return;
+
+  wrap.innerHTML = "";
+
+  const idx = clamp(selectedCharSlot || 0, 0, MAX_CHAR_SLOTS - 1);
+  const slot = state.slots && state.slots[idx] ? state.slots[idx] : null;
+
+  if (!slot){
+    const bCreate = document.createElement("button");
+    bCreate.type = "button";
+    bCreate.className = "primary";
+    bCreate.textContent = "Create";
+    bCreate.onclick = () => openCreateCharacter(idx, false);
+    wrap.appendChild(bCreate);
+    return;
+  }
+
+  const bPlay = document.createElement("button");
+  bPlay.type = "button";
+  bPlay.className = "good";
+  bPlay.textContent = "Play";
+  bPlay.onclick = () => enterTownWithSlot(idx);
+
+  const bDel = document.createElement("button");
+  bDel.type = "button";
+  bDel.className = "danger";
+  bDel.textContent = "Hapus";
+  bDel.onclick = () => deleteCharacter(idx);
+
+  wrap.appendChild(bPlay);
+  wrap.appendChild(bDel);
+}
+
+function openCharacterMenu(msg=""){
+  // pick a sensible default selection
+  const preferred = clamp((typeof state.activeSlot === "number" ? state.activeSlot : 0), 0, MAX_CHAR_SLOTS - 1);
+  const hasPreferred = state.slots && state.slots[preferred];
+  const firstFilled = state.slots ? state.slots.findIndex(Boolean) : -1;
+  selectedCharSlot = hasPreferred ? preferred : (firstFilled >= 0 ? firstFilled : 0);
+
+  renderCharacterSlots();
+  renderCharActions();
   setCharMsg(msg || "Pilih karakter atau buat baru.");
   showCharMenu(true);
   showCharCreate(false);
@@ -1721,6 +1729,8 @@ function openCreateCharacter(slotIdx, overwrite=false){
 function cancelCreateCharacter(){
   showCharCreate(false);
   showCharMenu(true);
+  renderCharacterSlots();
+  renderCharActions();
   setCcMsg("");
 }
 
@@ -1753,7 +1763,10 @@ function deleteCharacter(slotIdx){
   autosave(state);
   (async () => { try { await cloudTrySaveCurrentProfile(); } catch(e) {} })();
 
+  // Keep selection on the same index (now empty) so user can press Create.
+  selectedCharSlot = clamp(idx, 0, MAX_CHAR_SLOTS - 1);
   renderCharacterSlots();
+  renderCharActions();
   setCharMsg("Karakter dihapus.", false);
   showCharMenu(true);
   showCharCreate(false);
