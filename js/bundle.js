@@ -24,20 +24,32 @@ const STAT_POINTS_PER_LEVEL = 1;
 const MAX_LEVEL = 10;
 function genEnemy(plv){
   const lvl = clamp(plv + pick([-1,0,0,1]), 1, MAX_LEVEL);
-  return {
+  const enemy = {
     name: pick(ENEMY_NAMES),
     level:lvl,
     maxHp:25 + lvl*8, maxMp:10 + lvl*3,
     hp:25 + lvl*8, mp:10 + lvl*3,
     atk:6 + lvl*2, def:2 + lvl, spd:4 + lvl,
+    str: Math.max(0, lvl - 1),
+    dex: Math.max(0, Math.floor(lvl / 2)),
+    int: Math.max(0, Math.floor(lvl / 2)),
+    vit: Math.max(0, lvl),
     critChance: clamp(5 + Math.floor(lvl/3), 5, 35),
     critDamage: 0,
     acc: 0,
     foc: 0,
     combustionChance: 0,
     evasion: clamp(5 + Math.floor((4+lvl)/4), 5, 30),
+    baseBlockRate: clamp(5 + Math.floor(lvl / 3), 5, 24),
+    baseEscapeChance: clamp(6 + Math.floor(lvl / 2), 6, 28),
+    blockRate: 0,
+    escapeChance: 0,
+    manaRegen: 0,
+    statuses: [],
     xpReward:18 + lvl*6, goldReward:8 + lvl*4
   };
+  applyDerivedStats(enemy);
+  return enemy;
 }
 function calcDamage(attAtk, defDef, basePower, defending){
   const variance = randInt(-2,3);
@@ -80,7 +92,18 @@ function resolveAttack(att, def, basePower, opts = {}) {
     combustion = true;
   }
 
-  return { missed: false, crit, combustion, dmg, evasion, rollEv, rollCrit, rollComb };
+  const blockPct = clamp(def.blockRate || 0, 0, 90);
+  let blocked = 0;
+  let reflected = 0;
+  if (blockPct > 0) {
+    blocked = Math.round(dmg * (blockPct / 100));
+    if (blocked > 0) {
+      dmg = Math.max(0, dmg - blocked);
+      reflected = blocked;
+    }
+  }
+
+  return { missed: false, crit, combustion, dmg, evasion, rollEv, rollCrit, rollComb, blocked, reflected };
 }
 function escapeChance(p,e){
   return clamp(50 + (p.spd - e.spd)*8, 10, 90);
@@ -96,13 +119,15 @@ function dodgeChance(p,e){
 function newPlayer(){
   return {
     name:"Hero",
-    gender:"other",
+    gender:"male",
     level:1,
 
     // Base stats (for future scaling)
     str:0, dex:0, int:0, vit:0, foc:0,
     statPoints:1,
     _spBaseGranted:true,
+    baseBlockRate:8,
+    baseEscapeChance:10,
 
     // Derived / combat stats (currently flat)
     maxHp:60, maxMp:25,
@@ -110,6 +135,10 @@ function newPlayer(){
     atk:10, def:4, spd:7,
     acc:0,
     critChance:5, critDamage:0, combustionChance:0, evasion:5,
+    manaRegen:5,
+    blockRate:8,
+    escapeChance:10,
+    statuses: [],
 
     deprecatedSkillCooldown:0,
     xp:0, xpToLevel:50,
@@ -124,7 +153,7 @@ function normalizePlayer(p){
   if (!p) return p;
 
   // Base stats
-  if (typeof p.gender !== "string") p.gender = "other";
+  if (typeof p.gender !== "string") p.gender = "male";
   if (typeof p.str !== "number") p.str = 0;
   if (typeof p.dex !== "number") p.dex = 0;
   if (typeof p.int !== "number") p.int = 0;
@@ -154,12 +183,33 @@ function normalizePlayer(p){
   }
   if (typeof p.critChance !== "number") p.critChance = 0;
   if (typeof p.evasion !== "number") p.evasion = 0;
+  if (typeof p.baseBlockRate !== "number") p.baseBlockRate = 8;
+  if (typeof p.baseEscapeChance !== "number") p.baseEscapeChance = 10;
+  if (typeof p.manaRegen !== "number") p.manaRegen = 5;
+  if (typeof p.blockRate !== "number") p.blockRate = 0;
+  if (typeof p.escapeChance !== "number") p.escapeChance = 0;
+  if (!Array.isArray(p.statuses)) p.statuses = [];
 
   // Safety defaults (older saves)
   if (typeof p.level !== "number") p.level = 1;
   if (typeof p.name !== "string") p.name = "Hero";
 
+  applyDerivedStats(p);
   return p;
+}
+
+function applyDerivedStats(p){
+  if (!p) return;
+  if (typeof p.baseBlockRate !== "number") p.baseBlockRate = 6;
+  if (typeof p.baseEscapeChance !== "number") p.baseEscapeChance = 10;
+  if (!Array.isArray(p.statuses)) p.statuses = [];
+
+  const intVal = Math.max(0, p.int || 0);
+  const vitVal = Math.max(0, p.vit || 0);
+
+  p.manaRegen = Math.max(1, Math.floor((p.maxMp || 0) * 0.06) + Math.floor(intVal * 0.8));
+  p.blockRate = clamp(Math.round(p.baseBlockRate + vitVal * 1.2), 0, 80);
+  p.escapeChance = clamp(Math.round(p.baseEscapeChance + intVal * 1.3), 0, 95);
 }
 
 
@@ -367,6 +417,15 @@ function playDodgeFade(target) {
   setTimeout(() => el.classList.remove("dodgeFade"), 450);
 }
 
+function playSlash(target) {
+  const el = $(target === "player" ? "pAvatarBox" : "eAvatarBox");
+  if (!el) return;
+  const slash = document.createElement("div");
+  slash.className = "slashHit";
+  el.appendChild(slash);
+  slash.addEventListener("animationend", () => slash.remove(), { once: true });
+}
+
 function timeStr() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
@@ -379,19 +438,38 @@ function escapeHtml(s) {
     "'": "&#039;",
   }[m]));
 }
+
+let toastTimer = null;
+function showToast(msg, tag) {
+  const el = $("toast");
+  if (!el) return;
+  el.textContent = msg;
+  el.className = "toast";
+
+  const t = String(tag || "").toLowerCase();
+  if (["xp", "exp", "gold", "win", "level", "save", "good"].includes(t)) el.classList.add("good");
+  else if (["warn", "lose", "danger"].includes(t)) el.classList.add("warn");
+  else if (t === "error") el.classList.add("danger");
+
+  void el.offsetWidth;
+  el.classList.add("show");
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
+}
+
 function addLog(tag, msg) {
-  const logEl = $("log");
-  const div = document.createElement("div");
-  div.className = "entry";
+  showToast(msg, tag);
+  const metaEl = $("meta");
+  if (metaEl) metaEl.textContent = msg;
+}
 
-  // Color helpers (tag-based)
-  const t = String(tag || "").toUpperCase();
-  if (t === "XP" || t === "EXP") div.classList.add("log-xp");
-  if (t === "GOLD") div.classList.add("log-gold");
-
-  div.innerHTML = `<span class="tag">${escapeHtml(tag)}</span>${escapeHtml(msg)}<span class="time"> ${timeStr()}</span>`;
-  logEl.prepend(div);
-  logEl.scrollTop = 0;
+function statusLabel(entity) {
+  if (!entity || !Array.isArray(entity.statuses)) return "";
+  const active = entity.statuses.filter((s) => (s.turns || 0) > 0);
+  if (!active.length) return "";
+  return active
+    .map((s) => `${(s.type || "Effect").toUpperCase()} (${s.turns} turn${s.turns > 1 ? "s" : ""})`)
+    .join(" • ");
 }
 function setBar(el, cur, max) {
   const pctRaw = max <= 0 ? 0 : (cur / max) * 100;
@@ -538,25 +616,16 @@ function refresh(state) {
     btnStatsTown.textContent = "Stats";
   }
 
-  // Log hint / Turn indicator
-  const logHint = $("logHint");
-  if (logHint) {
-    if (state.inBattle && state.enemy) {
-      // Hide turn indicator in LOG card during battle
-      logHint.style.display = "none";
-      logHint.textContent = "";
-    } else {
-      logHint.style.display = "inline-flex";
-      logHint.textContent = "Town";
-    }
-  }
-
   // Player title + name
   const pNameTitle = $("pNameTitle");
   if (pNameTitle) pNameTitle.textContent = p.name;
 
   const pSub = $("pSub");
-  if (pSub) { pSub.textContent = ""; pSub.style.display = "none"; }
+  if (pSub) {
+    const label = statusLabel(p);
+    pSub.textContent = label;
+    pSub.style.display = label ? "block" : "none";
+  }
 
   $("pLvl").textContent = `Lv${p.level}`;
   const goldPill = $("goldPill");
@@ -608,7 +677,11 @@ function refresh(state) {
     if (eNameTitle) eNameTitle.textContent = e.name;
 
     const eSub = $("eSub");
-    if (eSub) { eSub.textContent = ""; eSub.style.display = "none"; }
+    if (eSub) {
+      const label = statusLabel(e);
+      eSub.textContent = label;
+      eSub.style.display = label ? "block" : "none";
+    }
 
     $("eLvl").textContent = `Lv${e.level}`;
 
@@ -707,9 +780,6 @@ function refresh(state) {
     const enemyBtns = $("enemyBtns");
     if (enemyBtns) enemyBtns.style.display = "none";
   }
-
-  const metaEl = $("meta");
-  if (metaEl) metaEl.textContent = "";
 }
 
 
@@ -717,6 +787,69 @@ function refresh(state) {
 const byId = (id) => document.getElementById(id);
 
 const state = newState();
+
+function ensureStatuses(entity){
+  if (!entity) return [];
+  if (!Array.isArray(entity.statuses)) entity.statuses = [];
+  return entity.statuses;
+}
+
+function clearStatuses(entity){
+  if (!entity) return;
+  entity.statuses = [];
+}
+
+function addStatusEffect(entity, status){
+  if (!entity || !status || !status.type) return;
+  const list = ensureStatuses(entity);
+  const existing = list.find((s) => s.type === status.type);
+  if (existing){
+    existing.turns = Math.max(existing.turns || 0, status.turns || 0);
+    existing.debuff = status.debuff ?? existing.debuff;
+  } else {
+    list.push({ ...status });
+  }
+}
+
+function hasStatus(entity, type){
+  return ensureStatuses(entity).find((s) => s.type === type && (s.turns || 0) > 0);
+}
+
+function tickStatuses(entity){
+  if (!entity || !entity.statuses) return 0;
+  let removed = 0;
+  entity.statuses = entity.statuses
+    .map((s) => ({ ...s, turns: (s.turns || 0) - 1 }))
+    .filter((s) => {
+      const alive = (s.turns || 0) > 0;
+      if (!alive) removed += 1;
+      return alive;
+    });
+  return removed;
+}
+
+function tryEscapeStatuses(entity){
+  if (!entity || !Array.isArray(entity.statuses) || !entity.statuses.length) return 0;
+  const chance = clamp(entity.escapeChance || 0, 0, 95);
+  if (chance <= 0) return 0;
+  let removed = 0;
+  entity.statuses = entity.statuses.filter((s) => {
+    if (!s.debuff) return true;
+    const roll = randInt(1, 100);
+    if (roll <= chance) { removed += 1; return false; }
+    return true;
+  });
+  return removed;
+}
+
+function applyManaRegen(entity){
+  if (!entity) return 0;
+  const regen = Math.max(0, Math.round(entity.manaRegen || 0));
+  if (regen <= 0 || typeof entity.mp !== "number") return 0;
+  const before = entity.mp;
+  entity.mp = clamp(entity.mp + regen, 0, entity.maxMp || 0);
+  return entity.mp - before;
+}
 
 /* ----------------------------- Core helpers ----------------------------- */
 
@@ -736,12 +869,63 @@ function setTurn(turn) {
   }
 }
 
-function endBattle(reason) {
+function prepareTurn(turn){
+  if (!state.inBattle) return { skipped: false };
+  const actor = turn === "player" ? state.player : state.enemy;
+  if (!actor) return { skipped: false };
+
+  const regen = applyManaRegen(actor);
+  const escaped = tryEscapeStatuses(actor);
+
+  if (regen > 0 && turn === "player") addLog("INFO", `Mana regen +${regen}`);
+  if (escaped > 0) addLog("GOOD", turn === "player" ? "Kamu lolos dari debuff!" : `${actor.name} bebas dari debuff.`);
+
+  const stunned = !!hasStatus(actor, "stun");
+  return { skipped: stunned };
+}
+
+function beginPlayerTurn(){
+  setTurn("player");
+  const prep = prepareTurn("player");
+  if (prep.skipped) {
+    addLog("WARN", "Kamu sedang stun! Giliran dilewati.");
+    tickStatuses(state.player);
+    state.battleTurn = (state.battleTurn || 0) + 1;
+    setTurn("enemy");
+    refresh(state);
+    setTimeout(() => {
+      if (state.inBattle) enemyTurn();
+    }, 380);
+    return false;
+  }
+  refresh(state);
+  return true;
+}
+
+function beginEnemyTurn(){
+  setTurn("enemy");
+  const prep = prepareTurn("enemy");
+  if (prep.skipped) {
+    addLog("INFO", `${state.enemy?.name || "Musuh"} sedang stun! Giliran mereka hilang.`);
+    tickStatuses(state.enemy);
+    state.playerDefending = false;
+    state.playerDodging = false;
+    state.battleTurn = (state.battleTurn || 0) + 1;
+    beginPlayerTurn();
+    return false;
+  }
+  refresh(state);
+  return true;
+}
+
+function endBattle(reason, summary) {
   addLog("INFO", reason);
   state.inBattle = false;
+  clearStatuses(state.enemy);
   state.enemy = null;
   state.playerDefending = false;
   state.playerDodging = false;
+  clearStatuses(state.player);
   setTurn("town");
   state.battleTurn = 0;
 
@@ -767,6 +951,7 @@ function endBattle(reason) {
   })();
 
   refresh(state);
+  if (summary) showBattleResultModal(summary);
 }
 
 function levelUp() {
@@ -788,6 +973,7 @@ function levelUp() {
   // Keep other stats unchanged
   p.hp = p.maxHp;
   p.mp = p.maxMp;
+  applyDerivedStats(p);
 
   p.xpToLevel = Math.floor(p.xpToLevel * 1.25);
 
@@ -819,28 +1005,76 @@ function gainXp(amount) {
   }
 }
 
+function rollBattleDrops(enemy){
+  const drops = [];
+  const lvl = enemy?.level || 1;
+  if (randInt(1, 100) <= 35) drops.push({ ...ITEMS.potion, qty: 1 });
+  if (randInt(1, 100) <= (lvl >= 4 ? 28 : 18)) drops.push({ ...ITEMS.ether, qty: 1 });
+  return drops;
+}
+
+function grantDropsToPlayer(drops){
+  if (!drops || !drops.length) return;
+  const inv = state.player.inv || (state.player.inv = {});
+  drops.forEach((d) => {
+    if (!d || !d.name) return;
+    const qty = d.qty || 1;
+    if (inv[d.name]) inv[d.name].qty += qty;
+    else inv[d.name] = { ...d, qty };
+  });
+}
+
+function showBattleResultModal(summary){
+  if (!summary) return;
+  const title = summary.outcome === "win" ? "Kamu Menang!" : "Kamu Kalah";
+  const drops = Array.isArray(summary.drops) ? summary.drops : [];
+  const lines = [
+    { title, desc: summary.enemyName ? `Melawan ${summary.enemyName}` : "Pertarungan selesai.", meta: "" },
+    { title: `Gold: +${summary.gold || 0}`, desc: "", meta: "" },
+    { title: `XP: +${summary.xp || 0}`, desc: "", meta: "" },
+  ];
+
+  if (drops.length) {
+    drops.forEach((d) => {
+      lines.push({ title: `Drop: ${d.name} x${d.qty || 1}`, desc: d.desc || "Reward", meta: "" });
+    });
+  } else {
+    lines.push({ title: "Drop: -", desc: "Tidak ada drop.", meta: "" });
+  }
+
+  modal.open("Hasil Pertarungan", lines, () => {});
+}
+
 function winBattle() {
   const p = state.player;
   const e = state.enemy;
 
-  addLog("WIN", `Menang melawan ${e.name}!`);
-  p.gold += e.goldReward;
-  addLog("GOLD", `+${e.goldReward} gold (Total: ${p.gold})`);
+  const drops = rollBattleDrops(e);
+  const goldGain = e.goldReward || 0;
+  const xpGain = e.xpReward || 0;
 
-  gainXp(e.xpReward);
-  endBattle("Pertarungan selesai.");
+  addLog("WIN", `Menang melawan ${e.name}!`);
+  p.gold += goldGain;
+
+  gainXp(xpGain);
+  grantDropsToPlayer(drops);
+
+  const summary = { outcome: "win", gold: goldGain, xp: xpGain, drops, enemyName: e.name };
+  endBattle("Pertarungan selesai.", summary);
 }
 
 function loseBattle() {
+  const eName = state.enemy?.name || "musuh";
   addLog("LOSE", "Kamu kalah... Game Over.");
-  alert("Kamu kalah... Game Over.\nKamu bisa ganti karakter atau buat karakter baru.");
-  endBattle("Kembali ke Town.");
+  const summary = { outcome: "lose", gold: 0, xp: 0, drops: [], enemyName: eName };
+  endBattle("Kembali ke Town.", summary);
 }
 
 /* ----------------------------- Enemy & turns ---------------------------- */
 
 function enemyTurn() {
-  setTurn("enemy");
+  if (!state.enemy || !state.inBattle) return;
+  if (!beginEnemyTurn()) return;
 
   const p = state.player;
   const e = state.enemy;
@@ -859,7 +1093,15 @@ function enemyTurn() {
       else addLog("YOU", "Menghindar! Serangan musuh meleset.");
       addLog("ENEMY", `${e.name} memakai Rage Strike, tapi meleset!`);
     } else {
-      p.hp = clamp(p.hp - res.dmg, 0, p.maxHp);
+      if (res.blocked > 0) addLog("INFO", "Serangan diblokir sebagian!");
+      if (res.dmg > 0) {
+        p.hp = clamp(p.hp - res.dmg, 0, p.maxHp);
+        playSlash("player");
+      }
+      if (res.reflected > 0) {
+        e.hp = clamp(e.hp - res.reflected, 0, e.maxHp);
+        playSlash("enemy");
+      }
       if (res.crit || res.combustion) {
         playCritShake("player");
         if (res.crit && res.combustion) addLog("ENEMY", `CRITICAL + COMBUSTION! ${e.name} memakai Rage Strike! Damage ${res.dmg}.`);
@@ -867,6 +1109,10 @@ function enemyTurn() {
         else addLog("ENEMY", `COMBUSTION! ${e.name} memakai Rage Strike! Damage ${res.dmg}.`);
       } else {
         addLog("ENEMY", `${e.name} memakai Rage Strike! Damage ${res.dmg}.`);
+      }
+      if (res.dmg > 0 && Math.random() < 0.2) {
+        addStatusEffect(p, { type: "stun", turns: 1, debuff: true });
+        addLog("WARN", "Kamu terkena Stun!");
       }
     }
   } else {
@@ -877,7 +1123,15 @@ function enemyTurn() {
       else addLog("YOU", "Menghindar! Serangan musuh meleset.");
       addLog("ENEMY", `${e.name} menyerang, tapi meleset!`);
     } else {
-      p.hp = clamp(p.hp - res.dmg, 0, p.maxHp);
+      if (res.blocked > 0) addLog("INFO", "Serangan diblokir sebagian!");
+      if (res.dmg > 0) {
+        p.hp = clamp(p.hp - res.dmg, 0, p.maxHp);
+        playSlash("player");
+      }
+      if (res.reflected > 0) {
+        e.hp = clamp(e.hp - res.reflected, 0, e.maxHp);
+        playSlash("enemy");
+      }
       if (res.crit || res.combustion) {
         playCritShake("player");
         if (res.crit && res.combustion) addLog("ENEMY", `CRITICAL + COMBUSTION! ${e.name} menyerang! Damage ${res.dmg}.`);
@@ -886,9 +1140,14 @@ function enemyTurn() {
       } else {
         addLog("ENEMY", `${e.name} menyerang! Damage ${res.dmg}.`);
       }
+      if (res.dmg > 0 && Math.random() < 0.12) {
+        addStatusEffect(p, { type: "stun", turns: 1, debuff: true });
+        addLog("WARN", "Kamu terkena Stun!");
+      }
     }
   }
 
+  tickStatuses(e);
   state.playerDefending = false;
   state.playerDodging = false;
 
@@ -896,13 +1155,23 @@ function enemyTurn() {
     loseBattle();
     return;
   }
+  if (e.hp <= 0) {
+    winBattle();
+    return;
+  }
 
   // Player turn counter
   state.battleTurn = (state.battleTurn || 0) + 1;
-  setTurn("player");
+  beginPlayerTurn();
 }
 
 function afterPlayerAction() {
+  if (!state.inBattle) return;
+  if (state.player && state.player.hp <= 0) {
+    loseBattle();
+    return;
+  }
+
   const e = state.enemy;
   if (!e) return;
 
@@ -910,6 +1179,8 @@ function afterPlayerAction() {
     winBattle();
     return;
   }
+
+  tickStatuses(state.player);
 
   // Lock ke giliran musuh dulu supaya player tidak bisa spam tombol
   setTurn("enemy");
@@ -933,6 +1204,9 @@ function explore() {
   state.playerDefending = false;
   state.playerDodging = false;
   state.battleTurn = 0;
+  clearStatuses(state.enemy);
+  ensureStatuses(state.enemy);
+  ensureStatuses(state.player);
 addLog("INFO", `Musuh muncul: ${state.enemy.name} (Lv${state.enemy.level})`);
 
   if (state.enemy.spd > state.player.spd) {
@@ -947,7 +1221,7 @@ addLog("INFO", `Musuh muncul: ${state.enemy.name} (Lv${state.enemy.level})`);
     return;
   } else {
     state.battleTurn = (state.battleTurn||0)+1;
-  setTurn("player");
+    beginPlayerTurn();
     addLog("TURN", "Kamu lebih cepat!");
   }
 
@@ -1003,7 +1277,15 @@ function attack() {
     return;
   }
 
-  e.hp = clamp(e.hp - res.dmg, 0, e.maxHp);
+  if (res.blocked > 0) addLog("INFO", `${e.name} memblokir seranganmu!`);
+  if (res.dmg > 0) {
+    e.hp = clamp(e.hp - res.dmg, 0, e.maxHp);
+    playSlash("enemy");
+  }
+  if (res.reflected > 0) {
+    p.hp = clamp(p.hp - res.reflected, 0, p.maxHp);
+    playSlash("player");
+  }
 
   if (res.crit || res.combustion) {
     playCritShake("enemy");
@@ -1012,6 +1294,10 @@ function attack() {
     else addLog("YOU", `COMBUSTION! Attack Damage ${res.dmg}.`);
   } else {
     addLog("YOU", `Attack! Damage ${res.dmg}.`);
+  }
+
+  if (p.hp <= 0) {
+    loseBattle();
   }
 }
 
@@ -1103,9 +1389,18 @@ function openSkillModal() {
 
     const res = resolveAttack(p, state.enemy, s.power);
     if (res.missed) {
+      playDodgeFade("enemy");
       addLog("ENEMY", `${state.enemy.name} menghindar! (Evasion ${res.evasion}%)`);
     } else {
-      state.enemy.hp = clamp(state.enemy.hp - res.dmg, 0, state.enemy.maxHp);
+      if (res.blocked > 0) addLog("INFO", `${state.enemy.name} memblokir skillmu!`);
+      if (res.dmg > 0) {
+        state.enemy.hp = clamp(state.enemy.hp - res.dmg, 0, state.enemy.maxHp);
+        playSlash("enemy");
+      }
+      if (res.reflected > 0) {
+        p.hp = clamp(p.hp - res.reflected, 0, p.maxHp);
+        playSlash("player");
+      }
       if (res.crit || res.combustion) {
         if (res.crit && res.combustion) addLog("YOU", `CRITICAL + COMBUSTION! ${s.name}! Damage ${res.dmg}.`);
         else if (res.crit) addLog("YOU", `CRITICAL! ${s.name}! Damage ${res.dmg}.`);
@@ -1115,8 +1410,18 @@ function openSkillModal() {
       }
     }
 
+    if (res.dmg > 0 && s.name.toLowerCase() === "fireball" && Math.random() < 0.18) {
+      addStatusEffect(state.enemy, { type: "stun", turns: 1, debuff: true });
+      addLog("INFO", `${state.enemy.name} terkena Stun!`);
+    }
+
     // Set per-skill cooldown
     s.cdLeft = s.cooldown || 0;
+
+    if (p.hp <= 0) {
+      loseBattle();
+      return;
+    }
 
     afterPlayerAction();
   });
@@ -1201,6 +1506,7 @@ function applyAttributeDelta(statKey, delta){
   p.critDamage = Math.max(0, p.critDamage || 0);
   p.combustionChance = clamp(p.combustionChance || 0, 0, 100);
   p.statPoints = Math.max(0, p.statPoints || 0);
+  applyDerivedStats(p);
 
   // persist to current slot
   if (Array.isArray(state.slots)) state.slots[state.activeSlot] = p;
@@ -1236,7 +1542,7 @@ function openProfileModal(){
       { title: `Stat Points : ${pts}`, desc: "Dapatkan dari level up. Gunakan tombol + untuk menambah stat.", meta: "" },
       mk("str", "STR", "Meningkatkan ATK dan Combustion Chance"),
       mk("dex", "DEX", "Meningkatkan Evasion, Accuracy, dan SPD"),
-      mk("int", "INT", "Meningkatkan MP, Mana Regen, dan Escape Rate"),
+      mk("int", "INT", "Meningkatkan MP, Mana Regen, dan Escape Chance"),
       mk("vit", "VIT", "Meningkatkan HP, DEF, dan Block Rate"),
       mk("foc", "FOC", "Meningkatkan Critical Chance dan Critical Damage"),
     ],
@@ -1280,6 +1586,9 @@ function openEnemyStatsModal() {
             { title: `CRIT : ${e.critChance}%`, desc: "", meta: "" },
       { title: `CRIT DMG : ${e.critDamage}%`, desc: "", meta: "" },
       { title: `EVASION : ${e.evasion}%`, desc: "", meta: "" },
+      { title: `BLOCK : ${e.blockRate || 0}%`, desc: "", meta: "" },
+      { title: `ESCAPE : ${e.escapeChance || 0}%`, desc: "", meta: "" },
+      { title: `MANA REGEN : ${e.manaRegen || 0}`, desc: "", meta: "" },
     ],
     () => {}
   );
@@ -1303,6 +1612,9 @@ function openStatsModal() {
             { title: `CRIT : ${p.critChance}%`, desc: "", meta: "" },
       { title: `CRIT DMG : ${p.critDamage}%`, desc: "", meta: "" },
       { title: `EVASION : ${p.evasion}%`, desc: "", meta: "" },
+      { title: `BLOCK : ${p.blockRate || 0}%`, desc: "", meta: "" },
+      { title: `ESCAPE : ${p.escapeChance || 0}%`, desc: "", meta: "" },
+      { title: `MANA REGEN : ${p.manaRegen || 0}`, desc: "", meta: "" },
     ],
     () => {}
   );
@@ -1413,7 +1725,6 @@ function openTownMenu(){
                   setTurn("town");
                   state.battleTurn = 0;
 
-                  byId("log").innerHTML = "";
                   addLog("LOAD", "Cloud dimuat. Pilih karakter.");
 
                   autosave(state);
@@ -1574,7 +1885,6 @@ function startNewGame(slotIdx){
   setTurn("town");
   state.battleTurn = 0;
 
-  byId("log").innerHTML = "";
   addLog("INFO", "Game baru dimulai (slot di-reset).");
 
   autosave(state);
@@ -1627,7 +1937,7 @@ function setCcMsg(msg, isError=false){
 }
 
 function genderLabel(g){
-  const v = String(g || "other").toLowerCase();
+  const v = String(g || "male").toLowerCase();
   if (v === "male") return "Male";
   if (v === "female") return "Female";
   return "Other";
@@ -1795,7 +2105,8 @@ function handleCreateCharacter(){
   const nameEl = byId("ccName");
   const genderEl = byId("ccGender");
   const name = (nameEl?.value || "").toString().trim();
-  const gender = (genderEl?.value || "other").toString();
+  const genderRaw = (genderEl?.value || "male").toString().toLowerCase();
+  const gender = genderRaw === "female" ? "female" : "male";
 
   if (!name){
     setCcMsg("Nama tidak boleh kosong.", true);
@@ -1818,7 +2129,6 @@ function handleCreateCharacter(){
   setTurn("town");
   state.battleTurn = 0;
 
-  byId("log").innerHTML = "";
   addLog("INFO", `Karakter dibuat: ${p.name} (${genderLabel(p.gender)})`);
   autosave(state);
 
@@ -1847,7 +2157,6 @@ function enterTownWithSlot(slotIdx){
   setTurn("town");
   state.battleTurn = 0;
 
-  byId("log").innerHTML = "";
   addLog("INFO", `Masuk sebagai ${state.player.name} (Lv${state.player.level}).`);
 
   autosave(state);
@@ -1920,7 +2229,6 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
   setTurn("town");
   state.battleTurn = 0;
 
-  byId("log").innerHTML = "";
   refresh(state);
 
   // Show character menu
