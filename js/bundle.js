@@ -96,7 +96,7 @@ function dodgeChance(p,e){
 function newPlayer(){
   return {
     name:"Hero",
-    gender:"other",
+    gender:"male",
     level:1,
 
     // Base stats (for future scaling)
@@ -124,7 +124,8 @@ function normalizePlayer(p){
   if (!p) return p;
 
   // Base stats
-  if (typeof p.gender !== "string") p.gender = "other";
+  if (typeof p.gender !== "string") p.gender = "male";
+  if (p.gender !== "male" && p.gender !== "female") p.gender = "male";
   if (typeof p.str !== "number") p.str = 0;
   if (typeof p.dex !== "number") p.dex = 0;
   if (typeof p.int !== "number") p.int = 0;
@@ -380,18 +381,8 @@ function escapeHtml(s) {
   }[m]));
 }
 function addLog(tag, msg) {
-  const logEl = $("log");
-  const div = document.createElement("div");
-  div.className = "entry";
-
-  // Color helpers (tag-based)
-  const t = String(tag || "").toUpperCase();
-  if (t === "XP" || t === "EXP") div.classList.add("log-xp");
-  if (t === "GOLD") div.classList.add("log-gold");
-
-  div.innerHTML = `<span class="tag">${escapeHtml(tag)}</span>${escapeHtml(msg)}<span class="time"> ${timeStr()}</span>`;
-  logEl.prepend(div);
-  logEl.scrollTop = 0;
+  // Log dihapus sepenuhnya dari UI -> no-op supaya tidak error meski #log tidak ada.
+  return;
 }
 function setBar(el, cur, max) {
   const pctRaw = max <= 0 ? 0 : (cur / max) * 100;
@@ -823,12 +814,19 @@ function winBattle() {
   const p = state.player;
   const e = state.enemy;
 
-  addLog("WIN", `Menang melawan ${e.name}!`);
-  p.gold += e.goldReward;
-  addLog("GOLD", `+${e.goldReward} gold (Total: ${p.gold})`);
+  const gold = e.goldReward || 0;
+  const xp = e.xpReward || 0;
+  const drop = e.dropReward || e.rewardDrop || e.drop || null;
 
-  gainXp(e.xpReward);
+  p.gold += gold;
+  gainXp(xp);
   endBattle("Pertarungan selesai.");
+
+  modal.open("Victory!", [{
+    title: `Gold +${gold} | EXP +${xp}`,
+    meta: drop ? `Drop: ${drop}` : "Drop: -",
+    value: "ok",
+  }], () => {});
 }
 
 function loseBattle() {
@@ -1032,10 +1030,11 @@ function runAway() {
 
   if (roll <= chance) {
     endBattle(`Berhasil kabur! (Chance ${chance}%, Roll ${roll})`);
+    addLog("ok", `Kabur berhasil! Escape chance ${chance}%`);
     return true;
   }
 
-  addLog("YOU", `Gagal kabur. (Chance ${chance}%, Roll ${roll})`);
+  addLog("bad", `Gagal kabur. Escape chance ${chance}%`);
   return false;
 }
 
@@ -1413,7 +1412,8 @@ function openTownMenu(){
                   setTurn("town");
                   state.battleTurn = 0;
 
-                  byId("log").innerHTML = "";
+                  const logEl = byId("log");
+                  if (logEl) logEl.innerHTML = "";
                   addLog("LOAD", "Cloud dimuat. Pilih karakter.");
 
                   autosave(state);
@@ -1574,7 +1574,8 @@ function startNewGame(slotIdx){
   setTurn("town");
   state.battleTurn = 0;
 
-  byId("log").innerHTML = "";
+  const logEl = byId("log");
+  if (logEl) logEl.innerHTML = "";
   addLog("INFO", "Game baru dimulai (slot di-reset).");
 
   autosave(state);
@@ -1818,7 +1819,8 @@ function handleCreateCharacter(){
   setTurn("town");
   state.battleTurn = 0;
 
-  byId("log").innerHTML = "";
+  const logEl = byId("log");
+  if (logEl) logEl.innerHTML = "";
   addLog("INFO", `Karakter dibuat: ${p.name} (${genderLabel(p.gender)})`);
   autosave(state);
 
@@ -1847,7 +1849,8 @@ function enterTownWithSlot(slotIdx){
   setTurn("town");
   state.battleTurn = 0;
 
-  byId("log").innerHTML = "";
+  const logEl = byId("log");
+  if (logEl) logEl.innerHTML = "";
   addLog("INFO", `Masuk sebagai ${state.player.name} (Lv${state.player.level}).`);
 
   autosave(state);
@@ -1920,7 +1923,8 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
   setTurn("town");
   state.battleTurn = 0;
 
-  byId("log").innerHTML = "";
+  const logEl = byId("log");
+  if (logEl) logEl.innerHTML = "";
   refresh(state);
 
   // Show character menu

@@ -68,12 +68,19 @@ function winBattle() {
   const p = state.player;
   const e = state.enemy;
 
-  addLog("WIN", `Menang melawan ${e.name}!`);
-  p.gold += e.goldReward;
-  addLog("GOLD", `+${e.goldReward} gold (Total: ${p.gold})`);
+  const gold = e.goldReward || 0;
+  const xp = e.xpReward || 0;
+  const drop = e.dropReward || e.rewardDrop || e.drop || null;
 
-  gainXp(e.xpReward);
+  p.gold += gold;
+  gainXp(xp);
   endBattle("Pertarungan selesai.");
+
+  modal.open("Victory!", [{
+    title: `Gold +${gold} | EXP +${xp}`,
+    meta: drop ? `Drop: ${drop}` : "Drop: -",
+    value: "ok",
+  }], () => {});
 }
 
 function loseBattle() {
@@ -222,10 +229,11 @@ function runAway() {
 
   if (roll <= chance) {
     endBattle(`Berhasil kabur! (Chance ${chance}%, Roll ${roll})`);
+    addLog("ok", `Kabur berhasil! Escape chance ${chance}%`);
     return true;
   }
 
-  addLog("YOU", `Gagal kabur. (Chance ${chance}%, Roll ${roll})`);
+  addLog("bad", `Gagal kabur. Escape chance ${chance}%`);
   return false;
 }
 
@@ -411,10 +419,12 @@ function openTownMenu(){
         state.enemy = null;
         state.inBattle = false;
         state.playerDefending = false;
-  state.playerDodging = false;
+        state.playerDodging = false;
         setTurn("town");
-  state.battleTurn = 0;
+        state.battleTurn = 0;
 
+        const logEl = byId("log");
+        if (logEl) logEl.innerHTML = "";
         addLog("LOAD", "Berhasil load progress.");
         refresh(state);
         return;
@@ -427,11 +437,12 @@ function openTownMenu(){
         state.enemy = null;
         state.inBattle = false;
         state.playerDefending = false;
-  state.playerDodging = false;
+        state.playerDodging = false;
         setTurn("town");
-  state.battleTurn = 0;
+        state.battleTurn = 0;
 
-        byId("log").innerHTML = "";
+        const logEl = byId("log");
+        if (logEl) logEl.innerHTML = "";
         addLog("INFO", "Game baru dimulai.");
 
         autosave(state);
@@ -502,11 +513,12 @@ function applyLoaded(payload){
     state.player = payload.player;
     state.enemy = null;
     state.inBattle = false;
-    state.playerDefending = false;
+  state.playerDefending = false;
   state.playerDodging = false;
     setTurn("town");
   state.battleTurn = 0;
-    byId("log").innerHTML = "";
+    const logEl = byId("log");
+    if (logEl) logEl.innerHTML = "";
     addLog("LOAD", "Progress dimuat.");
     refresh(state);
     return true;
@@ -522,7 +534,8 @@ function startNewGame(){
   state.playerDodging = false;
   setTurn("town");
   state.battleTurn = 0;
-  byId("log").innerHTML = "";
+  const logEl = byId("log");
+  if (logEl) logEl.innerHTML = "";
   addLog("INFO", "Game baru dimulai.");
   autosave(state);
   refresh(state);

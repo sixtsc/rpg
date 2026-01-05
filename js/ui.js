@@ -16,19 +16,9 @@ export function escapeHtml(s) {
   }[m]));
 }
 
-export function addLog(tag, msg) {
-  const logEl = $("log");
-  const div = document.createElement("div");
-  div.className = "entry";
-
-  // Color helpers (tag-based)
-  const t = String(tag || "").toUpperCase();
-  if (t === "XP" || t === "EXP") div.classList.add("log-xp");
-  if (t === "GOLD") div.classList.add("log-gold");
-
-  div.innerHTML = `<span class="tag">${escapeHtml(tag)}</span>${escapeHtml(msg)}<span class="time"> ${timeStr()}</span>`;
-  logEl.prepend(div);
-  logEl.scrollTop = 0;
+// Log telah dihapus dari UI. Fungsi ini dibiarkan ada agar pemanggilan lama tidak error.
+export function addLog() {
+  return;
 }
 
 export function setBar(el, cur, max) {
@@ -183,4 +173,3 @@ export function refresh(state) {
   const metaEl = $("meta");
   if (metaEl) metaEl.textContent = "";
 }
-
