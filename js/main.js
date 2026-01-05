@@ -122,7 +122,7 @@ function showResultOverlay(type, reward){
   if (!overlay || !titleEl || !listEl || !cardEl || !btn) return;
 
   overlay.classList.remove("hidden");
-  titleEl.textContent = type === "lose" ? "defeat" : "victory";
+  titleEl.textContent = type === "lose" ? "Defeat" : "Victory";
   cardEl.classList.remove("win", "lose");
   cardEl.classList.add(type === "lose" ? "lose" : "win");
 

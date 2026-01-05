@@ -65,6 +65,7 @@ h1{ font-size:18px; margin:0; font-weight:800; letter-spacing:.2px; }
   align-items:center;
   justify-content:center;
   background:rgba(0,0,0,0.6);
+  backdrop-filter: blur(6px);
   z-index:99999;
 }
 .resultOverlay.hidden{ display:none; }
@@ -74,16 +75,16 @@ h1{ font-size:18px; margin:0; font-weight:800; letter-spacing:.2px; }
   padding:26px 22px 18px;
   border:3px solid var(--accent);
   border-radius:18px;
-  background: linear-gradient(145deg, rgba(18,26,36,0.96), rgba(12,18,28,0.94));
-  color:#dbe7f5;
+  background: linear-gradient(135deg, rgba(18,26,36,0.96), rgba(12,18,28,0.92));
+  color:var(--text);
   text-align:center;
-  box-shadow:0 18px 50px rgba(0,0,0,0.55);
+  box-shadow:0 18px 44px rgba(0,0,0,0.55), 0 0 0 1px rgba(58,108,255,0.25);
 }
 .resultTitle{
-  font-size:26px;
-  font-weight:900;
-  margin:0 0 14px;
-  letter-spacing:1px;
+  font-size:24px;
+  font-weight:800;
+  margin:0 0 12px;
+  letter-spacing:.4px;
 }
 .resultList{
   display:flex;
@@ -98,32 +99,39 @@ h1{ font-size:18px; margin:0; font-weight:800; letter-spacing:.2px; }
 }
 .resultBtn{
   border:2px solid var(--accent);
-  background:transparent;
+  background:rgba(58,108,255,0.12);
   color:var(--accent);
-  padding:10px 12px;
-  border-radius:12px;
-  font-weight:900;
-  font-size:18px;
+  padding:11px 14px;
+  border-radius:14px;
+  font-weight:800;
+  font-size:16px;
   cursor:pointer;
-  width:64px;
+  width:96px;
   margin:0 auto;
   display:block;
 }
-.resultBtn:hover{ filter:brightness(1.1); }
+.resultBtn:hover{ filter:brightness(1.1); background:rgba(58,108,255,0.18); }
 
 .resultCard.win{
   border-color: var(--accent);
+  box-shadow:0 18px 44px rgba(0,0,0,0.55), 0 0 0 1px rgba(58,108,255,0.25), 0 0 28px rgba(58,108,255,0.15);
 }
 .resultCard.lose{
   border-color: var(--warn);
+  box-shadow:0 18px 44px rgba(0,0,0,0.55), 0 0 0 1px rgba(209,123,47,0.3), 0 0 28px rgba(209,123,47,0.12);
 }
 .resultTitle{ color: var(--accent); }
 .resultCard.lose .resultTitle{ color: var(--warn); }
+.resultCard .resultList div{ color: var(--text); }
 .resultCard.lose .resultList div{ color:#f2c94c; }
 .resultCard.lose .resultList .dropItem{ color:#f5b95b; }
 .resultCard.lose .resultBtn{
   border-color: var(--warn);
   color: var(--warn);
+  background:rgba(209,123,47,0.12);
+}
+.resultCard.lose .resultBtn:hover{
+  background:rgba(209,123,47,0.18);
 }
 
 .card{
