@@ -101,7 +101,8 @@ function newPlayer(){
 
     // Base stats (for future scaling)
     str:0, dex:0, int:0, vit:0, foc:0,
-    statPoints:0,
+    statPoints:1,
+    _spBaseGranted:true,
 
     // Derived / combat stats (currently flat)
     maxHp:60, maxMp:25,
@@ -134,6 +135,12 @@ function normalizePlayer(p){
     else p.foc = 0;
   }
   if (typeof p.statPoints !== "number") p.statPoints = 0;
+
+  // Grant 1 stat point at level 1 (migration-safe)
+  if (!p._spBaseGranted) {
+    p.statPoints += 1;
+    p._spBaseGranted = true;
+  }
 
   // Derived / combat stats
   if (typeof p.acc !== "number") p.acc = 0;
@@ -562,11 +569,11 @@ function refresh(state) {
   // Player bars
   $("hpText").textContent = `${p.hp}/${p.maxHp}`;
   $("mpText").textContent = `${p.mp}/${p.maxMp}`;
-  $("xpText").textContent = `${p.xp}/${p.xpToLevel}`;
+  $("xpText").textContent = (p.level >= MAX_LEVEL) ? "MAX" : `${p.xp}/${p.xpToLevel}`;
 
   setBar($("hpBar"), p.hp, p.maxHp);
   setBar($("mpBar"), p.mp, p.maxMp);
-  setBar($("xpBar"), p.xp, p.xpToLevel);
+  setBar($("xpBar"), (p.level >= MAX_LEVEL ? p.xpToLevel : p.xp), p.xpToLevel);
 
   const inBattle = state.inBattle && state.enemy;
 
@@ -792,12 +799,23 @@ function levelUp() {
 function gainXp(amount) {
   const p = state.player;
 
+  // Freeze XP at max level
+  if (p.level >= MAX_LEVEL) {
+    p.xp = p.xpToLevel;
+    return;
+  }
+
   addLog("XP", `+${amount} XP`);
   p.xp += amount;
 
   while (p.level < MAX_LEVEL && p.xp >= p.xpToLevel) {
     p.xp -= p.xpToLevel;
     levelUp();
+  }
+
+  // If we just hit cap, lock XP bar
+  if (p.level >= MAX_LEVEL) {
+    p.xp = p.xpToLevel;
   }
 }
 
@@ -1216,10 +1234,10 @@ function openProfileModal(){
     "Profile",
     [
       { title: `Stat Points : ${pts}`, desc: "Dapatkan dari level up. Gunakan tombol + untuk menambah stat.", meta: "" },
-      mk("str", "STR", "Meningkatkan ATK dan Combustion Chance (DMG x2 - x2.5)"),
+      mk("str", "STR", "Meningkatkan ATK dan Combustion Chance"),
       mk("dex", "DEX", "Meningkatkan Evasion, Accuracy, dan SPD"),
-      mk("int", "INT", "Meningkatkan MP"),
-      mk("vit", "VIT", "Meningkatkan HP dan DEF"),
+      mk("int", "INT", "Meningkatkan MP, Mana Regen, dan Escape Rate"),
+      mk("vit", "VIT", "Meningkatkan HP, DEF, dan Block Rate"),
       mk("foc", "FOC", "Meningkatkan Critical Chance dan Critical Damage"),
     ],
     (pick) => {
@@ -1258,8 +1276,8 @@ function openEnemyStatsModal() {
       { title: `DEF : ${e.def}`, desc: "", meta: "" },
       { title: `SPD : ${e.spd}`, desc: "", meta: "" },
       { title: `ACC : ${e.acc || 0}`, desc: "", meta: "" },
-      { title: `FOC : ${e.foc || 0}`, desc: "", meta: "" },
-      { title: `CRIT : ${e.critChance}%`, desc: "", meta: "" },
+      { title: `COMBUST : ${e.combustionChance || 0}%`, desc: "", meta: "" },
+            { title: `CRIT : ${e.critChance}%`, desc: "", meta: "" },
       { title: `CRIT DMG : ${e.critDamage}%`, desc: "", meta: "" },
       { title: `EVASION : ${e.evasion}%`, desc: "", meta: "" },
     ],
@@ -1281,8 +1299,8 @@ function openStatsModal() {
       { title: `DEF : ${p.def}`, desc: "", meta: "" },
       { title: `SPD : ${p.spd}`, desc: "", meta: "" },
       { title: `ACC : ${p.acc || 0}`, desc: "", meta: "" },
-      { title: `FOC : ${p.foc || 0}`, desc: "", meta: "" },
-      { title: `CRIT : ${p.critChance}%`, desc: "", meta: "" },
+      { title: `COMBUST : ${p.combustionChance || 0}%`, desc: "", meta: "" },
+            { title: `CRIT : ${p.critChance}%`, desc: "", meta: "" },
       { title: `CRIT DMG : ${p.critDamage}%`, desc: "", meta: "" },
       { title: `EVASION : ${p.evasion}%`, desc: "", meta: "" },
     ],

@@ -418,13 +418,13 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
 /* ---------------- Character Select / Create ---------------- */
 .charGrid{
   display:grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap:10px;
   margin: 10px 0 4px;
 }
 @media (max-width:520px){
-  .charGrid{ grid-template-columns: 1fr; }
-}
+  .charGrid{ grid-template-columns: repeat(3, 1fr); gap:8px; }
+  .charSlot{ padding:10px; }}
 .charSlot{
   display:flex;
   flex-direction:column;
