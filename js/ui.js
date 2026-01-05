@@ -2,13 +2,6 @@ import { clamp } from "./engine.js";
 
 const $ = (id) => document.getElementById(id);
 
-function setStatus(msg, tone = "info") {
-  const statusEl = $("meta");
-  if (!statusEl) return;
-  statusEl.textContent = msg || "—";
-  statusEl.dataset.tone = tone;
-}
-
 export function timeStr() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
@@ -23,21 +16,7 @@ export function escapeHtml(s) {
   }[m]));
 }
 
-export function addLog(tag, msg) {
-  const toneMap = {
-    WARN: "warn",
-    LOAD: "muted",
-    SAVE: "good",
-    WIN: "good",
-    GOLD: "good",
-    XP: "good",
-    EXP: "good",
-    LOSE: "danger",
-  };
-  const tone = toneMap[String(tag || "").toUpperCase()] || "info";
-  const text = tag ? `[${tag}] ${msg}` : msg;
-  setStatus(text, tone);
-}
+export function addLog() {}
 
 export function setBar(el, cur, max) {
   const pct = max <= 0 ? 0 : (cur / max) * 100;
@@ -178,8 +157,4 @@ export function refresh(state) {
     if (enemyBtns) enemyBtns.style.display = "none";
   }
 
-  const metaEl = $("meta");
-  if (!state.inBattle && metaEl && (!metaEl.textContent || metaEl.textContent.includes("—"))) {
-    setStatus("Siap bertualang.", "info");
-  }
 }

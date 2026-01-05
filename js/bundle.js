@@ -347,13 +347,6 @@ async function cloudTrySaveCurrentProfile() {
 /* ===== ui.js ===== */
 const $ = (id) => document.getElementById(id);
 
-function setStatus(msg, tone = "info") {
-  const statusEl = $("meta");
-  if (!statusEl) return;
-  statusEl.textContent = msg || "—";
-  statusEl.dataset.tone = tone;
-}
-
 // Avatar animations (critical / dodge)
 function playCritShake(target) {
   const el = $(target === "player" ? "pAvatarBox" : "eAvatarBox");
@@ -386,21 +379,7 @@ function escapeHtml(s) {
     "'": "&#039;",
   }[m]));
 }
-function addLog(tag, msg) {
-  const toneMap = {
-    WARN: "warn",
-    LOAD: "muted",
-    SAVE: "good",
-    WIN: "good",
-    GOLD: "good",
-    XP: "good",
-    EXP: "good",
-    LOSE: "danger",
-  };
-  const tone = toneMap[String(tag || "").toUpperCase()] || "info";
-  const text = tag ? `[${tag}] ${msg}` : msg;
-  setStatus(text, tone);
-}
+function addLog() {}
 function setBar(el, cur, max) {
   const pctRaw = max <= 0 ? 0 : (cur / max) * 100;
   const pct = clamp(pctRaw, 0, 100);
@@ -703,10 +682,6 @@ function refresh(state) {
     if (enemyBtns) enemyBtns.style.display = "none";
   }
 
-  const metaEl = $("meta");
-  if (!state.inBattle && metaEl && (!metaEl.textContent || metaEl.textContent.includes("—"))) {
-    setStatus("Siap bertualang.", "info");
-  }
 }
 
 
@@ -867,6 +842,41 @@ function showVictoryPopup(reward){
   setStatus("Kemenangan! Cek reward kemenangan.", "good");
   modal.open("Battle Victory", rows, () => {});
 }
+function showResultOverlay(type, reward){
+  const overlay = document.getElementById("resultOverlay");
+  const titleEl = document.getElementById("resultTitle");
+  const listEl = document.getElementById("resultList");
+  const cardEl = document.getElementById("resultCard");
+  const btn = document.getElementById("resultClose");
+  if (!overlay || !titleEl || !listEl || !cardEl || !btn) return;
+
+  overlay.classList.remove("hidden");
+  titleEl.textContent = type === "lose" ? "defeat" : "victory";
+  cardEl.classList.toggle("lose", type === "lose");
+
+  listEl.innerHTML = "";
+  const addRow = (text, cls="") => {
+    const div = document.createElement("div");
+    div.textContent = text;
+    if (cls) div.className = cls;
+    listEl.appendChild(div);
+  };
+
+  addRow(type === "lose" ? "Kamu kalah." : `+ Gold ${reward.gold}`);
+  if (type === "lose") {
+    addRow("Coba lagi!", "dropItem");
+  } else {
+    addRow(`+ XP ${reward.xp}`);
+    if (reward.drops && reward.drops.length){
+      reward.drops.forEach((d) => addRow(`${d.name} x${d.qty || 1}`, "dropItem"));
+    }
+  }
+
+  btn.onclick = () => {
+    overlay.classList.add("hidden");
+    endBattle(type === "lose" ? "Kalah dalam battle." : "Pertarungan selesai.");
+  };
+}
 
 function winBattle() {
   const p = state.player;
@@ -888,14 +898,12 @@ function winBattle() {
   const drops = rollBattleDrops(e);
   reward.drops = applyDropsToInventory(drops);
 
-  endBattle("Pertarungan selesai.");
-  showVictoryPopup(reward);
+  showResultOverlay("win", reward);
 }
 
 function loseBattle() {
-  addLog("LOSE", "Kamu kalah... Game Over.");
-  alert("Kamu kalah... Game Over.\nKamu bisa ganti karakter atau buat karakter baru.");
-  endBattle("Kembali ke Town.");
+  addLog("LOSE", "Kamu kalah...");
+  showResultOverlay("lose", { gold:0, xp:0, drops:[] });
 }
 
 /* ----------------------------- Enemy & turns ---------------------------- */
@@ -1164,7 +1172,7 @@ function openSkillModal() {
 
     const res = resolveAttack(p, state.enemy, s.power);
     if (res.missed) {
-      addLog("ENEMY", `${state.enemy.name} menghindar! (Evasion ${res.evasion}%)`);
+  addLog("ENEMY", `${state.enemy.name} menghindar! (Evasion ${res.evasion}%)`);
     } else {
       state.enemy.hp = clamp(state.enemy.hp - res.dmg, 0, state.enemy.maxHp);
       if (res.crit || res.combustion) {

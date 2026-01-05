@@ -113,6 +113,41 @@ function showVictoryPopup(reward){
 
   modal.open("Battle Victory", rows, () => {});
 }
+function showResultOverlay(type, reward){
+  const overlay = document.getElementById("resultOverlay");
+  const titleEl = document.getElementById("resultTitle");
+  const listEl = document.getElementById("resultList");
+  const cardEl = document.getElementById("resultCard");
+  const btn = document.getElementById("resultClose");
+  if (!overlay || !titleEl || !listEl || !cardEl || !btn) return;
+
+  overlay.classList.remove("hidden");
+  titleEl.textContent = type === "lose" ? "defeat" : "victory";
+  cardEl.classList.toggle("lose", type === "lose");
+
+  listEl.innerHTML = "";
+  const addRow = (text, cls="") => {
+    const div = document.createElement("div");
+    div.textContent = text;
+    if (cls) div.className = cls;
+    listEl.appendChild(div);
+  };
+
+  addRow(type === "lose" ? "Kamu kalah." : `+ Gold ${reward.gold}`);
+  if (type === "lose") {
+    addRow("Coba lagi!", "dropItem");
+  } else {
+    addRow(`+ XP ${reward.xp}`);
+    if (reward.drops && reward.drops.length){
+      reward.drops.forEach((d) => addRow(`${d.name} x${d.qty || 1}`, "dropItem"));
+    }
+  }
+
+  btn.onclick = () => {
+    overlay.classList.add("hidden");
+    endBattle(type === "lose" ? "Kalah dalam battle." : "Pertarungan selesai.");
+  };
+}
 
 function winBattle() {
   const p = state.player;
@@ -134,14 +169,12 @@ function winBattle() {
   const drops = rollBattleDrops(e);
   reward.drops = applyDropsToInventory(drops);
 
-  endBattle("Pertarungan selesai.");
-  showVictoryPopup(reward);
+  showResultOverlay("win", reward);
 }
 
 function loseBattle() {
-  addLog("LOSE", "Kamu kalah... Game Over.");
-  alert("Kamu kalah... Game Over.\nKamu bisa Load atau New Game.");
-  endBattle("Kembali ke Town.");
+  addLog("LOSE", "Kamu kalah...");
+  showResultOverlay("lose", { gold:0, xp:0, drops:[] });
 }
 
 /* ----------------------------- Enemy & turns ---------------------------- */

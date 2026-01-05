@@ -72,7 +72,6 @@
 <div class="wrap">
     <div class="topbar">
       <h1>Text RPG Turn-Based <span class="pill" id="modePill">Town</span></h1>
-      <div class="pill muted statusPill" id="meta">—</div>
     </div>
 
     <div class="grid">
@@ -189,6 +188,24 @@
       </div>
       <div class="modalBody" id="modalBody"></div>
 </div>
+  </div>
+
+  <!-- Result Overlay (Victory / Defeat) -->
+  <div id="resultOverlay" class="resultOverlay hidden">
+    <div class="resultCard" id="resultCard">
+      <div class="resultTitle" id="resultTitle">Victory</div>
+      <div class="resultList" id="resultList"></div>
+      <button class="resultBtn" id="resultClose" type="button">✓</button>
+    </div>
+  </div>
+
+  <!-- Result Overlay (Victory / Defeat) -->
+  <div id="resultOverlay" class="resultOverlay hidden">
+    <div class="resultCard" id="resultCard">
+      <div class="resultTitle" id="resultTitle">Victory</div>
+      <div class="resultList" id="resultList"></div>
+      <button class="resultBtn" id="resultClose" type="button">✓</button>
+    </div>
   </div>
   <!-- Scripts (bundled, non-module) -->
   <script>
