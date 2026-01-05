@@ -123,7 +123,8 @@ function showResultOverlay(type, reward){
 
   overlay.classList.remove("hidden");
   titleEl.textContent = type === "lose" ? "defeat" : "victory";
-  cardEl.classList.toggle("lose", type === "lose");
+  cardEl.classList.remove("win", "lose");
+  cardEl.classList.add(type === "lose" ? "lose" : "win");
 
   listEl.innerHTML = "";
   const addRow = (text, cls="") => {
