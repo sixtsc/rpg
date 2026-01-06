@@ -859,6 +859,16 @@ function applyManaRegen(entity){
   return entity.mp - before;
 }
 
+function applyDamageAfterDelay(target, dmg, slashTarget, delay = 140){
+  if (!target || dmg <= 0) return 0;
+  setTimeout(() => {
+    target.hp = clamp((target.hp || 0) - dmg, 0, target.maxHp || 0);
+    playSlash(slashTarget);
+    refresh(state);
+  }, delay);
+  return delay;
+}
+
 function equipItem(slot, itemName){
   const p = state.player;
   if (!p || !p.equipment) return false;
@@ -1204,6 +1214,24 @@ function enemyTurn() {
   if (!e) return;
 
   const isRage = e.mp >= 5 && Math.random() < 0.25;
+  const endTurnAfter = (waitMs = 0) => {
+    setTimeout(() => {
+      state.playerDefending = false;
+      state.playerDodging = false;
+
+      if (p.hp <= 0) {
+        loseBattle();
+        return;
+      }
+      if (e.hp <= 0) {
+        winBattle();
+        return;
+      }
+
+      state.battleTurn = (state.battleTurn || 0) + 1;
+      beginPlayerTurn();
+    }, waitMs);
+  };
 
   if (isRage) {
     e.mp -= 5;
@@ -1215,15 +1243,15 @@ function enemyTurn() {
       if (state.playerDodging) addLog("YOU", "Dodge berhasil! Serangan musuh meleset.");
       else addLog("YOU", "Menghindar! Serangan musuh meleset.");
       addLog("ENEMY", `${e.name} memakai Rage Strike, tapi meleset!`);
+      endTurnAfter(0);
     } else {
+      const delays = [];
       if (res.blocked > 0) addLog("INFO", "Serangan diblokir sebagian!");
       if (res.dmg > 0) {
-        p.hp = clamp(p.hp - res.dmg, 0, p.maxHp);
-        playSlash("player", 80);
+        delays.push(applyDamageAfterDelay(p, res.dmg, "player", 180));
       }
       if (res.reflected > 0) {
-        e.hp = clamp(e.hp - res.reflected, 0, e.maxHp);
-        playSlash("enemy", 150);
+        delays.push(applyDamageAfterDelay(e, res.reflected, "enemy", 240));
       }
       if (res.crit || res.combustion) {
         playCritShake("player");
@@ -1237,6 +1265,8 @@ function enemyTurn() {
         addStatusEffect(p, { type: "stun", turns: 1, debuff: true });
         addLog("WARN", "Kamu terkena Stun!");
       }
+      const wait = delays.length ? Math.max(...delays, 180) + 40 : 0;
+      endTurnAfter(wait);
     }
   } else {
     const res = resolveAttack(e, p, 2, { dodgeBonus: state.playerDodging ? 30 : 0 });
@@ -1245,15 +1275,15 @@ function enemyTurn() {
       if (state.playerDodging) addLog("YOU", "Dodge berhasil! Serangan musuh meleset.");
       else addLog("YOU", "Menghindar! Serangan musuh meleset.");
       addLog("ENEMY", `${e.name} menyerang, tapi meleset!`);
+      endTurnAfter(0);
     } else {
+      const delays = [];
       if (res.blocked > 0) addLog("INFO", "Serangan diblokir sebagian!");
       if (res.dmg > 0) {
-        p.hp = clamp(p.hp - res.dmg, 0, p.maxHp);
-        playSlash("player", 80);
+        delays.push(applyDamageAfterDelay(p, res.dmg, "player", 180));
       }
       if (res.reflected > 0) {
-        e.hp = clamp(e.hp - res.reflected, 0, e.maxHp);
-        playSlash("enemy", 150);
+        delays.push(applyDamageAfterDelay(e, res.reflected, "enemy", 240));
       }
       if (res.crit || res.combustion) {
         playCritShake("player");
@@ -1267,25 +1297,10 @@ function enemyTurn() {
         addStatusEffect(p, { type: "stun", turns: 1, debuff: true });
         addLog("WARN", "Kamu terkena Stun!");
       }
+      const wait = delays.length ? Math.max(...delays, 180) + 40 : 0;
+      endTurnAfter(wait);
     }
   }
-
-  tickStatuses(e);
-  state.playerDefending = false;
-  state.playerDodging = false;
-
-  if (p.hp <= 0) {
-    loseBattle();
-    return;
-  }
-  if (e.hp <= 0) {
-    winBattle();
-    return;
-  }
-
-  // Player turn counter
-  state.battleTurn = (state.battleTurn || 0) + 1;
-  beginPlayerTurn();
 }
 
 function afterPlayerAction() {
