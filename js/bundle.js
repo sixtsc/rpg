@@ -9,12 +9,22 @@ const SKILLS = {
 };
 const ITEMS = {
   potion: { name:"Potion", kind:"heal_hp", amount:25, desc:"Memulihkan 25 HP" },
-  ether:  { name:"Ether",  kind:"heal_mp", amount:10, desc:"Memulihkan 10 MP" }
+  ether:  { name:"Ether",  kind:"heal_mp", amount:10, desc:"Memulihkan 10 MP" },
+  woodenSword: { name:"Wooden Sword", kind:"gear", slot:"hand", desc:"Senjata kayu sederhana.", atk:2 },
+  clothHat: { name:"Cloth Hat", kind:"gear", slot:"head", desc:"Topi kain lusuh.", def:1 },
+  leatherArmor: { name:"Leather Armor", kind:"gear", slot:"armor", desc:"Armor kulit ringan.", def:2 },
+  leatherPants: { name:"Leather Pants", kind:"gear", slot:"pant", desc:"Celana kulit sederhana.", def:1 },
+  oldBoots: { name:"Old Boots", kind:"gear", slot:"shoes", desc:"Sepatu tua tapi nyaman.", spd:1 }
 };
 const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton"];
 const SHOP_GOODS = [
   { name:"Potion", price:12, ref: ITEMS.potion },
   { name:"Ether", price:18, ref: ITEMS.ether },
+  { name:"Wooden Sword", price:30, ref: ITEMS.woodenSword },
+  { name:"Cloth Hat", price:20, ref: ITEMS.clothHat },
+  { name:"Leather Armor", price:40, ref: ITEMS.leatherArmor },
+  { name:"Leather Pants", price:28, ref: ITEMS.leatherPants },
+  { name:"Old Boots", price:22, ref: ITEMS.oldBoots },
 ];
 
 
@@ -28,8 +38,9 @@ const STAT_POINTS_PER_LEVEL = 1;
 const MAX_LEVEL = 10;
 function genEnemy(plv){
   const lvl = clamp(plv + pick([-1,0,0,1]), 1, MAX_LEVEL);
+  const name = pick(ENEMY_NAMES);
   const enemy = {
-    name: pick(ENEMY_NAMES),
+    name,
     level:lvl,
     maxHp:25 + lvl*8, maxMp:10 + lvl*3,
     hp:25 + lvl*8, mp:10 + lvl*3,
@@ -49,6 +60,8 @@ function genEnemy(plv){
     blockRate: 0,
     escapeChance: 0,
     manaRegen: 0,
+    canStun: ["Goblin","Bandit","Skeleton"].includes(name),
+    stunChance: name === "Skeleton" ? 0.25 : (["Goblin","Bandit"].includes(name) ? 0.18 : 0),
     statuses: [],
     xpReward:18 + lvl*6, goldReward:8 + lvl*4
   };
@@ -859,11 +872,11 @@ function applyManaRegen(entity){
   return entity.mp - before;
 }
 
-function applyDamageAfterDelay(target, dmg, slashTarget, delay = 140){
+function applyDamageAfterDelay(target, dmg, slashTarget, delay = 200){
   if (!target || dmg <= 0) return 0;
   setTimeout(() => {
     target.hp = clamp((target.hp || 0) - dmg, 0, target.maxHp || 0);
-    playSlash(slashTarget);
+    if (slashTarget) playSlash(slashTarget);
     refresh(state);
   }, delay);
   return delay;
@@ -875,6 +888,8 @@ function equipItem(slot, itemName){
   const inv = p.inv || {};
   const it = inv[itemName];
   if (!it || (it.qty || 0) <= 0) return false;
+  if (it.kind !== "gear") return false;
+  if (it.slot !== slot) return false;
   p.equipment[slot] = itemName;
   autosave(state);
   addLog("INFO", `${itemName} dipakai di slot ${slot}.`);
@@ -934,10 +949,33 @@ function openShopModal(mode = "menu"){
     modal.open(
       "Shop",
       [
+        { title: "Market", desc: "Beli / jual item.", meta: "", value: "market" },
+        { title: "Learn Skill", desc: "Pelajari skill baru (coming soon).", meta: "", value: "learn" },
+      ],
+      (pick) => openShopModal(String(pick || "menu"))
+    );
+    return;
+  }
+
+  if (mode === "learn"){
+    modal.open(
+      "Shop - Learn Skill",
+      [
+        { title: "Skill belum tersedia", desc: "Trainer belum membuka skill baru.", meta: "", value: undefined, className:"readonly" },
+      ],
+      () => {}
+    );
+    return;
+  }
+
+  if (mode === "market"){
+    modal.open(
+      "Market",
+      [
         { title: "Beli", desc: "Beli item.", meta: "", value: "buy" },
         { title: "Jual", desc: "Jual item di inventory.", meta: "", value: "sell" },
       ],
-      (pick) => openShopModal(String(pick || "menu"))
+      (pick) => openShopModal(String(pick || "market"))
     );
     return;
   }
@@ -1248,10 +1286,10 @@ function enemyTurn() {
       const delays = [];
       if (res.blocked > 0) addLog("INFO", "Serangan diblokir sebagian!");
       if (res.dmg > 0) {
-        delays.push(applyDamageAfterDelay(p, res.dmg, "player", 180));
+        delays.push(applyDamageAfterDelay(p, res.dmg, "player", 230));
       }
       if (res.reflected > 0) {
-        delays.push(applyDamageAfterDelay(e, res.reflected, "enemy", 240));
+        delays.push(applyDamageAfterDelay(e, res.reflected, "enemy", 430));
       }
       if (res.crit || res.combustion) {
         playCritShake("player");
@@ -1261,7 +1299,7 @@ function enemyTurn() {
       } else {
         addLog("ENEMY", `${e.name} memakai Rage Strike! Damage ${res.dmg}.`);
       }
-      if (res.dmg > 0 && Math.random() < 0.2) {
+      if (res.dmg > 0 && e.canStun && Math.random() < (e.stunChance || 0)) {
         addStatusEffect(p, { type: "stun", turns: 1, debuff: true });
         addLog("WARN", "Kamu terkena Stun!");
       }
@@ -1280,10 +1318,10 @@ function enemyTurn() {
       const delays = [];
       if (res.blocked > 0) addLog("INFO", "Serangan diblokir sebagian!");
       if (res.dmg > 0) {
-        delays.push(applyDamageAfterDelay(p, res.dmg, "player", 180));
+        delays.push(applyDamageAfterDelay(p, res.dmg, "player", 230));
       }
       if (res.reflected > 0) {
-        delays.push(applyDamageAfterDelay(e, res.reflected, "enemy", 240));
+        delays.push(applyDamageAfterDelay(e, res.reflected, "enemy", 430));
       }
       if (res.crit || res.combustion) {
         playCritShake("player");
@@ -1293,7 +1331,7 @@ function enemyTurn() {
       } else {
         addLog("ENEMY", `${e.name} menyerang! Damage ${res.dmg}.`);
       }
-      if (res.dmg > 0 && Math.random() < 0.12) {
+      if (res.dmg > 0 && e.canStun && Math.random() < (e.stunChance || 0)) {
         addStatusEffect(p, { type: "stun", turns: 1, debuff: true });
         addLog("WARN", "Kamu terkena Stun!");
       }
@@ -1727,7 +1765,7 @@ function openEquipmentModal(){
     { key:"armor", label:"Armor" },
     { key:"shoes", label:"Shoes" },
   ];
-  const hasInv = Object.keys(p.inv || {}).length > 0;
+  const hasGear = (p.inv && Object.values(p.inv).some((it) => it.kind === "gear")) || false;
 
   const choices = slots.map((s) => {
     const cur = p.equipment[s.key] || null;
@@ -1737,7 +1775,7 @@ function openEquipmentModal(){
       desc,
       meta: "",
       buttons: [
-        { text: "Equip", value: `equip:${s.key}`, disabled: !hasInv },
+        { text: "Equip", value: `equip:${s.key}`, disabled: !hasGear },
         { text: "Unequip", value: `unequip:${s.key}`, disabled: !cur },
       ],
       keepOpen: true,
@@ -1765,9 +1803,12 @@ function openEquipmentModal(){
 function openEquipSelect(slot){
   const p = state.player;
   if (!p || !p.inv) return;
-  const keys = Object.keys(p.inv);
+  const keys = Object.keys(p.inv).filter((k) => {
+    const it = p.inv[k];
+    return it && it.kind === "gear" && it.slot === slot;
+  });
   if (!keys.length) {
-    addLog("WARN", "Inventory kosong untuk di-equip.");
+    addLog("WARN", `Tidak ada gear untuk slot ${slot}.`);
     return;
   }
 
@@ -1776,7 +1817,7 @@ function openEquipSelect(slot){
     keys.map((k) => ({
       title: `${k} x${p.inv[k].qty}`,
       desc: p.inv[k].desc || "Perlengkapan",
-      meta: "Equip",
+      meta: `Equip (${p.inv[k].slot || "-"})`,
       value: k,
     })),
     (name) => {
