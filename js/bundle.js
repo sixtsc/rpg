@@ -12,6 +12,10 @@ const ITEMS = {
   ether:  { name:"Ether",  kind:"heal_mp", amount:10, desc:"Memulihkan 10 MP" }
 };
 const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton"];
+const SHOP_GOODS = [
+  { name:"Potion", price:12, ref: ITEMS.potion },
+  { name:"Ether", price:18, ref: ITEMS.ether },
+];
 
 
 /* ===== engine.js ===== */
@@ -139,6 +143,7 @@ function newPlayer(){
     blockRate:8,
     escapeChance:10,
     statuses: [],
+    equipment: { hand:null, head:null, pant:null, armor:null, shoes:null },
 
     deprecatedSkillCooldown:0,
     xp:0, xpToLevel:50,
@@ -189,6 +194,15 @@ function normalizePlayer(p){
   if (typeof p.blockRate !== "number") p.blockRate = 0;
   if (typeof p.escapeChance !== "number") p.escapeChance = 0;
   if (!Array.isArray(p.statuses)) p.statuses = [];
+  if (typeof p.equipment !== "object" || p.equipment === null) {
+    p.equipment = { hand:null, head:null, pant:null, armor:null, shoes:null };
+  } else {
+    p.equipment.hand ??= null;
+    p.equipment.head ??= null;
+    p.equipment.pant ??= null;
+    p.equipment.armor ??= null;
+    p.equipment.shoes ??= null;
+  }
 
   // Safety defaults (older saves)
   if (typeof p.level !== "number") p.level = 1;
@@ -417,13 +431,19 @@ function playDodgeFade(target) {
   setTimeout(() => el.classList.remove("dodgeFade"), 450);
 }
 
-function playSlash(target) {
+function playSlash(target, delay = 0) {
   const el = $(target === "player" ? "pAvatarBox" : "eAvatarBox");
   if (!el) return;
-  const slash = document.createElement("div");
-  slash.className = "slashHit";
-  el.appendChild(slash);
-  slash.addEventListener("animationend", () => slash.remove(), { once: true });
+  const spawn = () => {
+    const prev = el.querySelector(".slashHit");
+    if (prev) prev.remove();
+    const slash = document.createElement("div");
+    slash.className = "slashHit";
+    el.appendChild(slash);
+    slash.addEventListener("animationend", () => slash.remove(), { once: true });
+  };
+  if (delay > 0) setTimeout(spawn, delay);
+  else spawn();
 }
 
 function timeStr() {
@@ -459,8 +479,6 @@ function showToast(msg, tag) {
 
 function addLog(tag, msg) {
   showToast(msg, tag);
-  const metaEl = $("meta");
-  if (metaEl) metaEl.textContent = msg;
 }
 
 function statusLabel(entity) {
@@ -605,16 +623,6 @@ const modal = {
 // TURN INDICATOR: state.turn = "player" | "enemy" | "town"
 function refresh(state) {
   const p = state.player;
-
-  // Stats button — simple label only, XP shown di dalam stats modal
-  const btnStatsBattle = $("btnStatsBattle");
-  if (btnStatsBattle) {
-    btnStatsBattle.textContent = "Stats";
-  }
-  const btnStatsTown = $("btnStats");
-  if (btnStatsTown) {
-    btnStatsTown.textContent = "Stats";
-  }
 
   // Player title + name
   const pNameTitle = $("pNameTitle");
@@ -849,6 +857,121 @@ function applyManaRegen(entity){
   const before = entity.mp;
   entity.mp = clamp(entity.mp + regen, 0, entity.maxMp || 0);
   return entity.mp - before;
+}
+
+function equipItem(slot, itemName){
+  const p = state.player;
+  if (!p || !p.equipment) return false;
+  const inv = p.inv || {};
+  const it = inv[itemName];
+  if (!it || (it.qty || 0) <= 0) return false;
+  p.equipment[slot] = itemName;
+  autosave(state);
+  addLog("INFO", `${itemName} dipakai di slot ${slot}.`);
+  refresh(state);
+  return true;
+}
+
+function unequipSlot(slot){
+  const p = state.player;
+  if (!p || !p.equipment) return false;
+  if (!p.equipment[slot]) return false;
+  const name = p.equipment[slot];
+  p.equipment[slot] = null;
+  autosave(state);
+  addLog("INFO", `${name} dilepas dari slot ${slot}.`);
+  refresh(state);
+  return true;
+}
+
+function getShopItem(name){
+  return SHOP_GOODS.find((g) => g.name === name);
+}
+
+function buyItem(name){
+  const p = state.player;
+  const g = getShopItem(name);
+  if (!p || !g || !g.ref) return false;
+  if (p.gold < g.price) return false;
+  p.gold -= g.price;
+  const inv = p.inv || (p.inv = {});
+  if (inv[name]) inv[name].qty += 1;
+  else inv[name] = { ...g.ref, qty:1 };
+  autosave(state);
+  addLog("GOLD", `Beli ${name} (-${g.price} gold)`);
+  refresh(state);
+  return true;
+}
+
+function sellItem(name){
+  const p = state.player;
+  if (!p || !p.inv || !p.inv[name]) return false;
+  const inv = p.inv[name];
+  const base = getShopItem(name)?.price || 10;
+  const gain = Math.max(1, Math.floor(base / 2));
+  inv.qty -= 1;
+  if (inv.qty <= 0) delete p.inv[name];
+  p.gold += gain;
+  autosave(state);
+  addLog("GOLD", `Jual ${name} (+${gain} gold)`);
+  refresh(state);
+  return true;
+}
+
+function openShopModal(mode = "menu"){
+  if (state.inBattle) return;
+  if (mode === "menu"){
+    modal.open(
+      "Shop",
+      [
+        { title: "Beli", desc: "Beli item.", meta: "", value: "buy" },
+        { title: "Jual", desc: "Jual item di inventory.", meta: "", value: "sell" },
+      ],
+      (pick) => openShopModal(String(pick || "menu"))
+    );
+    return;
+  }
+
+  if (mode === "buy"){
+    modal.open(
+      "Shop - Beli",
+      SHOP_GOODS.map((g) => ({
+        title: `${g.name}`,
+        desc: g.ref.desc || "Item",
+        meta: `${g.price} gold`,
+        value: `buy:${g.name}`,
+      })),
+      (pick) => {
+        const name = String(pick || "").replace(/^buy:/, "");
+        const ok = buyItem(name);
+        if (!ok) addLog("WARN", "Gold tidak cukup atau item tidak tersedia.");
+        openShopModal("buy");
+      }
+    );
+    return;
+  }
+
+  if (mode === "sell"){
+    const inv = state.player.inv || {};
+    const keys = Object.keys(inv);
+    const rows = keys.length
+      ? keys.map((k) => {
+          const price = Math.max(1, Math.floor((getShopItem(k)?.price || 10) / 2));
+          return { title: `${k} x${inv[k].qty}`, desc: inv[k].desc || "Item", meta: `+${price} gold`, value: `sell:${k}` };
+        })
+      : [{ title: "Tidak ada item", desc: "Inventory kosong.", meta: "", value: undefined, className: "readonly" }];
+
+    modal.open(
+      "Shop - Jual",
+      rows,
+      (pick) => {
+        const name = String(pick || "").replace(/^sell:/, "");
+        const ok = sellItem(name);
+        if (!ok) addLog("WARN", "Item tidak bisa dijual.");
+        openShopModal("sell");
+      }
+    );
+  }
 }
 
 /* ----------------------------- Core helpers ----------------------------- */
@@ -1096,11 +1219,11 @@ function enemyTurn() {
       if (res.blocked > 0) addLog("INFO", "Serangan diblokir sebagian!");
       if (res.dmg > 0) {
         p.hp = clamp(p.hp - res.dmg, 0, p.maxHp);
-        playSlash("player");
+        playSlash("player", 80);
       }
       if (res.reflected > 0) {
         e.hp = clamp(e.hp - res.reflected, 0, e.maxHp);
-        playSlash("enemy");
+        playSlash("enemy", 150);
       }
       if (res.crit || res.combustion) {
         playCritShake("player");
@@ -1126,11 +1249,11 @@ function enemyTurn() {
       if (res.blocked > 0) addLog("INFO", "Serangan diblokir sebagian!");
       if (res.dmg > 0) {
         p.hp = clamp(p.hp - res.dmg, 0, p.maxHp);
-        playSlash("player");
+        playSlash("player", 80);
       }
       if (res.reflected > 0) {
         e.hp = clamp(e.hp - res.reflected, 0, e.maxHp);
-        playSlash("enemy");
+        playSlash("enemy", 150);
       }
       if (res.crit || res.combustion) {
         playCritShake("player");
@@ -1280,11 +1403,11 @@ function attack() {
   if (res.blocked > 0) addLog("INFO", `${e.name} memblokir seranganmu!`);
   if (res.dmg > 0) {
     e.hp = clamp(e.hp - res.dmg, 0, e.maxHp);
-    playSlash("enemy");
+    playSlash("enemy", 80);
   }
   if (res.reflected > 0) {
     p.hp = clamp(p.hp - res.reflected, 0, p.maxHp);
-    playSlash("player");
+    playSlash("player", 150);
   }
 
   if (res.crit || res.combustion) {
@@ -1395,11 +1518,11 @@ function openSkillModal() {
       if (res.blocked > 0) addLog("INFO", `${state.enemy.name} memblokir skillmu!`);
       if (res.dmg > 0) {
         state.enemy.hp = clamp(state.enemy.hp - res.dmg, 0, state.enemy.maxHp);
-        playSlash("enemy");
+        playSlash("enemy", 80);
       }
       if (res.reflected > 0) {
         p.hp = clamp(p.hp - res.reflected, 0, p.maxHp);
-        playSlash("player");
+        playSlash("player", 150);
       }
       if (res.crit || res.combustion) {
         if (res.crit && res.combustion) addLog("YOU", `CRITICAL + COMBUSTION! ${s.name}! Damage ${res.dmg}.`);
@@ -1519,6 +1642,20 @@ function applyAttributeDelta(statKey, delta){
 }
 
 function openProfileModal(){
+  modal.open(
+    "Profile",
+    [
+      { title: "Equipment", desc: "Kelola gear (hand, head, pant, armor, shoes).", meta: "", value: "equip" },
+      { title: "Stat", desc: "Atur stat poin.", meta: "", value: "stat" },
+    ],
+    (pick) => {
+      if (pick === "equip") return openEquipmentModal();
+      if (pick === "stat") return openProfileStatModal();
+    }
+  );
+}
+
+function openProfileStatModal(){
   const p = state.player || {};
   const pts = p.statPoints || 0;
 
@@ -1537,7 +1674,7 @@ function openProfileModal(){
   };
 
   modal.open(
-    "Profile",
+    "Stat",
     [
       { title: `Stat Points : ${pts}`, desc: "Dapatkan dari level up. Gunakan tombol + untuk menambah stat.", meta: "" },
       mk("str", "STR", "Meningkatkan ATK dan Combustion Chance"),
@@ -1557,12 +1694,80 @@ function openProfileModal(){
 
       const ok = applyAttributeDelta(key, delta);
       if (!ok){
-        // re-render anyway to refresh disabled buttons
-        openProfileModal();
+        openProfileStatModal();
         return;
       }
-      // re-render to update values + points
-      openProfileModal();
+      openProfileStatModal();
+    }
+  );
+}
+
+function openEquipmentModal(){
+  const p = state.player;
+  if (!p || !p.equipment) return;
+  const slots = [
+    { key:"hand", label:"Hand" },
+    { key:"head", label:"Head" },
+    { key:"pant", label:"Pant" },
+    { key:"armor", label:"Armor" },
+    { key:"shoes", label:"Shoes" },
+  ];
+  const hasInv = Object.keys(p.inv || {}).length > 0;
+
+  const choices = slots.map((s) => {
+    const cur = p.equipment[s.key] || null;
+    const desc = cur ? `Memakai: ${cur}` : "Kosong";
+    return {
+      title: `${s.label} : ${cur || "-"}`,
+      desc,
+      meta: "",
+      buttons: [
+        { text: "Equip", value: `equip:${s.key}`, disabled: !hasInv },
+        { text: "Unequip", value: `unequip:${s.key}`, disabled: !cur },
+      ],
+      keepOpen: true,
+    };
+  });
+
+  modal.open(
+    "Equipment",
+    choices,
+    (pick) => {
+      const [action, slot] = String(pick || "").split(":");
+      if (!slot) return;
+      if (action === "equip") {
+        openEquipSelect(slot);
+        return;
+      }
+      if (action === "unequip") {
+        unequipSlot(slot);
+        openEquipmentModal();
+      }
+    }
+  );
+}
+
+function openEquipSelect(slot){
+  const p = state.player;
+  if (!p || !p.inv) return;
+  const keys = Object.keys(p.inv);
+  if (!keys.length) {
+    addLog("WARN", "Inventory kosong untuk di-equip.");
+    return;
+  }
+
+  modal.open(
+    `Pilih item untuk ${slot}`,
+    keys.map((k) => ({
+      title: `${k} x${p.inv[k].qty}`,
+      desc: p.inv[k].desc || "Perlengkapan",
+      meta: "Equip",
+      value: k,
+    })),
+    (name) => {
+      const ok = equipItem(slot, name);
+      if (!ok) addLog("WARN", "Item tidak bisa dipakai.");
+      openEquipmentModal();
     }
   );
 }
@@ -1780,12 +1985,6 @@ function bind() {
   byId("btnExplore").onclick = explore;
   const br=byId("btnRest"); if(br) br.onclick = rest;
   byId("btnInventory").onclick = openInventoryReadOnly;
-  const btnStats = byId("btnStats");
-  if (btnStats) btnStats.onclick = openStatsModal;
-
-  const btnStatsBattle = byId("btnStatsBattle");
-  if (btnStatsBattle) btnStatsBattle.onclick = openStatsModal;
-
   const btnEnemyStats = byId("btnEnemyStats");
   if (btnEnemyStats) btnEnemyStats.onclick = openEnemyStatsModal;
   // MENU (Save/Load/New Game)
@@ -1796,7 +1995,9 @@ function bind() {
   const btnProfile = byId("btnProfile");
   if (btnProfile) btnProfile.onclick = openProfileModal;
   const btnShop = byId("btnShop");
-  if (btnShop) btnShop.onclick = () => addLog("INFO", "Shop (coming soon).");
+  if (btnShop) btnShop.onclick = () => openShopModal();
+  const playerStatLink = byId("playerStatLink");
+  if (playerStatLink) playerStatLink.onclick = openStatsModal;
 
   // Character create menu buttons
   const ccCreate = byId("ccCreate");

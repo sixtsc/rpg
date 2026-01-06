@@ -75,6 +75,13 @@ h1{ font-size:18px; margin:0; font-weight:800; letter-spacing:.2px; }
   margin-bottom:8px;
 }
 
+.playerTitle{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex-wrap:wrap;
+}
+
 .mono{
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size:13px;
@@ -135,6 +142,15 @@ button.danger{ border-color: rgba(255, 120, 120, .55); background:#2a1212; color
 /* Skill button (purple) */
 #btnSkill{ border-color:#8b5cf6; background:rgba(88,28,135,.35); }
 button:disabled{ opacity:.45; cursor:not-allowed; }
+
+.statLink{
+  padding:2px 8px;
+  font-weight:900;
+  font-size:12px;
+  cursor:pointer;
+  background:rgba(255,255,255,0.06);
+}
+.statLink:hover{ filter: brightness(1.08); }
 
 /* Stats button with Lv badge + XP progress */
 #btnStatsBattle, #btnStats, #btnEnemyStats{
