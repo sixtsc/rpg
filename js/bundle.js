@@ -143,8 +143,8 @@ function newPlayer(){
     str:0, dex:0, int:0, vit:0, foc:0,
     statPoints:1,
     _spBaseGranted:true,
-    baseBlockRate:8,
-    baseEscapeChance:10,
+    baseBlockRate:0,
+    baseEscapeChance:0,
 
     // Derived / combat stats (currently flat)
     maxHp:60, maxMp:25,
@@ -153,8 +153,8 @@ function newPlayer(){
     acc:0,
     critChance:5, critDamage:0, combustionChance:0, evasion:5,
     manaRegen:5,
-    blockRate:8,
-    escapeChance:10,
+    blockRate:0,
+    escapeChance:0,
     statuses: [],
     equipment: { hand:null, head:null, pant:null, armor:null, shoes:null },
 
@@ -201,8 +201,8 @@ function normalizePlayer(p){
   }
   if (typeof p.critChance !== "number") p.critChance = 0;
   if (typeof p.evasion !== "number") p.evasion = 0;
-  if (typeof p.baseBlockRate !== "number") p.baseBlockRate = 8;
-  if (typeof p.baseEscapeChance !== "number") p.baseEscapeChance = 10;
+  if (typeof p.baseBlockRate !== "number") p.baseBlockRate = 0;
+  if (typeof p.baseEscapeChance !== "number") p.baseEscapeChance = 0;
   if (typeof p.manaRegen !== "number") p.manaRegen = 5;
   if (typeof p.blockRate !== "number") p.blockRate = 0;
   if (typeof p.escapeChance !== "number") p.escapeChance = 0;
@@ -227,8 +227,8 @@ function normalizePlayer(p){
 
 function applyDerivedStats(p){
   if (!p) return;
-  if (typeof p.baseBlockRate !== "number") p.baseBlockRate = 6;
-  if (typeof p.baseEscapeChance !== "number") p.baseEscapeChance = 10;
+  if (typeof p.baseBlockRate !== "number") p.baseBlockRate = 0;
+  if (typeof p.baseEscapeChance !== "number") p.baseEscapeChance = 0;
   if (!Array.isArray(p.statuses)) p.statuses = [];
 
   const intVal = Math.max(0, p.int || 0);
@@ -1045,10 +1045,7 @@ function prepareTurn(turn){
   const actor = turn === "player" ? state.player : state.enemy;
   if (!actor) return { skipped: false };
 
-  const regen = applyManaRegen(actor);
   const escaped = tryEscapeStatuses(actor);
-
-  if (regen > 0 && turn === "player") addLog("INFO", `Mana regen +${regen}`);
   if (escaped > 0) addLog("GOOD", turn === "player" ? "Kamu lolos dari debuff!" : `${actor.name} bebas dari debuff.`);
 
   const stunned = !!hasStatus(actor, "stun");
@@ -1475,6 +1472,17 @@ function attack() {
   if (p.hp <= 0) {
     loseBattle();
   }
+}
+
+function charge(){
+  if (!state.inBattle || state.turn !== "player") return;
+  setTurn("player");
+  const p = state.player;
+  const gain = Math.max(1, Math.round(p.manaRegen || 0));
+  const before = p.mp;
+  p.mp = clamp(p.mp + gain, 0, p.maxMp);
+  addLog("INFO", `Charge! MP ${before}→${p.mp} (+${gain})`);
+  afterPlayerAction();
 }
 
 function dodge() {
@@ -2067,6 +2075,11 @@ function bind() {
     if (!state.inBattle || state.turn !== "player") return;
     attack();
     afterPlayerAction();
+  };
+  const btnCharge = byId("btnCharge");
+  if (btnCharge) btnCharge.onclick = () => {
+    if (!state.inBattle || state.turn !== "player") return;
+    charge();
   };
 
   byId("btnDefend").onclick = () => {
