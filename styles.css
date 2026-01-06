@@ -117,7 +117,7 @@ h1{ font-size:18px; margin:0; font-weight:800; letter-spacing:.2px; }
 
 /* Battle UI */
 .battleActions{ display:flex; flex-direction:column; gap:10px; margin-top:12px; }
-.battlePrimary{ display:grid; gap:10px; grid-template-columns:repeat(2, minmax(0,1fr)); }
+.battlePrimary{ display:grid; gap:10px; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
 .battlePrimary button{ width:100%; }
 /* Full-width actions */
 #btnStatsBattle, #btnRun{ grid-column: 1 / -1; }

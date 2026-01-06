@@ -51,12 +51,12 @@ function genEnemy(plv){
     vit: Math.max(0, lvl),
     critChance: clamp(5 + Math.floor(lvl/3), 5, 35),
     critDamage: 0,
-    acc: 0,
+    acc: Math.max(0, Math.floor(lvl / 4)),
     foc: 0,
     combustionChance: 0,
-    evasion: clamp(5 + Math.floor((4+lvl)/4), 5, 30),
-    baseBlockRate: clamp(5 + Math.floor(lvl / 3), 5, 24),
-    baseEscapeChance: clamp(6 + Math.floor(lvl / 2), 6, 28),
+    evasion: clamp(3 + Math.floor(lvl / 6), 3, 15),
+    baseBlockRate: 0,
+    baseEscapeChance: clamp(2 + Math.floor(lvl / 6), 2, 12),
     blockRate: 0,
     escapeChance: 0,
     manaRegen: 0,
@@ -717,12 +717,6 @@ function refresh(state) {
     $("townBtns").style.display = "none";
     $("battleBtns").style.display = "flex";
 
-    const btnSkill = $("btnSkill");
-    if (btnSkill) {
-      btnSkill.textContent = "Skill";
-      btnSkill.disabled = (state.turn !== "player");
-    }
-
     const actionCard = $("actionCard");
     if (actionCard) actionCard.style.display = "block";
 
@@ -785,9 +779,6 @@ function refresh(state) {
 
     $("townBtns").style.display = "flex";
     $("battleBtns").style.display = "none";
-    const btnSkill = $("btnSkill");
-    if (btnSkill) { btnSkill.disabled = false; btnSkill.textContent = "Skill"; }
-
     const actionCard = $("actionCard");
     if (actionCard) actionCard.style.display = "block";
 
@@ -2092,11 +2083,6 @@ function bind() {
     if (!state.inBattle || state.turn !== "player") return;
     const ok = runAway();
     if (!ok) afterPlayerAction();
-  };
-
-  byId("btnSkill").onclick = () => {
-    if (!state.inBattle || state.turn !== "player") return;
-    openSkillModal();
   };
 
   byId("btnItem").onclick = () => {
