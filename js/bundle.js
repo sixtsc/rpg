@@ -9,9 +9,31 @@ const SKILLS = {
 };
 const ITEMS = {
   potion: { name:"Potion", kind:"heal_hp", amount:25, desc:"Memulihkan 25 HP" },
-  ether:  { name:"Ether",  kind:"heal_mp", amount:10, desc:"Memulihkan 10 MP" }
+  ether:  { name:"Ether",  kind:"heal_mp", amount:10, desc:"Memulihkan 10 MP" },
+  woodenSword: { name:"Wooden Sword", kind:"gear", slot:"hand", desc:"Senjata kayu sederhana.", atk:2 },
+  clothHat: { name:"Cloth Hat", kind:"gear", slot:"head", desc:"Topi kain lusuh.", def:1 },
+  leatherArmor: { name:"Leather Armor", kind:"gear", slot:"armor", desc:"Armor kulit ringan.", def:2 },
+  leatherPants: { name:"Leather Pants", kind:"gear", slot:"pant", desc:"Celana kulit sederhana.", def:1 },
+  oldBoots: { name:"Old Boots", kind:"gear", slot:"shoes", desc:"Sepatu tua tapi nyaman.", spd:1 }
 };
+const SKILL_SHOP = [
+  { key:"emberBolt", name:"Ember Bolt", levelReq:1, mpCost:3, power:2, cooldown:1, desc:"Belum punya efek khusus." },
+  { key:"frostPing", name:"Frost Ping", levelReq:2, mpCost:4, power:3, cooldown:2, desc:"Belum punya efek khusus." },
+  { key:"shadowTap", name:"Shadow Tap", levelReq:4, mpCost:5, power:4, cooldown:2, desc:"Belum punya efek khusus." },
+  { key:"stoneClap", name:"Stone Clap", levelReq:6, mpCost:6, power:5, cooldown:3, desc:"Belum punya efek khusus." },
+  { key:"stormGlyph", name:"Storm Glyph", levelReq:8, mpCost:7, power:6, cooldown:3, desc:"Belum punya efek khusus." },
+  { key:"solarPulse", name:"Solar Pulse", levelReq:10, mpCost:8, power:7, cooldown:4, desc:"Belum punya efek khusus." },
+];
 const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton"];
+const SHOP_GOODS = [
+  { name:"Potion", price:12, ref: ITEMS.potion },
+  { name:"Ether", price:18, ref: ITEMS.ether },
+  { name:"Wooden Sword", price:30, ref: ITEMS.woodenSword },
+  { name:"Cloth Hat", price:20, ref: ITEMS.clothHat },
+  { name:"Leather Armor", price:40, ref: ITEMS.leatherArmor },
+  { name:"Leather Pants", price:28, ref: ITEMS.leatherPants },
+  { name:"Old Boots", price:22, ref: ITEMS.oldBoots },
+];
 
 
 /* ===== engine.js ===== */
@@ -24,20 +46,34 @@ const STAT_POINTS_PER_LEVEL = 1;
 const MAX_LEVEL = 10;
 function genEnemy(plv){
   const lvl = clamp(plv + pick([-1,0,0,1]), 1, MAX_LEVEL);
-  return {
-    name: pick(ENEMY_NAMES),
+  const name = pick(ENEMY_NAMES);
+  const enemy = {
+    name,
     level:lvl,
     maxHp:25 + lvl*8, maxMp:10 + lvl*3,
     hp:25 + lvl*8, mp:10 + lvl*3,
     atk:6 + lvl*2, def:2 + lvl, spd:4 + lvl,
+    str: Math.max(0, lvl - 1),
+    dex: Math.max(0, Math.floor(lvl / 2)),
+    int: Math.max(0, Math.floor(lvl / 2)),
+    vit: Math.max(0, lvl),
     critChance: clamp(5 + Math.floor(lvl/3), 5, 35),
     critDamage: 0,
-    acc: 0,
+    acc: Math.max(0, Math.floor(lvl / 6)),
     foc: 0,
     combustionChance: 0,
-    evasion: clamp(5 + Math.floor((4+lvl)/4), 5, 30),
+    evasion: clamp(2 + Math.floor(lvl / 8), 2, 10),
+    baseBlockRate: 0,
+    baseEscapeChance: clamp(2 + Math.floor(lvl / 8), 2, 10),
+    blockRate: 0,
+    escapeChance: 0,
+    manaRegen: 0,
+    statuses: [],
     xpReward:18 + lvl*6, goldReward:8 + lvl*4
   };
+  applyDerivedStats(enemy);
+  enemy.blockRate = 0;
+  return enemy;
 }
 function calcDamage(attAtk, defDef, basePower, defending){
   const variance = randInt(-2,3);
@@ -80,7 +116,18 @@ function resolveAttack(att, def, basePower, opts = {}) {
     combustion = true;
   }
 
-  return { missed: false, crit, combustion, dmg, evasion, rollEv, rollCrit, rollComb };
+  const blockPct = clamp(def.blockRate || 0, 0, 90);
+  let blocked = 0;
+  let reflected = 0;
+  if (blockPct > 0) {
+    blocked = Math.round(dmg * (blockPct / 100));
+    if (blocked > 0) {
+      dmg = Math.max(0, dmg - blocked);
+      reflected = blocked;
+    }
+  }
+
+  return { missed: false, crit, combustion, dmg, evasion, rollEv, rollCrit, rollComb, blocked, reflected };
 }
 function escapeChance(p,e){
   return clamp(50 + (p.spd - e.spd)*8, 10, 90);
@@ -96,13 +143,15 @@ function dodgeChance(p,e){
 function newPlayer(){
   return {
     name:"Hero",
-    gender:"other",
+    gender:"male",
     level:1,
 
     // Base stats (for future scaling)
     str:0, dex:0, int:0, vit:0, foc:0,
     statPoints:1,
     _spBaseGranted:true,
+    baseBlockRate:0,
+    baseEscapeChance:0,
 
     // Derived / combat stats (currently flat)
     maxHp:60, maxMp:25,
@@ -110,6 +159,11 @@ function newPlayer(){
     atk:10, def:4, spd:7,
     acc:0,
     critChance:5, critDamage:0, combustionChance:0, evasion:5,
+    manaRegen:5,
+    blockRate:0,
+    escapeChance:0,
+    statuses: [],
+    equipment: { hand:null, head:null, pant:null, armor:null, shoes:null },
 
     deprecatedSkillCooldown:0,
     xp:0, xpToLevel:50,
@@ -124,7 +178,7 @@ function normalizePlayer(p){
   if (!p) return p;
 
   // Base stats
-  if (typeof p.gender !== "string") p.gender = "other";
+  if (typeof p.gender !== "string") p.gender = "male";
   if (typeof p.str !== "number") p.str = 0;
   if (typeof p.dex !== "number") p.dex = 0;
   if (typeof p.int !== "number") p.int = 0;
@@ -154,12 +208,42 @@ function normalizePlayer(p){
   }
   if (typeof p.critChance !== "number") p.critChance = 0;
   if (typeof p.evasion !== "number") p.evasion = 0;
+  if (typeof p.baseBlockRate !== "number") p.baseBlockRate = 0;
+  if (typeof p.baseEscapeChance !== "number") p.baseEscapeChance = 0;
+  if (typeof p.manaRegen !== "number") p.manaRegen = 5;
+  if (typeof p.blockRate !== "number") p.blockRate = 0;
+  if (typeof p.escapeChance !== "number") p.escapeChance = 0;
+  if (!Array.isArray(p.statuses)) p.statuses = [];
+  if (typeof p.equipment !== "object" || p.equipment === null) {
+    p.equipment = { hand:null, head:null, pant:null, armor:null, shoes:null };
+  } else {
+    p.equipment.hand ??= null;
+    p.equipment.head ??= null;
+    p.equipment.pant ??= null;
+    p.equipment.armor ??= null;
+    p.equipment.shoes ??= null;
+  }
 
   // Safety defaults (older saves)
   if (typeof p.level !== "number") p.level = 1;
   if (typeof p.name !== "string") p.name = "Hero";
 
+  applyDerivedStats(p);
   return p;
+}
+
+function applyDerivedStats(p){
+  if (!p) return;
+  if (typeof p.baseBlockRate !== "number") p.baseBlockRate = 0;
+  if (typeof p.baseEscapeChance !== "number") p.baseEscapeChance = 0;
+  if (!Array.isArray(p.statuses)) p.statuses = [];
+
+  const intVal = Math.max(0, p.int || 0);
+  const vitVal = Math.max(0, p.vit || 0);
+
+  p.manaRegen = Math.max(1, Math.floor((p.maxMp || 0) * 0.06) + Math.floor(intVal * 0.8));
+  p.blockRate = clamp(Math.round(p.baseBlockRate + vitVal * 1.2), 0, 80);
+  p.escapeChance = clamp(Math.round(p.baseEscapeChance + intVal * 1.3), 0, 95);
 }
 
 
@@ -173,6 +257,9 @@ function newState(){
     player: normalizePlayer(newPlayer()),
     enemy: null,
     inBattle: false,
+    battleResult: null,
+    shopMarketCategory: "consumable",
+    shopEquipCategory: "weapon",
     playerDefending: false,
     playerDodging: false,
     turn: "town",
@@ -367,6 +454,21 @@ function playDodgeFade(target) {
   setTimeout(() => el.classList.remove("dodgeFade"), 450);
 }
 
+function playSlash(target, delay = 0) {
+  const el = $(target === "player" ? "pAvatarBox" : "eAvatarBox");
+  if (!el) return;
+  const spawn = () => {
+    const prev = el.querySelector(".slashHit");
+    if (prev) prev.remove();
+    const slash = document.createElement("div");
+    slash.className = "slashHit";
+    el.appendChild(slash);
+    slash.addEventListener("animationend", () => slash.remove(), { once: true });
+  };
+  if (delay > 0) setTimeout(spawn, delay);
+  else spawn();
+}
+
 function timeStr() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
@@ -379,19 +481,142 @@ function escapeHtml(s) {
     "'": "&#039;",
   }[m]));
 }
+
+let toastTimer = null;
+function showToast(msg, tag) {
+  const el = $("toast");
+  if (!el) return;
+  el.textContent = msg;
+  el.className = "toast";
+
+  const t = String(tag || "").toLowerCase();
+  if (["xp", "exp", "gold", "win", "level", "save", "good"].includes(t)) el.classList.add("good");
+  else if (["warn", "lose", "danger"].includes(t)) el.classList.add("warn");
+  else if (t === "error") el.classList.add("danger");
+
+  void el.offsetWidth;
+  el.classList.add("show");
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
+}
+
 function addLog(tag, msg) {
-  const logEl = $("log");
-  const div = document.createElement("div");
-  div.className = "entry";
+  showToast(msg, tag);
+}
 
-  // Color helpers (tag-based)
-  const t = String(tag || "").toUpperCase();
-  if (t === "XP" || t === "EXP") div.classList.add("log-xp");
-  if (t === "GOLD") div.classList.add("log-gold");
+function showBattleResultOverlay(summary, onClose) {
+  const backdrop = $("battleResultBackdrop");
+  if (!backdrop) return;
+  $("battleResultTitle").textContent = summary.outcome === "win" ? "Victory" : "Defeat";
+  $("battleResultEnemy").textContent = summary.enemyName ? `Vs ${summary.enemyName}` : "";
+  $("battleResultGold").textContent = `Gold +${summary.gold || 0}`;
+  $("battleResultXp").textContent = `XP +${summary.xp || 0}`;
 
-  div.innerHTML = `<span class="tag">${escapeHtml(tag)}</span>${escapeHtml(msg)}<span class="time"> ${timeStr()}</span>`;
-  logEl.prepend(div);
-  logEl.scrollTop = 0;
+  const dropEl = $("battleResultDrops");
+  const drops = Array.isArray(summary.drops) ? summary.drops : [];
+  if (!drops.length) {
+    dropEl.textContent = "Drop: -";
+  } else {
+    dropEl.textContent = `Drop: ${drops.map((d) => `${d.name} x${d.qty || 1}`).join(", ")}`;
+  }
+
+  backdrop.style.display = "flex";
+  const btn = $("battleResultClose");
+  if (btn) {
+    btn.onclick = () => {
+      backdrop.style.display = "none";
+      if (onClose) onClose();
+    };
+  }
+}
+
+function renderSkillSlots(){
+  const grid = $("skillSlots");
+  if (!grid) return;
+  const p = state.player;
+  const slots = Array.from({ length: 8 });
+  slots.forEach((_, i) => {
+    let btn = grid.querySelector(`[data-slot="${i}"]`);
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.className = "skillSlot";
+      btn.setAttribute("data-slot", `${i}`);
+      grid.appendChild(btn);
+    }
+    const skill = p.skills && p.skills[i];
+    if (skill) {
+      const cdLeft = skill.cdLeft || 0;
+      btn.textContent = cdLeft > 0 ? `${skill.name} (CD ${cdLeft})` : skill.name;
+      btn.disabled = (state.turn !== "player") || p.mp < skill.mpCost || cdLeft > 0;
+      btn.onclick = () => useSkillAtIndex(i);
+    } else {
+      btn.textContent = "-";
+      btn.disabled = true;
+      btn.onclick = null;
+    }
+  });
+}
+
+function useSkillAtIndex(idx){
+  const p = state.player;
+  const e = state.enemy;
+  if (!p || !e || !Array.isArray(p.skills)) return;
+  const s = p.skills[idx];
+  if (!s) return;
+  if (state.turn !== "player") return;
+  const cdLeft = s.cdLeft || 0;
+  if (cdLeft > 0) {
+    addLog("WARN", `${s.name} cooldown ${cdLeft} turn.`);
+    refresh(state);
+    return;
+  }
+  if (p.mp < s.mpCost) {
+    addLog("WARN", "MP tidak cukup.");
+    refresh(state);
+    return;
+  }
+
+  p.mp -= s.mpCost;
+
+  const res = resolveAttack(p, e, s.power);
+  if (res.missed) {
+    playDodgeFade("enemy");
+    addLog("ENEMY", `${e.name} menghindar! (Evasion ${res.evasion}%)`);
+  } else {
+    if (res.blocked > 0) addLog("INFO", `${e.name} memblokir skillmu!`);
+    if (res.dmg > 0) {
+      e.hp = clamp(e.hp - res.dmg, 0, e.maxHp);
+      playSlash("enemy", 80);
+    }
+    if (res.reflected > 0) {
+      p.hp = clamp(p.hp - res.reflected, 0, p.maxHp);
+      playSlash("player", 150);
+    }
+    if (res.crit || res.combustion) {
+      playCritShake("enemy");
+      if (res.crit && res.combustion) addLog("YOU", `CRITICAL + COMBUSTION! ${s.name}! Damage ${res.dmg}.`);
+      else if (res.crit) addLog("YOU", `CRITICAL! ${s.name}! Damage ${res.dmg}.`);
+      else addLog("YOU", `COMBUSTION! ${s.name}! Damage ${res.dmg}.`);
+    } else {
+      addLog("YOU", `${s.name}! Damage ${res.dmg}.`);
+    }
+  }
+
+  s.cdLeft = s.cooldown || 0;
+  if (p.hp <= 0) {
+    loseBattle();
+    return;
+  }
+
+  afterPlayerAction();
+}
+function statusLabel(entity) {
+  if (!entity || !Array.isArray(entity.statuses)) return "";
+  const active = entity.statuses.filter((s) => (s.turns || 0) > 0);
+  if (!active.length) return "";
+  return active
+    .map((s) => `${(s.type || "Effect").toUpperCase()} (${s.turns} turn${s.turns > 1 ? "s" : ""})`)
+    .join(" • ");
 }
 function setBar(el, cur, max) {
   const pctRaw = max <= 0 ? 0 : (cur / max) * 100;
@@ -448,7 +673,11 @@ const modal = {
 
     // Layout: make Stats modals show 2-3 columns
     body.classList.remove("statsGrid");
+    body.classList.remove("marketGrid");
+    body.classList.remove("equipmentGrid");
     if (String(title).toLowerCase().includes("stats")) body.classList.add("statsGrid");
+    if (String(title).toLowerCase().includes("market")) body.classList.add("marketGrid");
+    if (String(title).toLowerCase().includes("equipment")) body.classList.add("equipmentGrid");
 
     choices.forEach((c) => {
       const row = document.createElement("div");
@@ -483,7 +712,7 @@ const modal = {
       row.appendChild(right);
 
       // Clickable row (only if value provided and no buttons)
-      if (c.value !== undefined && !(Array.isArray(c.buttons) && c.buttons.length)) {
+      if (c.value !== undefined && (!(Array.isArray(c.buttons) && c.buttons.length) || c.allowClick)) {
         row.onclick = () => {
           if (!c.keepOpen) modal.close();
           onPick(c.value);
@@ -528,35 +757,16 @@ const modal = {
 function refresh(state) {
   const p = state.player;
 
-  // Stats button — simple label only, XP shown di dalam stats modal
-  const btnStatsBattle = $("btnStatsBattle");
-  if (btnStatsBattle) {
-    btnStatsBattle.textContent = "Stats";
-  }
-  const btnStatsTown = $("btnStats");
-  if (btnStatsTown) {
-    btnStatsTown.textContent = "Stats";
-  }
-
-  // Log hint / Turn indicator
-  const logHint = $("logHint");
-  if (logHint) {
-    if (state.inBattle && state.enemy) {
-      // Hide turn indicator in LOG card during battle
-      logHint.style.display = "none";
-      logHint.textContent = "";
-    } else {
-      logHint.style.display = "inline-flex";
-      logHint.textContent = "Town";
-    }
-  }
-
   // Player title + name
   const pNameTitle = $("pNameTitle");
   if (pNameTitle) pNameTitle.textContent = p.name;
 
   const pSub = $("pSub");
-  if (pSub) { pSub.textContent = ""; pSub.style.display = "none"; }
+  if (pSub) {
+    const label = statusLabel(p);
+    pSub.textContent = label;
+    pSub.style.display = label ? "block" : "none";
+  }
 
   $("pLvl").textContent = `Lv${p.level}`;
   const goldPill = $("goldPill");
@@ -574,6 +784,7 @@ function refresh(state) {
   setBar($("hpBar"), p.hp, p.maxHp);
   setBar($("mpBar"), p.mp, p.maxMp);
   setBar($("xpBar"), (p.level >= MAX_LEVEL ? p.xpToLevel : p.xp), p.xpToLevel);
+  renderSkillSlots();
 
   const inBattle = state.inBattle && state.enemy;
 
@@ -608,7 +819,11 @@ function refresh(state) {
     if (eNameTitle) eNameTitle.textContent = e.name;
 
     const eSub = $("eSub");
-    if (eSub) { eSub.textContent = ""; eSub.style.display = "none"; }
+    if (eSub) {
+      const label = statusLabel(e);
+      eSub.textContent = label;
+      eSub.style.display = label ? "block" : "none";
+    }
 
     $("eLvl").textContent = `Lv${e.level}`;
 
@@ -622,11 +837,12 @@ function refresh(state) {
     // Buttons visibility
     $("townBtns").style.display = "none";
     $("battleBtns").style.display = "flex";
-
-    const btnSkill = $("btnSkill");
-    if (btnSkill) {
-      btnSkill.textContent = "Skill";
-      btnSkill.disabled = (state.turn !== "player");
+    if (state.battleResult) {
+      $("battleBtns").classList.add("disabled");
+      $("battleBtns").querySelectorAll("button").forEach((b) => { b.disabled = true; });
+    } else {
+      $("battleBtns").classList.remove("disabled");
+      $("battleBtns").querySelectorAll("button").forEach((b) => { b.disabled = false; });
     }
 
     const actionCard = $("actionCard");
@@ -691,9 +907,6 @@ function refresh(state) {
 
     $("townBtns").style.display = "flex";
     $("battleBtns").style.display = "none";
-    const btnSkill = $("btnSkill");
-    if (btnSkill) { btnSkill.disabled = false; btnSkill.textContent = "Skill"; }
-
     const actionCard = $("actionCard");
     if (actionCard) actionCard.style.display = "block";
 
@@ -707,9 +920,6 @@ function refresh(state) {
     const enemyBtns = $("enemyBtns");
     if (enemyBtns) enemyBtns.style.display = "none";
   }
-
-  const metaEl = $("meta");
-  if (metaEl) metaEl.textContent = "";
 }
 
 
@@ -717,6 +927,327 @@ function refresh(state) {
 const byId = (id) => document.getElementById(id);
 
 const state = newState();
+
+function ensureStatuses(entity){
+  if (!entity) return [];
+  if (!Array.isArray(entity.statuses)) entity.statuses = [];
+  return entity.statuses;
+}
+
+function clearStatuses(entity){
+  if (!entity) return;
+  entity.statuses = [];
+}
+
+function addStatusEffect(entity, status){
+  if (!entity || !status || !status.type) return;
+  const list = ensureStatuses(entity);
+  const existing = list.find((s) => s.type === status.type);
+  if (existing){
+    existing.turns = Math.max(existing.turns || 0, status.turns || 0);
+    existing.debuff = status.debuff ?? existing.debuff;
+  } else {
+    list.push({ ...status });
+  }
+}
+
+function hasStatus(entity, type){
+  return ensureStatuses(entity).find((s) => s.type === type && (s.turns || 0) > 0);
+}
+
+function tickStatuses(entity){
+  if (!entity || !entity.statuses) return 0;
+  let removed = 0;
+  entity.statuses = entity.statuses
+    .map((s) => ({ ...s, turns: (s.turns || 0) - 1 }))
+    .filter((s) => {
+      const alive = (s.turns || 0) > 0;
+      if (!alive) removed += 1;
+      return alive;
+    });
+  return removed;
+}
+
+function tryEscapeStatuses(entity){
+  if (!entity || !Array.isArray(entity.statuses) || !entity.statuses.length) return 0;
+  const chance = clamp(entity.escapeChance || 0, 0, 95);
+  if (chance <= 0) return 0;
+  let removed = 0;
+  entity.statuses = entity.statuses.filter((s) => {
+    if (!s.debuff) return true;
+    const roll = randInt(1, 100);
+    if (roll <= chance) { removed += 1; return false; }
+    return true;
+  });
+  return removed;
+}
+
+function applyManaRegen(entity){
+  if (!entity) return 0;
+  const regen = Math.max(0, Math.round(entity.manaRegen || 0));
+  if (regen <= 0 || typeof entity.mp !== "number") return 0;
+  const before = entity.mp;
+  entity.mp = clamp(entity.mp + regen, 0, entity.maxMp || 0);
+  return entity.mp - before;
+}
+
+function applyDamageAfterDelay(target, dmg, slashTarget, delay = 200){
+  if (!target || dmg <= 0) return 0;
+  setTimeout(() => {
+    target.hp = clamp((target.hp || 0) - dmg, 0, target.maxHp || 0);
+    if (slashTarget) playSlash(slashTarget);
+    refresh(state);
+  }, delay);
+  return delay;
+}
+
+function equipItem(slot, itemName){
+  const p = state.player;
+  if (!p || !p.equipment) return false;
+  const inv = p.inv || {};
+  const it = inv[itemName];
+  if (!it || (it.qty || 0) <= 0) return false;
+  if (it.kind !== "gear") return false;
+  if (it.slot !== slot) return false;
+  p.equipment[slot] = itemName;
+  autosave(state);
+  addLog("INFO", `${itemName} dipakai di slot ${slot}.`);
+  refresh(state);
+  return true;
+}
+
+function unequipSlot(slot){
+  const p = state.player;
+  if (!p || !p.equipment) return false;
+  if (!p.equipment[slot]) return false;
+  const name = p.equipment[slot];
+  p.equipment[slot] = null;
+  autosave(state);
+  addLog("INFO", `${name} dilepas dari slot ${slot}.`);
+  refresh(state);
+  return true;
+}
+
+function getShopItem(name){
+  return SHOP_GOODS.find((g) => g.name === name);
+}
+
+function getItemData(name){
+  return (state.player && state.player.inv && state.player.inv[name]) || getShopItem(name)?.ref || null;
+}
+
+function formatGearStats(item){
+  if (!item) return "";
+  const parts = [];
+  if (item.atk) parts.push(`ATK +${item.atk}`);
+  if (item.def) parts.push(`DEF +${item.def}`);
+  if (item.spd) parts.push(`SPD +${item.spd}`);
+  return parts.length ? parts.join(" / ") : "";
+}
+
+function getMarketGoods(){
+  const category = state.shopMarketCategory || "consumable";
+  const equipCategory = state.shopEquipCategory || "weapon";
+  if (category === "equipment") {
+    const slot = equipCategory === "weapon" ? "hand" : equipCategory;
+    return SHOP_GOODS.filter((g) => g.ref && g.ref.kind === "gear" && g.ref.slot === slot);
+  }
+  return SHOP_GOODS.filter((g) => g.ref && g.ref.kind !== "gear");
+}
+
+function buyItem(name){
+  const p = state.player;
+  const g = getShopItem(name);
+  if (!p || !g || !g.ref) return false;
+  if (p.gold < g.price) return false;
+  p.gold -= g.price;
+  const inv = p.inv || (p.inv = {});
+  if (inv[name]) inv[name].qty += 1;
+  else inv[name] = { ...g.ref, qty:1 };
+  autosave(state);
+  addLog("GOLD", `Beli ${name} (-${g.price} gold)`);
+  refresh(state);
+  return true;
+}
+
+function sellItem(name){
+  const p = state.player;
+  if (!p || !p.inv || !p.inv[name]) return false;
+  const inv = p.inv[name];
+  const base = getShopItem(name)?.price || 10;
+  const gain = Math.max(1, Math.floor(base / 2));
+  inv.qty -= 1;
+  if (inv.qty <= 0) delete p.inv[name];
+  p.gold += gain;
+  autosave(state);
+  addLog("GOLD", `Jual ${name} (+${gain} gold)`);
+  refresh(state);
+  return true;
+}
+
+function openShopModal(mode = "menu"){
+  if (state.inBattle) return;
+  if (mode === "menu"){
+    modal.open(
+      "Shop",
+      [
+        { title: "Market", desc: "Beli / jual item.", meta: "", value: "market" },
+        { title: "Learn Skill", desc: "Pelajari skill baru.", meta: "", value: "learn" },
+      ],
+      (pick) => openShopModal(String(pick || "menu"))
+    );
+    return;
+  }
+
+  if (mode === "learn"){
+    const p = state.player;
+    const maxSlots = 8;
+    const skills = SKILL_SHOP.map((s) => {
+      const owned = p.skills && p.skills.some((sk) => sk && sk.key === s.key);
+      const locked = (p.level || 1) < s.levelReq;
+      const desc = `${s.desc} (Lv ${s.levelReq})`;
+      const meta = owned ? "Sudah dimiliki" : (locked ? `Butuh Lv ${s.levelReq}` : `MP ${s.mpCost} • CD ${s.cooldown}`);
+      return {
+        title: s.name,
+        desc,
+        meta,
+        value: owned || locked ? undefined : `learn:${s.key}`,
+        className: owned || locked ? "readonly" : "",
+      };
+    });
+    if ((p.skills || []).length >= maxSlots) {
+      skills.unshift({ title: "Slot skill penuh", desc: `Maksimal ${maxSlots} skill aktif.`, meta: "", value: undefined, className:"readonly" });
+    }
+    modal.open(
+      "Shop - Learn Skill",
+      skills,
+      (pick) => {
+        const key = String(pick || "").replace("learn:", "");
+        const skill = SKILL_SHOP.find((s) => s.key === key);
+        if (!skill || !p || !Array.isArray(p.skills)) return;
+        if ((p.skills || []).length >= maxSlots) {
+          addLog("WARN", "Slot skill penuh.");
+          openShopModal("learn");
+          return;
+        }
+        if ((p.level || 1) < skill.levelReq) {
+          addLog("WARN", "Level belum cukup.");
+          openShopModal("learn");
+          return;
+        }
+        if (p.skills.some((sk) => sk && sk.key === skill.key)) {
+          openShopModal("learn");
+          return;
+        }
+        p.skills.push({ ...skill, cdLeft:0 });
+        autosave(state);
+        addLog("INFO", `Belajar ${skill.name}.`);
+        openShopModal("learn");
+      }
+    );
+    return;
+  }
+
+  if (mode === "market"){
+    modal.open(
+      "Market",
+      [
+        { title: "Beli", desc: "Beli item.", meta: "", value: "buy" },
+        { title: "Jual", desc: "Jual item di inventory.", meta: "", value: "sell" },
+      ],
+      (pick) => openShopModal(String(pick || "market"))
+    );
+    return;
+  }
+
+  if (mode === "buy"){
+    const categories = [
+      { key:"consumable", label:"Consumable", icon:"🧪", desc:"Potion & item sekali pakai." },
+      { key:"equipment", label:"Equipment", icon:"🛡️", desc:"Senjata & armor." },
+    ];
+    const equipCategories = [
+      { key:"weapon", label:"Weapon", icon:"🗡️", slot:"hand", desc:"Slot: Hand" },
+      { key:"head", label:"Head", icon:"🪖", slot:"head", desc:"Slot: Head" },
+      { key:"armor", label:"Armor", icon:"🥋", slot:"armor", desc:"Slot: Armor" },
+      { key:"pant", label:"Pant", icon:"👖", slot:"pant", desc:"Slot: Pant" },
+      { key:"shoes", label:"Shoes", icon:"🥾", slot:"shoes", desc:"Slot: Shoes" },
+    ];
+    const categoryChoices = categories.map((c) => ({
+      title: `${c.icon} ${c.label}`,
+      desc: c.desc || "",
+      meta: "",
+      value: `cat:${c.key}`,
+      className: `marketCategory marketPrimary ${state.shopMarketCategory === c.key ? "active" : ""}`.trim(),
+    }));
+    const equipChoices = (state.shopMarketCategory === "equipment")
+      ? equipCategories.map((c) => ({
+          title: c.icon || c.label,
+          desc: "",
+          meta: "",
+          value: `equipcat:${c.key}`,
+          className: `marketCategory marketSub ${state.shopEquipCategory === c.key ? "active" : ""}`.trim(),
+        }))
+      : [];
+
+    const goods = getMarketGoods();
+    modal.open(
+      "Market - Beli",
+      categoryChoices
+        .concat(equipChoices)
+        .concat([{ title: "Item Market", desc: "", meta: "", value: undefined, className: "marketDivider readonly" }])
+        .concat(
+          goods.map((g) => ({
+            title: `${g.name}`,
+            desc: g.ref.kind === "gear"
+              ? `${g.ref.desc || "Perlengkapan"}${formatGearStats(g.ref) ? ` • ${formatGearStats(g.ref)}` : ""}`
+              : (g.ref.desc || "Item"),
+            meta: `${g.price} gold`,
+            value: `buy:${g.name}`,
+          }))
+        ),
+      (pick) => {
+        const name = String(pick || "").replace(/^buy:/, "");
+        if (String(pick || "").startsWith("cat:")) {
+          state.shopMarketCategory = String(pick || "").replace("cat:", "");
+          if (state.shopMarketCategory !== "equipment") state.shopEquipCategory = "weapon";
+          openShopModal("buy");
+          return;
+        }
+        if (String(pick || "").startsWith("equipcat:")) {
+          state.shopEquipCategory = String(pick || "").replace("equipcat:", "");
+          openShopModal("buy");
+          return;
+        }
+        const ok = buyItem(name);
+        if (!ok) addLog("WARN", "Gold tidak cukup atau item tidak tersedia.");
+        openShopModal("buy");
+      }
+    );
+    return;
+  }
+
+  if (mode === "sell"){
+    const inv = state.player.inv || {};
+    const keys = Object.keys(inv);
+    const rows = keys.length
+      ? keys.map((k) => {
+          const price = Math.max(1, Math.floor((getShopItem(k)?.price || 10) / 2));
+          return { title: `${k} x${inv[k].qty}`, desc: inv[k].desc || "Item", meta: `+${price} gold`, value: `sell:${k}` };
+        })
+      : [{ title: "Tidak ada item", desc: "Inventory kosong.", meta: "", value: undefined, className: "readonly" }];
+
+    modal.open(
+      "Market - Jual",
+      rows,
+      (pick) => {
+        const name = String(pick || "").replace(/^sell:/, "");
+        const ok = sellItem(name);
+        if (!ok) addLog("WARN", "Item tidak bisa dijual.");
+        openShopModal("sell");
+      }
+    );
+  }
+}
 
 /* ----------------------------- Core helpers ----------------------------- */
 
@@ -736,27 +1267,82 @@ function setTurn(turn) {
   }
 }
 
-function endBattle(reason) {
+function prepareTurn(turn){
+  if (!state.inBattle) return { skipped: false };
+  const actor = turn === "player" ? state.player : state.enemy;
+  if (!actor) return { skipped: false };
+
+  const escaped = tryEscapeStatuses(actor);
+  if (escaped > 0) addLog("GOOD", turn === "player" ? "Kamu lolos dari debuff!" : `${actor.name} bebas dari debuff.`);
+
+  const stunned = !!hasStatus(actor, "stun");
+  return { skipped: stunned };
+}
+
+function beginPlayerTurn(){
+  setTurn("player");
+  const prep = prepareTurn("player");
+  if (prep.skipped) {
+    addLog("WARN", "Kamu sedang stun! Giliran dilewati.");
+    tickStatuses(state.player);
+    state.battleTurn = (state.battleTurn || 0) + 1;
+    setTurn("enemy");
+    refresh(state);
+    setTimeout(() => {
+      if (state.inBattle) enemyTurn();
+    }, 380);
+    return false;
+  }
+  refresh(state);
+  return true;
+}
+
+function beginEnemyTurn(){
+  setTurn("enemy");
+  const prep = prepareTurn("enemy");
+  if (prep.skipped) {
+    addLog("INFO", `${state.enemy?.name || "Musuh"} sedang stun! Giliran mereka hilang.`);
+    tickStatuses(state.enemy);
+    state.playerDefending = false;
+    state.playerDodging = false;
+    state.battleTurn = (state.battleTurn || 0) + 1;
+    beginPlayerTurn();
+    return false;
+  }
+  refresh(state);
+  return true;
+}
+
+function endBattle(reason, summary) {
   addLog("INFO", reason);
+  if (summary) {
+    state.battleResult = summary;
+    refresh(state);
+    showBattleResultOverlay(summary, () => finalizeBattle(reason));
+    return;
+  }
+  finalizeBattle(reason);
+}
+
+function finalizeBattle(reason){
   state.inBattle = false;
+  state.battleResult = null;
+  clearStatuses(state.enemy);
   state.enemy = null;
   state.playerDefending = false;
   state.playerDodging = false;
+  clearStatuses(state.player);
   setTurn("town");
   state.battleTurn = 0;
 
-  // Setelah battle selesai (menang/kalah/kabur), pulihkan HP & MP player
   state.player.hp = state.player.maxHp;
   state.player.mp = state.player.maxMp;
 
-  // Reset skill cooldowns after battle
   if (state.player && Array.isArray(state.player.skills)) {
     state.player.skills.forEach((s) => { if (s) s.cdLeft = 0; });
   }
 
   autosave(state);
-
-  // Also sync to cloud (if logged in) so progress can be used cross-device
   (async () => {
     try {
       const r = await cloudTrySaveCurrentProfile();
@@ -788,6 +1374,7 @@ function levelUp() {
   // Keep other stats unchanged
   p.hp = p.maxHp;
   p.mp = p.maxMp;
+  applyDerivedStats(p);
 
   p.xpToLevel = Math.floor(p.xpToLevel * 1.25);
 
@@ -819,34 +1406,79 @@ function gainXp(amount) {
   }
 }
 
+function rollBattleDrops(enemy){
+  const drops = [];
+  const lvl = enemy?.level || 1;
+  if (randInt(1, 100) <= 35) drops.push({ ...ITEMS.potion, qty: 1 });
+  if (randInt(1, 100) <= (lvl >= 4 ? 28 : 18)) drops.push({ ...ITEMS.ether, qty: 1 });
+  return drops;
+}
+
+function grantDropsToPlayer(drops){
+  if (!drops || !drops.length) return;
+  const inv = state.player.inv || (state.player.inv = {});
+  drops.forEach((d) => {
+    if (!d || !d.name) return;
+    const qty = d.qty || 1;
+    if (inv[d.name]) inv[d.name].qty += qty;
+    else inv[d.name] = { ...d, qty };
+  });
+}
+
 function winBattle() {
   const p = state.player;
   const e = state.enemy;
 
-  addLog("WIN", `Menang melawan ${e.name}!`);
-  p.gold += e.goldReward;
-  addLog("GOLD", `+${e.goldReward} gold (Total: ${p.gold})`);
+  const drops = rollBattleDrops(e);
+  const goldGain = e.goldReward || 0;
+  const xpGain = e.xpReward || 0;
 
-  gainXp(e.xpReward);
-  endBattle("Pertarungan selesai.");
+  addLog("WIN", `Menang melawan ${e.name}!`);
+  p.gold += goldGain;
+
+  gainXp(xpGain);
+  grantDropsToPlayer(drops);
+
+  const summary = { outcome: "win", gold: goldGain, xp: xpGain, drops, enemyName: e.name };
+  endBattle("Pertarungan selesai.", summary);
 }
 
 function loseBattle() {
+  const eName = state.enemy?.name || "musuh";
   addLog("LOSE", "Kamu kalah... Game Over.");
-  alert("Kamu kalah... Game Over.\nKamu bisa ganti karakter atau buat karakter baru.");
-  endBattle("Kembali ke Town.");
+  const summary = { outcome: "lose", gold: 0, xp: 0, drops: [], enemyName: eName };
+  endBattle("Kembali ke Town.", summary);
 }
 
 /* ----------------------------- Enemy & turns ---------------------------- */
 
 function enemyTurn() {
-  setTurn("enemy");
+  if (!state.enemy || !state.inBattle) return;
+  if (!beginEnemyTurn()) return;
 
   const p = state.player;
   const e = state.enemy;
   if (!e) return;
 
   const isRage = e.mp >= 5 && Math.random() < 0.25;
+  const endTurnAfter = (waitMs = 0) => {
+    setTimeout(() => {
+      state.playerDefending = false;
+      state.playerDodging = false;
+
+      if (p.hp <= 0) {
+        loseBattle();
+        return;
+      }
+      if (e.hp <= 0) {
+        winBattle();
+        return;
+      }
+
+      state.battleTurn = (state.battleTurn || 0) + 1;
+      beginPlayerTurn();
+    }, waitMs);
+  };
 
   if (isRage) {
     e.mp -= 5;
@@ -858,8 +1490,16 @@ function enemyTurn() {
       if (state.playerDodging) addLog("YOU", "Dodge berhasil! Serangan musuh meleset.");
       else addLog("YOU", "Menghindar! Serangan musuh meleset.");
       addLog("ENEMY", `${e.name} memakai Rage Strike, tapi meleset!`);
+      endTurnAfter(0);
     } else {
-      p.hp = clamp(p.hp - res.dmg, 0, p.maxHp);
+      const delays = [];
+      if (res.blocked > 0) addLog("INFO", "Serangan diblokir sebagian!");
+      if (res.dmg > 0) {
+        delays.push(applyDamageAfterDelay(p, res.dmg, "player", 230));
+      }
+      if (res.reflected > 0) {
+        delays.push(applyDamageAfterDelay(e, res.reflected, "enemy", 430));
+      }
       if (res.crit || res.combustion) {
         playCritShake("player");
         if (res.crit && res.combustion) addLog("ENEMY", `CRITICAL + COMBUSTION! ${e.name} memakai Rage Strike! Damage ${res.dmg}.`);
@@ -868,6 +1508,8 @@ function enemyTurn() {
       } else {
         addLog("ENEMY", `${e.name} memakai Rage Strike! Damage ${res.dmg}.`);
       }
+      const wait = delays.length ? Math.max(...delays, 180) + 40 : 0;
+      endTurnAfter(wait);
     }
   } else {
     const res = resolveAttack(e, p, 2, { dodgeBonus: state.playerDodging ? 30 : 0 });
@@ -876,8 +1518,16 @@ function enemyTurn() {
       if (state.playerDodging) addLog("YOU", "Dodge berhasil! Serangan musuh meleset.");
       else addLog("YOU", "Menghindar! Serangan musuh meleset.");
       addLog("ENEMY", `${e.name} menyerang, tapi meleset!`);
+      endTurnAfter(0);
     } else {
-      p.hp = clamp(p.hp - res.dmg, 0, p.maxHp);
+      const delays = [];
+      if (res.blocked > 0) addLog("INFO", "Serangan diblokir sebagian!");
+      if (res.dmg > 0) {
+        delays.push(applyDamageAfterDelay(p, res.dmg, "player", 230));
+      }
+      if (res.reflected > 0) {
+        delays.push(applyDamageAfterDelay(e, res.reflected, "enemy", 430));
+      }
       if (res.crit || res.combustion) {
         playCritShake("player");
         if (res.crit && res.combustion) addLog("ENEMY", `CRITICAL + COMBUSTION! ${e.name} menyerang! Damage ${res.dmg}.`);
@@ -886,23 +1536,19 @@ function enemyTurn() {
       } else {
         addLog("ENEMY", `${e.name} menyerang! Damage ${res.dmg}.`);
       }
+      const wait = delays.length ? Math.max(...delays, 180) + 40 : 0;
+      endTurnAfter(wait);
     }
   }
+}
 
-  state.playerDefending = false;
-  state.playerDodging = false;
-
-  if (p.hp <= 0) {
+function afterPlayerAction() {
+  if (!state.inBattle) return;
+  if (state.player && state.player.hp <= 0) {
     loseBattle();
     return;
   }
 
-  // Player turn counter
-  state.battleTurn = (state.battleTurn || 0) + 1;
-  setTurn("player");
-}
-
-function afterPlayerAction() {
   const e = state.enemy;
   if (!e) return;
 
@@ -910,6 +1556,8 @@ function afterPlayerAction() {
     winBattle();
     return;
   }
+
+  tickStatuses(state.player);
 
   // Lock ke giliran musuh dulu supaya player tidak bisa spam tombol
   setTurn("enemy");
@@ -927,19 +1575,42 @@ function afterPlayerAction() {
 function explore() {
   if (state.inBattle) return;
 
-  state.enemy = genEnemy(state.player.level);
+  openAdventureLevels();
+}
+
+function openAdventureLevels(){
+  const stages = [1, 3, 5, 7, 10];
+  modal.open(
+    "Adventure - Level",
+    stages.map((level) => ({
+      title: `Level ${level}`,
+      desc: "Pilih level petualangan",
+      meta: "",
+      value: level,
+    })),
+    (level) => {
+      const targetLv = clamp(Number(level) || 1, 1, MAX_LEVEL);
+      startAdventureBattle(targetLv, `Level ${targetLv}`);
+    }
+  );
+}
+
+function startAdventureBattle(targetLevel, stageName){
+  state.enemy = genEnemy(targetLevel);
   state.inBattle = true;
   state._animateEnemyIn = true;
   state.playerDefending = false;
   state.playerDodging = false;
   state.battleTurn = 0;
-addLog("INFO", `Musuh muncul: ${state.enemy.name} (Lv${state.enemy.level})`);
+  clearStatuses(state.enemy);
+  ensureStatuses(state.enemy);
+  ensureStatuses(state.player);
+  addLog("INFO", `Stage ${stageName}: Musuh muncul: ${state.enemy.name} (Lv${state.enemy.level})`);
 
   if (state.enemy.spd > state.player.spd) {
     setTurn("enemy");
     addLog("TURN", `${state.enemy.name} lebih cepat! Musuh duluan.`);
     refresh(state);
-    // Delay serangan pertama musuh sedikit, biar berasa gantian
     setTimeout(() => {
       enemyTurn();
       refresh(state);
@@ -947,7 +1618,7 @@ addLog("INFO", `Musuh muncul: ${state.enemy.name} (Lv${state.enemy.level})`);
     return;
   } else {
     state.battleTurn = (state.battleTurn||0)+1;
-  setTurn("player");
+    beginPlayerTurn();
     addLog("TURN", "Kamu lebih cepat!");
   }
 
@@ -1003,7 +1674,15 @@ function attack() {
     return;
   }
 
-  e.hp = clamp(e.hp - res.dmg, 0, e.maxHp);
+  if (res.blocked > 0) addLog("INFO", `${e.name} memblokir seranganmu!`);
+  if (res.dmg > 0) {
+    e.hp = clamp(e.hp - res.dmg, 0, e.maxHp);
+    playSlash("enemy", 80);
+  }
+  if (res.reflected > 0) {
+    p.hp = clamp(p.hp - res.reflected, 0, p.maxHp);
+    playSlash("player", 150);
+  }
 
   if (res.crit || res.combustion) {
     playCritShake("enemy");
@@ -1013,6 +1692,21 @@ function attack() {
   } else {
     addLog("YOU", `Attack! Damage ${res.dmg}.`);
   }
+
+  if (p.hp <= 0) {
+    loseBattle();
+  }
+}
+
+function charge(){
+  if (!state.inBattle || state.turn !== "player") return;
+  setTurn("player");
+  const p = state.player;
+  const gain = Math.max(1, Math.round(p.manaRegen || 0));
+  const before = p.mp;
+  p.mp = clamp(p.mp + gain, 0, p.maxMp);
+  addLog("INFO", `Charge! MP ${before}→${p.mp} (+${gain})`);
+  afterPlayerAction();
 }
 
 function dodge() {
@@ -1058,6 +1752,9 @@ function useItem(name) {
     const before = p.mp;
     p.mp = clamp(p.mp + it.amount, 0, p.maxMp);
     addLog("ITEM", `Memakai ${name}. MP ${before}→${p.mp}`);
+  } else {
+    addLog("WARN", "Item ini bukan consumable.");
+    return false;
   }
 
   it.qty -= 1;
@@ -1103,9 +1800,18 @@ function openSkillModal() {
 
     const res = resolveAttack(p, state.enemy, s.power);
     if (res.missed) {
+      playDodgeFade("enemy");
       addLog("ENEMY", `${state.enemy.name} menghindar! (Evasion ${res.evasion}%)`);
     } else {
-      state.enemy.hp = clamp(state.enemy.hp - res.dmg, 0, state.enemy.maxHp);
+      if (res.blocked > 0) addLog("INFO", `${state.enemy.name} memblokir skillmu!`);
+      if (res.dmg > 0) {
+        state.enemy.hp = clamp(state.enemy.hp - res.dmg, 0, state.enemy.maxHp);
+        playSlash("enemy", 80);
+      }
+      if (res.reflected > 0) {
+        p.hp = clamp(p.hp - res.reflected, 0, p.maxHp);
+        playSlash("player", 150);
+      }
       if (res.crit || res.combustion) {
         if (res.crit && res.combustion) addLog("YOU", `CRITICAL + COMBUSTION! ${s.name}! Damage ${res.dmg}.`);
         else if (res.crit) addLog("YOU", `CRITICAL! ${s.name}! Damage ${res.dmg}.`);
@@ -1118,16 +1824,24 @@ function openSkillModal() {
     // Set per-skill cooldown
     s.cdLeft = s.cooldown || 0;
 
+    if (p.hp <= 0) {
+      loseBattle();
+      return;
+    }
+
     afterPlayerAction();
   });
 }
 
 function openItemModal() {
   const inv = state.player.inv;
-  const keys = Object.keys(inv);
+  const keys = Object.keys(inv).filter((k) => {
+    const it = inv[k];
+    return it && (it.kind === "heal_hp" || it.kind === "heal_mp");
+  });
 
   if (!keys.length) {
-    addLog("WARN", "Inventory kosong.");
+    addLog("WARN", "Tidak ada consumable.");
     return;
   }
 
@@ -1201,6 +1915,7 @@ function applyAttributeDelta(statKey, delta){
   p.critDamage = Math.max(0, p.critDamage || 0);
   p.combustionChance = clamp(p.combustionChance || 0, 0, 100);
   p.statPoints = Math.max(0, p.statPoints || 0);
+  applyDerivedStats(p);
 
   // persist to current slot
   if (Array.isArray(state.slots)) state.slots[state.activeSlot] = p;
@@ -1213,6 +1928,20 @@ function applyAttributeDelta(statKey, delta){
 }
 
 function openProfileModal(){
+  modal.open(
+    "Profile",
+    [
+      { title: "Equipment", desc: "Kelola gear (hand, head, pant, armor, shoes).", meta: "", value: "equip" },
+      { title: "Stat", desc: "Atur stat poin.", meta: "", value: "stat" },
+    ],
+    (pick) => {
+      if (pick === "equip") return openEquipmentModal();
+      if (pick === "stat") return openProfileStatModal();
+    }
+  );
+}
+
+function openProfileStatModal(){
   const p = state.player || {};
   const pts = p.statPoints || 0;
 
@@ -1231,12 +1960,12 @@ function openProfileModal(){
   };
 
   modal.open(
-    "Profile",
+    "Stat",
     [
       { title: `Stat Points : ${pts}`, desc: "Dapatkan dari level up. Gunakan tombol + untuk menambah stat.", meta: "" },
       mk("str", "STR", "Meningkatkan ATK dan Combustion Chance"),
       mk("dex", "DEX", "Meningkatkan Evasion, Accuracy, dan SPD"),
-      mk("int", "INT", "Meningkatkan MP, Mana Regen, dan Escape Rate"),
+      mk("int", "INT", "Meningkatkan MP, Mana Regen, dan Escape Chance"),
       mk("vit", "VIT", "Meningkatkan HP, DEF, dan Block Rate"),
       mk("foc", "FOC", "Meningkatkan Critical Chance dan Critical Damage"),
     ],
@@ -1251,12 +1980,89 @@ function openProfileModal(){
 
       const ok = applyAttributeDelta(key, delta);
       if (!ok){
-        // re-render anyway to refresh disabled buttons
-        openProfileModal();
+        openProfileStatModal();
         return;
       }
-      // re-render to update values + points
-      openProfileModal();
+      openProfileStatModal();
+    }
+  );
+}
+
+function openEquipmentModal(){
+  const p = state.player;
+  if (!p || !p.equipment) return;
+  const slots = [
+    { key:"hand", label:"Hand" },
+    { key:"head", label:"Head" },
+    { key:"pant", label:"Pant" },
+    { key:"armor", label:"Armor" },
+    { key:"shoes", label:"Shoes" },
+  ];
+  const hasGear = (p.inv && Object.values(p.inv).some((it) => it.kind === "gear")) || false;
+
+  const choices = slots.map((s) => {
+    const cur = p.equipment[s.key] || null;
+    const item = cur ? getItemData(cur) : null;
+    const stats = item ? formatGearStats(item) : "";
+    const desc = cur ? `Memakai: ${cur}${stats ? ` • ${stats}` : ""}` : "Kosong";
+    const meta = cur
+      ? "Klik untuk ganti"
+      : (hasGear ? "Klik untuk equip" : "Tidak ada gear");
+    return {
+      title: `${s.label}`,
+      desc,
+      meta,
+      value: `equip:${s.key}`,
+      allowClick: true,
+      buttons: [
+        { text: "Unequip", value: `unequip:${s.key}`, disabled: !cur },
+      ],
+      keepOpen: true,
+    };
+  });
+
+  modal.open(
+    "Equipment",
+    choices.map((c) => ({ ...c, className: `equipmentCard ${c.className || ""}`.trim(), value: c.value })),
+    (pick) => {
+      const [action, slot] = String(pick || "").split(":");
+      if (!slot) return;
+      if (action === "equip") {
+        openEquipSelect(slot);
+        return;
+      }
+      if (action === "unequip") {
+        unequipSlot(slot);
+        openEquipmentModal();
+      }
+    }
+  );
+}
+
+function openEquipSelect(slot){
+  const p = state.player;
+  if (!p || !p.inv) return;
+  const keys = Object.keys(p.inv).filter((k) => {
+    const it = p.inv[k];
+    return it && it.kind === "gear" && it.slot === slot;
+  });
+  if (!keys.length) {
+    addLog("WARN", `Tidak ada gear untuk slot ${slot}.`);
+    return;
+  }
+
+  modal.open(
+    `Pilih item untuk ${slot}`,
+    keys.map((k) => ({
+      title: `${k} x${p.inv[k].qty}`,
+      desc: `${p.inv[k].desc || "Perlengkapan"}${formatGearStats(p.inv[k]) ? ` • ${formatGearStats(p.inv[k])}` : ""}`,
+      meta: `Equip (${p.inv[k].slot || "-"})`,
+      value: k,
+    })),
+    (name) => {
+      const ok = equipItem(slot, name);
+      if (!ok) addLog("WARN", "Item tidak bisa dipakai.");
+      openEquipmentModal();
     }
   );
 }
@@ -1280,6 +2086,9 @@ function openEnemyStatsModal() {
             { title: `CRIT : ${e.critChance}%`, desc: "", meta: "" },
       { title: `CRIT DMG : ${e.critDamage}%`, desc: "", meta: "" },
       { title: `EVASION : ${e.evasion}%`, desc: "", meta: "" },
+      { title: `BLOCK : ${e.blockRate || 0}%`, desc: "", meta: "" },
+      { title: `ESCAPE : ${e.escapeChance || 0}%`, desc: "", meta: "" },
+      { title: `MANA REGEN : ${e.manaRegen || 0}`, desc: "", meta: "" },
     ],
     () => {}
   );
@@ -1303,6 +2112,9 @@ function openStatsModal() {
             { title: `CRIT : ${p.critChance}%`, desc: "", meta: "" },
       { title: `CRIT DMG : ${p.critDamage}%`, desc: "", meta: "" },
       { title: `EVASION : ${p.evasion}%`, desc: "", meta: "" },
+      { title: `BLOCK : ${p.blockRate || 0}%`, desc: "", meta: "" },
+      { title: `ESCAPE : ${p.escapeChance || 0}%`, desc: "", meta: "" },
+      { title: `MANA REGEN : ${p.manaRegen || 0}`, desc: "", meta: "" },
     ],
     () => {}
   );
@@ -1413,7 +2225,6 @@ function openTownMenu(){
                   setTurn("town");
                   state.battleTurn = 0;
 
-                  byId("log").innerHTML = "";
                   addLog("LOAD", "Cloud dimuat. Pilih karakter.");
 
                   autosave(state);
@@ -1469,12 +2280,6 @@ function bind() {
   byId("btnExplore").onclick = explore;
   const br=byId("btnRest"); if(br) br.onclick = rest;
   byId("btnInventory").onclick = openInventoryReadOnly;
-  const btnStats = byId("btnStats");
-  if (btnStats) btnStats.onclick = openStatsModal;
-
-  const btnStatsBattle = byId("btnStatsBattle");
-  if (btnStatsBattle) btnStatsBattle.onclick = openStatsModal;
-
   const btnEnemyStats = byId("btnEnemyStats");
   if (btnEnemyStats) btnEnemyStats.onclick = openEnemyStatsModal;
   // MENU (Save/Load/New Game)
@@ -1485,7 +2290,9 @@ function bind() {
   const btnProfile = byId("btnProfile");
   if (btnProfile) btnProfile.onclick = openProfileModal;
   const btnShop = byId("btnShop");
-  if (btnShop) btnShop.onclick = () => addLog("INFO", "Shop (coming soon).");
+  if (btnShop) btnShop.onclick = () => openShopModal();
+  const playerStatLink = byId("playerStatLink");
+  if (playerStatLink) playerStatLink.onclick = openStatsModal;
 
   // Character create menu buttons
   const ccCreate = byId("ccCreate");
@@ -1500,6 +2307,11 @@ function bind() {
     attack();
     afterPlayerAction();
   };
+  const btnCharge = byId("btnCharge");
+  if (btnCharge) btnCharge.onclick = () => {
+    if (!state.inBattle || state.turn !== "player") return;
+    charge();
+  };
 
   byId("btnDefend").onclick = () => {
     if (!state.inBattle || state.turn !== "player") return;
@@ -1511,11 +2323,6 @@ function bind() {
     if (!state.inBattle || state.turn !== "player") return;
     const ok = runAway();
     if (!ok) afterPlayerAction();
-  };
-
-  byId("btnSkill").onclick = () => {
-    if (!state.inBattle || state.turn !== "player") return;
-    openSkillModal();
   };
 
   byId("btnItem").onclick = () => {
@@ -1574,7 +2381,6 @@ function startNewGame(slotIdx){
   setTurn("town");
   state.battleTurn = 0;
 
-  byId("log").innerHTML = "";
   addLog("INFO", "Game baru dimulai (slot di-reset).");
 
   autosave(state);
@@ -1627,7 +2433,7 @@ function setCcMsg(msg, isError=false){
 }
 
 function genderLabel(g){
-  const v = String(g || "other").toLowerCase();
+  const v = String(g || "male").toLowerCase();
   if (v === "male") return "Male";
   if (v === "female") return "Female";
   return "Other";
@@ -1795,7 +2601,8 @@ function handleCreateCharacter(){
   const nameEl = byId("ccName");
   const genderEl = byId("ccGender");
   const name = (nameEl?.value || "").toString().trim();
-  const gender = (genderEl?.value || "other").toString();
+  const genderRaw = (genderEl?.value || "male").toString().toLowerCase();
+  const gender = genderRaw === "female" ? "female" : "male";
 
   if (!name){
     setCcMsg("Nama tidak boleh kosong.", true);
@@ -1818,7 +2625,6 @@ function handleCreateCharacter(){
   setTurn("town");
   state.battleTurn = 0;
 
-  byId("log").innerHTML = "";
   addLog("INFO", `Karakter dibuat: ${p.name} (${genderLabel(p.gender)})`);
   autosave(state);
 
@@ -1847,7 +2653,6 @@ function enterTownWithSlot(slotIdx){
   setTurn("town");
   state.battleTurn = 0;
 
-  byId("log").innerHTML = "";
   addLog("INFO", `Masuk sebagai ${state.player.name} (Lv${state.player.level}).`);
 
   autosave(state);
@@ -1920,7 +2725,6 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
   setTurn("town");
   state.battleTurn = 0;
 
-  byId("log").innerHTML = "";
   refresh(state);
 
   // Show character menu
