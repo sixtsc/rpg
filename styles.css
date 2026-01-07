@@ -121,6 +121,19 @@ h1{ font-size:18px; margin:0; font-weight:800; letter-spacing:.2px; }
 .battlePrimary button{ width:100%; }
 /* Full-width actions */
 #btnStatsBattle, #btnRun{ grid-column: 1 / -1; }
+.skillGrid{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  gap:8px;
+  grid-column: 1 / -1;
+}
+.skillSlot{
+  background:#132235;
+  border:1px solid #2a3c52;
+  padding:10px;
+  border-radius:12px;
+  font-weight:800;
+}
 
 
 button{

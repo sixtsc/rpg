@@ -26,6 +26,18 @@ const SHOP_GOODS = [
   { name:"Leather Pants", price:28, ref: ITEMS.leatherPants },
   { name:"Old Boots", price:22, ref: ITEMS.oldBoots },
 ];
+const STAGES = [
+  { id:"s1", name:"Stage 1", range:[1,2] },
+  { id:"s2", name:"Stage 2", range:[2,3] },
+  { id:"s3", name:"Stage 3", range:[3,4] },
+  { id:"s4", name:"Stage 4", range:[4,5] },
+  { id:"s5", name:"Stage 5", range:[5,6] },
+  { id:"s6", name:"Stage 6", range:[6,7] },
+  { id:"s7", name:"Stage 7", range:[7,8] },
+  { id:"s8", name:"Stage 8", range:[8,9] },
+  { id:"s9", name:"Stage 9", range:[9,10] },
+  { id:"s10", name:"Stage 10", range:[10,10] },
+];
 
 
 /* ===== engine.js ===== */
@@ -51,12 +63,12 @@ function genEnemy(plv){
     vit: Math.max(0, lvl),
     critChance: clamp(5 + Math.floor(lvl/3), 5, 35),
     critDamage: 0,
-    acc: Math.max(0, Math.floor(lvl / 4)),
+    acc: Math.max(0, Math.floor(lvl / 6)),
     foc: 0,
     combustionChance: 0,
-    evasion: clamp(3 + Math.floor(lvl / 6), 3, 15),
+    evasion: clamp(2 + Math.floor(lvl / 8), 2, 10),
     baseBlockRate: 0,
-    baseEscapeChance: clamp(2 + Math.floor(lvl / 6), 2, 12),
+    baseEscapeChance: clamp(2 + Math.floor(lvl / 8), 2, 10),
     blockRate: 0,
     escapeChance: 0,
     manaRegen: 0,
@@ -66,6 +78,7 @@ function genEnemy(plv){
     xpReward:18 + lvl*6, goldReward:8 + lvl*4
   };
   applyDerivedStats(enemy);
+  enemy.blockRate = 0;
   return enemy;
 }
 function calcDamage(attAtk, defDef, basePower, defending){
@@ -494,6 +507,91 @@ function addLog(tag, msg) {
   showToast(msg, tag);
 }
 
+function renderSkillSlots(){
+  const grid = $("skillSlots");
+  if (!grid) return;
+  const p = state.player;
+  const slots = Array.from({ length: 8 });
+  slots.forEach((_, i) => {
+    let btn = grid.querySelector(`[data-slot="${i}"]`);
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.className = "skillSlot";
+      btn.setAttribute("data-slot", `${i}`);
+      grid.appendChild(btn);
+    }
+    const skill = p.skills && p.skills[i];
+    if (skill) {
+      const cdLeft = skill.cdLeft || 0;
+      btn.textContent = cdLeft > 0 ? `${skill.name} (CD ${cdLeft})` : skill.name;
+      btn.disabled = (state.turn !== "player") || p.mp < skill.mpCost || cdLeft > 0;
+      btn.onclick = () => useSkillAtIndex(i);
+    } else {
+      btn.textContent = "-";
+      btn.disabled = true;
+      btn.onclick = null;
+    }
+  });
+}
+
+function useSkillAtIndex(idx){
+  const p = state.player;
+  const e = state.enemy;
+  if (!p || !e || !Array.isArray(p.skills)) return;
+  const s = p.skills[idx];
+  if (!s) return;
+  if (state.turn !== "player") return;
+  const cdLeft = s.cdLeft || 0;
+  if (cdLeft > 0) {
+    addLog("WARN", `${s.name} cooldown ${cdLeft} turn.`);
+    refresh(state);
+    return;
+  }
+  if (p.mp < s.mpCost) {
+    addLog("WARN", "MP tidak cukup.");
+    refresh(state);
+    return;
+  }
+
+  p.mp -= s.mpCost;
+
+  const res = resolveAttack(p, e, s.power);
+  if (res.missed) {
+    playDodgeFade("enemy");
+    addLog("ENEMY", `${e.name} menghindar! (Evasion ${res.evasion}%)`);
+  } else {
+    if (res.blocked > 0) addLog("INFO", `${e.name} memblokir skillmu!`);
+    if (res.dmg > 0) {
+      e.hp = clamp(e.hp - res.dmg, 0, e.maxHp);
+      playSlash("enemy", 80);
+    }
+    if (res.reflected > 0) {
+      p.hp = clamp(p.hp - res.reflected, 0, p.maxHp);
+      playSlash("player", 150);
+    }
+    if (res.crit || res.combustion) {
+      playCritShake("enemy");
+      if (res.crit && res.combustion) addLog("YOU", `CRITICAL + COMBUSTION! ${s.name}! Damage ${res.dmg}.`);
+      else if (res.crit) addLog("YOU", `CRITICAL! ${s.name}! Damage ${res.dmg}.`);
+      else addLog("YOU", `COMBUSTION! ${s.name}! Damage ${res.dmg}.`);
+    } else {
+      addLog("YOU", `${s.name}! Damage ${res.dmg}.`);
+    }
+  }
+
+  if (res.dmg > 0 && s.name.toLowerCase() === "fireball" && Math.random() < 0.18) {
+    addStatusEffect(e, { type: "stun", turns: 1, debuff: true });
+    addLog("INFO", `${e.name} terkena Stun!`);
+  }
+
+  s.cdLeft = s.cooldown || 0;
+  if (p.hp <= 0) {
+    loseBattle();
+    return;
+  }
+
+  afterPlayerAction();
+}
 function statusLabel(entity) {
   if (!entity || !Array.isArray(entity.statuses)) return "";
   const active = entity.statuses.filter((s) => (s.turns || 0) > 0);
@@ -664,6 +762,7 @@ function refresh(state) {
   setBar($("hpBar"), p.hp, p.maxHp);
   setBar($("mpBar"), p.mp, p.maxMp);
   setBar($("xpBar"), (p.level >= MAX_LEVEL ? p.xpToLevel : p.xp), p.xpToLevel);
+  renderSkillSlots();
 
   const inBattle = state.inBattle && state.enemy;
 
@@ -1362,7 +1461,25 @@ function afterPlayerAction() {
 function explore() {
   if (state.inBattle) return;
 
-  state.enemy = genEnemy(state.player.level);
+  modal.open(
+    "Pilih Stage",
+    STAGES.map((s) => ({
+      title: s.name,
+      desc: `Lv ${s.range[0]} - ${s.range[1]}`,
+      meta: "",
+      value: s.id,
+    })),
+    (id) => {
+      const stage = STAGES.find((s) => s.id === id) || STAGES[0];
+      const [lo, hi] = stage.range;
+      const targetLv = clamp(randInt(lo, hi), 1, MAX_LEVEL);
+      startAdventureBattle(targetLv, stage.name);
+    }
+  );
+}
+
+function startAdventureBattle(targetLevel, stageName){
+  state.enemy = genEnemy(targetLevel);
   state.inBattle = true;
   state._animateEnemyIn = true;
   state.playerDefending = false;
@@ -1371,13 +1488,12 @@ function explore() {
   clearStatuses(state.enemy);
   ensureStatuses(state.enemy);
   ensureStatuses(state.player);
-addLog("INFO", `Musuh muncul: ${state.enemy.name} (Lv${state.enemy.level})`);
+  addLog("INFO", `Stage ${stageName}: Musuh muncul: ${state.enemy.name} (Lv${state.enemy.level})`);
 
   if (state.enemy.spd > state.player.spd) {
     setTurn("enemy");
     addLog("TURN", `${state.enemy.name} lebih cepat! Musuh duluan.`);
     refresh(state);
-    // Delay serangan pertama musuh sedikit, biar berasa gantian
     setTimeout(() => {
       enemyTurn();
       refresh(state);
