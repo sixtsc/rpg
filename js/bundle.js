@@ -26,17 +26,10 @@ const SHOP_GOODS = [
   { name:"Leather Pants", price:28, ref: ITEMS.leatherPants },
   { name:"Old Boots", price:22, ref: ITEMS.oldBoots },
 ];
-const STAGES = [
-  { id:"s1", name:"Stage 1", range:[1,2] },
-  { id:"s2", name:"Stage 2", range:[2,3] },
-  { id:"s3", name:"Stage 3", range:[3,4] },
-  { id:"s4", name:"Stage 4", range:[4,5] },
-  { id:"s5", name:"Stage 5", range:[5,6] },
-  { id:"s6", name:"Stage 6", range:[6,7] },
-  { id:"s7", name:"Stage 7", range:[7,8] },
-  { id:"s8", name:"Stage 8", range:[8,9] },
-  { id:"s9", name:"Stage 9", range:[9,10] },
-  { id:"s10", name:"Stage 10", range:[10,10] },
+const STAGE_TIERS = [
+  { id:"a", name:"Stage A", offset:-1 },
+  { id:"b", name:"Stage B", offset:0 },
+  { id:"c", name:"Stage C", offset:1 },
 ];
 
 
@@ -1446,19 +1439,36 @@ function afterPlayerAction() {
 function explore() {
   if (state.inBattle) return;
 
+  openAdventureLevels();
+}
+
+function openAdventureLevels(){
   modal.open(
-    "Pilih Stage",
-    STAGES.map((s) => ({
+    "Adventure - Level",
+    Array.from({ length: 10 }, (_, i) => ({
+      title: `Level ${i + 1}`,
+      desc: "Pilih level petualangan",
+      meta: "",
+      value: i + 1,
+    })),
+    (level) => openAdventureStages(Number(level) || 1)
+  );
+}
+
+function openAdventureStages(level){
+  const base = clamp(level || 1, 1, MAX_LEVEL);
+  modal.open(
+    `Adventure - Level ${base}`,
+    STAGE_TIERS.map((s) => ({
       title: s.name,
-      desc: `Lv ${s.range[0]} - ${s.range[1]}`,
+      desc: `Target Lv ${clamp(base + s.offset, 1, MAX_LEVEL)}`,
       meta: "",
       value: s.id,
     })),
     (id) => {
-      const stage = STAGES.find((s) => s.id === id) || STAGES[0];
-      const [lo, hi] = stage.range;
-      const targetLv = clamp(randInt(lo, hi), 1, MAX_LEVEL);
-      startAdventureBattle(targetLv, stage.name);
+      const tier = STAGE_TIERS.find((s) => s.id === id) || STAGE_TIERS[1];
+      const targetLv = clamp(base + tier.offset, 1, MAX_LEVEL);
+      startAdventureBattle(targetLv, `${base}-${tier.name}`);
     }
   );
 }
