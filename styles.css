@@ -299,6 +299,22 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   gap:10px;
   align-items:center;
 }
+.titleRow{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.skillIcon{
+  width:18px;
+  height:18px;
+  object-fit:contain;
+  display:inline-block;
+}
+.skillIconWrap{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
 
 /* Market grid layout */
 .modalBody.marketGrid{

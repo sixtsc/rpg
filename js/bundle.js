@@ -5,12 +5,12 @@ try{var _el=document.getElementById('menuSub'); if(_el && _el.textContent && _el
 
 /* ===== data.js ===== */
 const SKILLS = {
-  fireball: { name:"Fireball", icon:"🔥", mpCost:6, power:10, cooldown:3, desc:"Serangan api (damage tinggi)." },
-  spark: { name:"Spark", icon:"⚡", mpCost:3, power:6, cooldown:2, desc:"Sambaran listrik ringan." },
-  frostBite: { name:"Frost Bite", icon:"❄️", mpCost:5, power:9, cooldown:2, desc:"Es tajam yang menusuk." },
-  shadowCut: { name:"Shadow Cut", icon:"🗡️", mpCost:7, power:12, cooldown:3, desc:"Tebasan gelap yang cepat." },
-  earthSpike: { name:"Earth Spike", icon:"🪨", mpCost:9, power:15, cooldown:3, desc:"Paku tanah menghantam musuh." },
-  meteor: { name:"Meteor", icon:"☄️", mpCost:12, power:20, cooldown:4, desc:"Pukulan meteor dengan damage besar." }
+  fireball: { name:"Fireball", icon:"./assets/skills/fireball.svg", mpCost:6, power:10, cooldown:3, desc:"Serangan api (damage tinggi)." },
+  spark: { name:"Spark", icon:"./assets/skills/spark.svg", mpCost:3, power:6, cooldown:2, desc:"Sambaran listrik ringan." },
+  frostBite: { name:"Frost Bite", icon:"./assets/skills/frost-bite.svg", mpCost:5, power:9, cooldown:2, desc:"Es tajam yang menusuk." },
+  shadowCut: { name:"Shadow Cut", icon:"./assets/skills/shadow-cut.svg", mpCost:7, power:12, cooldown:3, desc:"Tebasan gelap yang cepat." },
+  earthSpike: { name:"Earth Spike", icon:"./assets/skills/earth-spike.svg", mpCost:9, power:15, cooldown:3, desc:"Paku tanah menghantam musuh." },
+  meteor: { name:"Meteor", icon:"./assets/skills/meteor.svg", mpCost:12, power:20, cooldown:4, desc:"Pukulan meteor dengan damage besar." }
 };
 const ITEMS = {
   potion: { name:"Potion", kind:"heal_hp", amount:25, desc:"Memulihkan 25 HP" },
@@ -619,6 +619,11 @@ function getSkillByName(player, name){
   return player.skills.find((s) => s && s.name === name) || null;
 }
 
+function skillIconHtml(skill){
+  if (!skill || !skill.icon) return "";
+  return `<img class="skillIcon" src="${escapeHtml(skill.icon)}" alt="" />`;
+}
+
 function renderSkillSlots(){
   const grid = $("skillSlots");
   if (!grid) return;
@@ -639,8 +644,9 @@ function renderSkillSlots(){
     const skill = slotName ? getSkillByName(p, slotName) : null;
     if (skill) {
       const cdLeft = skill.cdLeft || 0;
-      const label = `${skill.icon ? `${skill.icon} ` : ""}${skill.name}`;
-      btn.textContent = cdLeft > 0 ? `${label} (CD ${cdLeft})` : label;
+      const label = `${escapeHtml(skill.name)}`;
+      const icon = skillIconHtml(skill);
+      btn.innerHTML = cdLeft > 0 ? `${icon}${label} (CD ${cdLeft})` : `${icon}${label}`;
       btn.disabled = (state.turn !== "player") || p.mp < skill.mpCost || cdLeft > 0;
       btn.onclick = () => useSkillAtIndex(i);
     } else {
@@ -787,8 +793,9 @@ const modal = {
       if (c.style) row.style.cssText += String(c.style);
 
       const left = document.createElement("div");
+      const iconHtml = c.icon ? `<span class="skillIconWrap"><img class="skillIcon" src="${escapeHtml(c.icon)}" alt="" /></span>` : "";
       left.innerHTML = `
-        <b>${escapeHtml(c.title)}</b>
+        <div class="titleRow">${iconHtml}<b>${escapeHtml(c.title)}</b></div>
         <div class="desc">${escapeHtml(c.desc || "")}</div>
       `;
 
@@ -1224,9 +1231,10 @@ function openShopModal(mode = "menu"){
       const skill = SKILLS[entry.key];
       const learned = Array.isArray(p.skills) && p.skills.some((s) => s.name === skill.name);
       const meta = `Lv ${entry.level} • MP ${skill.mpCost} • Power ${skill.power} • ${entry.price} gold`;
-      const title = `${learned ? "✅ " : ""}${skill.icon ? `${skill.icon} ` : ""}${skill.name}`;
+      const title = `${learned ? "✓ " : ""}${skill.name}`;
       return {
         title,
+        icon: skill.icon,
         desc: skill.desc || "Skill",
         meta: learned ? `${meta} • Learned` : meta,
         value: learned ? undefined : `learn:${entry.key}`,
@@ -1872,13 +1880,13 @@ function openSkillModal() {
     const cdLeft = s.cdLeft || 0;
     const cdText = (s.cooldown ? `CD ${cdLeft}/${s.cooldown}` : "CD -");
     const meta = `MP ${s.mpCost} • ${cdText}`;
-    const title = `${s.icon ? `${s.icon} ` : ""}${s.name}`;
+    const title = `${s.name}`;
 
     // If on cooldown, make it readonly by omitting value
     if (cdLeft > 0) {
-      return { title, desc: `${s.desc}`, meta, value: undefined, className: "readonly" };
+      return { title, icon: s.icon, desc: `${s.desc}`, meta, value: undefined, className: "readonly" };
     }
-    return { title, desc: `${s.desc}`, meta, value: i };
+    return { title, icon: s.icon, desc: `${s.desc}`, meta, value: i };
   });
 
   modal.open("Skill", choices, (idx) => {
@@ -2101,11 +2109,12 @@ function openSkillSlotModal(){
   const choices = Array.from({ length: 8 }, (_, i) => {
     const slotName = p.skillSlots[i];
     const skill = slotName ? getSkillByName(p, slotName) : null;
-    const title = skill ? `${skill.icon ? `${skill.icon} ` : ""}${skill.name}` : "Kosong";
+    const title = skill ? `${skill.name}` : "Kosong";
     return {
       title: `Slot ${i + 1}`,
       desc: skill ? skill.desc : "Kosong",
       meta: skill ? title : "Klik untuk pilih",
+      icon: skill ? skill.icon : "",
       value: `slot:${i}`,
       allowClick: true,
       buttons: [
@@ -2148,7 +2157,8 @@ function openSkillSlotSelect(slotIdx){
     const alreadyEquipped = equippedIndex !== -1 && equippedIndex !== slotIdx;
     const meta = `MP ${skill.mpCost} • Power ${skill.power}${alreadyEquipped ? " • Equipped" : ""}`;
     return {
-      title: `${skill.icon ? `${skill.icon} ` : ""}${skill.name}`,
+      title: skill.name,
+      icon: skill.icon,
       desc: skill.desc || "Skill",
       meta,
       value: alreadyEquipped ? undefined : `pick:${skill.name}`,
