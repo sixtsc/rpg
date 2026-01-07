@@ -287,6 +287,25 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   align-items:center;
 }
 
+/* Market grid layout */
+.modalBody.marketGrid{
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (min-width: 700px){
+  .modalBody.marketGrid{
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.modalBody.marketGrid .choice{
+  flex-direction:column;
+  align-items:flex-start;
+  gap:6px;
+  min-height:120px;
+}
+.modalBody.marketGrid .choice .right{
+  align-self:flex-end;
+}
+
 /* XP progress fill (used for Lv badge / row) */
 .xpProgress{ position:relative; overflow:hidden; }
 .xpProgress::before{
@@ -707,3 +726,45 @@ body.inTown .grid{ grid-template-columns: 1fr !important; }
 .toast.good{ border-color: rgba(47,218,119,0.65); }
 .toast.warn{ border-color: rgba(209,123,47,0.75); }
 .toast.danger{ border-color: rgba(255,120,120,0.85); color:#ffb4b4; }
+
+/* Battle result overlay */
+.battleResultBackdrop{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.7);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:9998;
+  padding:16px;
+}
+.battleResultCard{
+  width:min(360px, 90vw);
+  aspect-ratio: 1 / 1;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:20px;
+  padding:18px;
+  box-shadow:0 16px 50px rgba(0,0,0,0.6);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:8px;
+  text-align:center;
+}
+.battleResultTitle{
+  font-size:20px;
+  font-weight:900;
+}
+.battleResultEnemy{
+  color:var(--muted);
+  font-size:12px;
+}
+.battleResultLine{
+  font-weight:700;
+}
+.battleResultBtn{
+  margin-top:8px;
+  border-radius:14px;
+  padding:10px 12px;
+}

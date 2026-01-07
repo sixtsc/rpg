@@ -26,11 +26,6 @@ const SHOP_GOODS = [
   { name:"Leather Pants", price:28, ref: ITEMS.leatherPants },
   { name:"Old Boots", price:22, ref: ITEMS.oldBoots },
 ];
-const STAGE_TIERS = [
-  { id:"a", name:"Stage A", offset:-1 },
-  { id:"b", name:"Stage B", offset:0 },
-  { id:"c", name:"Stage C", offset:1 },
-];
 
 
 /* ===== engine.js ===== */
@@ -254,6 +249,7 @@ function newState(){
     player: normalizePlayer(newPlayer()),
     enemy: null,
     inBattle: false,
+    battleResult: null,
     playerDefending: false,
     playerDodging: false,
     turn: "town",
@@ -498,6 +494,32 @@ function addLog(tag, msg) {
   showToast(msg, tag);
 }
 
+function showBattleResultOverlay(summary, onClose) {
+  const backdrop = $("battleResultBackdrop");
+  if (!backdrop) return;
+  $("battleResultTitle").textContent = summary.outcome === "win" ? "Victory" : "Defeat";
+  $("battleResultEnemy").textContent = summary.enemyName ? `Vs ${summary.enemyName}` : "";
+  $("battleResultGold").textContent = `Gold +${summary.gold || 0}`;
+  $("battleResultXp").textContent = `XP +${summary.xp || 0}`;
+
+  const dropEl = $("battleResultDrops");
+  const drops = Array.isArray(summary.drops) ? summary.drops : [];
+  if (!drops.length) {
+    dropEl.textContent = "Drop: -";
+  } else {
+    dropEl.textContent = `Drop: ${drops.map((d) => `${d.name} x${d.qty || 1}`).join(", ")}`;
+  }
+
+  backdrop.style.display = "flex";
+  const btn = $("battleResultClose");
+  if (btn) {
+    btn.onclick = () => {
+      backdrop.style.display = "none";
+      if (onClose) onClose();
+    };
+  }
+}
+
 function renderSkillSlots(){
   const grid = $("skillSlots");
   if (!grid) return;
@@ -641,7 +663,9 @@ const modal = {
 
     // Layout: make Stats modals show 2-3 columns
     body.classList.remove("statsGrid");
+    body.classList.remove("marketGrid");
     if (String(title).toLowerCase().includes("stats")) body.classList.add("statsGrid");
+    if (String(title).toLowerCase().includes("market")) body.classList.add("marketGrid");
 
     choices.forEach((c) => {
       const row = document.createElement("div");
@@ -801,6 +825,13 @@ function refresh(state) {
     // Buttons visibility
     $("townBtns").style.display = "none";
     $("battleBtns").style.display = "flex";
+    if (state.battleResult) {
+      $("battleBtns").classList.add("disabled");
+      $("battleBtns").querySelectorAll("button").forEach((b) => { b.disabled = true; });
+    } else {
+      $("battleBtns").classList.remove("disabled");
+      $("battleBtns").querySelectorAll("button").forEach((b) => { b.disabled = false; });
+    }
 
     const actionCard = $("actionCard");
     if (actionCard) actionCard.style.display = "block";
@@ -1058,7 +1089,7 @@ function openShopModal(mode = "menu"){
 
   if (mode === "buy"){
     modal.open(
-      "Shop - Beli",
+      "Market - Beli",
       SHOP_GOODS.map((g) => ({
         title: `${g.name}`,
         desc: g.ref.desc || "Item",
@@ -1086,7 +1117,7 @@ function openShopModal(mode = "menu"){
       : [{ title: "Tidak ada item", desc: "Inventory kosong.", meta: "", value: undefined, className: "readonly" }];
 
     modal.open(
-      "Shop - Jual",
+      "Market - Jual",
       rows,
       (pick) => {
         const name = String(pick || "").replace(/^sell:/, "");
@@ -1164,7 +1195,18 @@ function beginEnemyTurn(){
 
 function endBattle(reason, summary) {
   addLog("INFO", reason);
+  if (summary) {
+    state.battleResult = summary;
+    refresh(state);
+    showBattleResultOverlay(summary, () => finalizeBattle(reason));
+    return;
+  }
+  finalizeBattle(reason);
+}
+
+function finalizeBattle(reason){
   state.inBattle = false;
+  state.battleResult = null;
   clearStatuses(state.enemy);
   state.enemy = null;
   state.playerDefending = false;
@@ -1173,18 +1215,14 @@ function endBattle(reason, summary) {
   setTurn("town");
   state.battleTurn = 0;
 
-  // Setelah battle selesai (menang/kalah/kabur), pulihkan HP & MP player
   state.player.hp = state.player.maxHp;
   state.player.mp = state.player.maxMp;
 
-  // Reset skill cooldowns after battle
   if (state.player && Array.isArray(state.player.skills)) {
     state.player.skills.forEach((s) => { if (s) s.cdLeft = 0; });
   }
 
   autosave(state);
-
-  // Also sync to cloud (if logged in) so progress can be used cross-device
   (async () => {
     try {
       const r = await cloudTrySaveCurrentProfile();
@@ -1195,7 +1233,6 @@ function endBattle(reason, summary) {
   })();
 
   refresh(state);
-  if (summary) showBattleResultModal(summary);
 }
 
 function levelUp() {
@@ -1266,27 +1303,6 @@ function grantDropsToPlayer(drops){
     if (inv[d.name]) inv[d.name].qty += qty;
     else inv[d.name] = { ...d, qty };
   });
-}
-
-function showBattleResultModal(summary){
-  if (!summary) return;
-  const title = summary.outcome === "win" ? "Kamu Menang!" : "Kamu Kalah";
-  const drops = Array.isArray(summary.drops) ? summary.drops : [];
-  const lines = [
-    { title, desc: summary.enemyName ? `Melawan ${summary.enemyName}` : "Pertarungan selesai.", meta: "" },
-    { title: `Gold: +${summary.gold || 0}`, desc: "", meta: "" },
-    { title: `XP: +${summary.xp || 0}`, desc: "", meta: "" },
-  ];
-
-  if (drops.length) {
-    drops.forEach((d) => {
-      lines.push({ title: `Drop: ${d.name} x${d.qty || 1}`, desc: d.desc || "Reward", meta: "" });
-    });
-  } else {
-    lines.push({ title: "Drop: -", desc: "Tidak ada drop.", meta: "" });
-  }
-
-  modal.open("Hasil Pertarungan", lines, () => {});
 }
 
 function winBattle() {
@@ -1451,24 +1467,9 @@ function openAdventureLevels(){
       meta: "",
       value: i + 1,
     })),
-    (level) => openAdventureStages(Number(level) || 1)
-  );
-}
-
-function openAdventureStages(level){
-  const base = clamp(level || 1, 1, MAX_LEVEL);
-  modal.open(
-    `Adventure - Level ${base}`,
-    STAGE_TIERS.map((s) => ({
-      title: s.name,
-      desc: `Target Lv ${clamp(base + s.offset, 1, MAX_LEVEL)}`,
-      meta: "",
-      value: s.id,
-    })),
-    (id) => {
-      const tier = STAGE_TIERS.find((s) => s.id === id) || STAGE_TIERS[1];
-      const targetLv = clamp(base + tier.offset, 1, MAX_LEVEL);
-      startAdventureBattle(targetLv, `${base}-${tier.name}`);
+    (level) => {
+      const targetLv = clamp(Number(level) || 1, 1, MAX_LEVEL);
+      startAdventureBattle(targetLv, `Level ${targetLv}`);
     }
   );
 }
