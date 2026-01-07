@@ -72,8 +72,6 @@ function genEnemy(plv){
     blockRate: 0,
     escapeChance: 0,
     manaRegen: 0,
-    canStun: ["Goblin","Bandit","Skeleton"].includes(name),
-    stunChance: name === "Skeleton" ? 0.25 : (["Goblin","Bandit"].includes(name) ? 0.18 : 0),
     statuses: [],
     xpReward:18 + lvl*6, goldReward:8 + lvl*4
   };
@@ -577,11 +575,6 @@ function useSkillAtIndex(idx){
     } else {
       addLog("YOU", `${s.name}! Damage ${res.dmg}.`);
     }
-  }
-
-  if (res.dmg > 0 && s.name.toLowerCase() === "fireball" && Math.random() < 0.18) {
-    addStatusEffect(e, { type: "stun", turns: 1, debuff: true });
-    addLog("INFO", `${e.name} terkena Stun!`);
   }
 
   s.cdLeft = s.cooldown || 0;
@@ -1386,10 +1379,6 @@ function enemyTurn() {
       } else {
         addLog("ENEMY", `${e.name} memakai Rage Strike! Damage ${res.dmg}.`);
       }
-      if (res.dmg > 0 && e.canStun && Math.random() < (e.stunChance || 0)) {
-        addStatusEffect(p, { type: "stun", turns: 1, debuff: true });
-        addLog("WARN", "Kamu terkena Stun!");
-      }
       const wait = delays.length ? Math.max(...delays, 180) + 40 : 0;
       endTurnAfter(wait);
     }
@@ -1417,10 +1406,6 @@ function enemyTurn() {
         else addLog("ENEMY", `COMBUSTION! ${e.name} menyerang! Damage ${res.dmg}.`);
       } else {
         addLog("ENEMY", `${e.name} menyerang! Damage ${res.dmg}.`);
-      }
-      if (res.dmg > 0 && e.canStun && Math.random() < (e.stunChance || 0)) {
-        addStatusEffect(p, { type: "stun", turns: 1, debuff: true });
-        addLog("WARN", "Kamu terkena Stun!");
       }
       const wait = delays.length ? Math.max(...delays, 180) + 40 : 0;
       endTurnAfter(wait);
@@ -1699,11 +1684,6 @@ function openSkillModal() {
       } else {
         addLog("YOU", `${s.name}! Damage ${res.dmg}.`);
       }
-    }
-
-    if (res.dmg > 0 && s.name.toLowerCase() === "fireball" && Math.random() < 0.18) {
-      addStatusEffect(state.enemy, { type: "stun", turns: 1, debuff: true });
-      addLog("INFO", `${state.enemy.name} terkena Stun!`);
     }
 
     // Set per-skill cooldown
