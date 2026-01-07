@@ -56,7 +56,6 @@
         <select id="ccGender" class="authInput">
           <option value="male">Male</option>
           <option value="female">Female</option>
-          <option value="other">Other</option>
         </select>
       </div>
 
@@ -69,18 +68,22 @@
     </div>
   </div>
 
-
 <div class="wrap">
     <div class="topbar">
-      <h1>Text RPG Turn-Based <span class="pill" id="modePill">Town</span></h1>
-      <div class="pill muted" id="meta">—</div>
+      <div class="brand">
+        <img class="logo" src="./assets/logo.svg" alt="RPG Logo" />
+        <h1>Text RPG Turn-Based <span class="pill" id="modePill">Town</span></h1>
+      </div>
     </div>
 
     <div class="grid">
       <!-- LEFT: Player + Actions -->
       <div class="card" id="playerCard">
         <div class="sectionTitle">
-          <div><b id="pNameTitle">Hero</b> <span class="pill" id="pLvl">Lv1</span></div>
+          <div class="playerTitle">
+            <b id="pNameTitle">Hero</b> <span class="pill" id="pLvl">Lv1</span>
+            <span class="pill statLink" id="playerStatLink">?</span>
+          </div>
           <div class="pill" id="goldPill">Gold: 0</div>
         </div>
 
@@ -157,10 +160,19 @@
         <div class="battleActions" id="battleBtns" style="display:none;">
           <div class="battlePrimary">
             <button class="primary" id="btnAttack">Attack</button>
-            <button id="btnSkill">Skill</button>
+            <button id="btnCharge">Charge</button>
             <button id="btnItem">Item</button>
             <button id="btnDefend">Dodge</button>
-            <button id="btnStatsBattle">Stats</button>
+            <div id="skillSlots" class="skillGrid">
+              <button class="skillSlot" data-slot="0">-</button>
+              <button class="skillSlot" data-slot="1">-</button>
+              <button class="skillSlot" data-slot="2">-</button>
+              <button class="skillSlot" data-slot="3">-</button>
+              <button class="skillSlot" data-slot="4">-</button>
+              <button class="skillSlot" data-slot="5">-</button>
+              <button class="skillSlot" data-slot="6">-</button>
+              <button class="skillSlot" data-slot="7">-</button>
+            </div>
             <button class="warn" id="btnRun">Run</button>
           </div>
         </div>
@@ -168,24 +180,26 @@
         <!-- Town buttons -->
         <div class="battleActions" id="townBtns" style="display:none;">
           <div class="battlePrimary">
-            <button class="primary" id="btnExplore">Explore</button>
+            <button class="primary" id="btnExplore">Adventure</button>
             <button id="btnInventory">Inventory</button>
             <button id="btnProfile">Profile</button>
             <button id="btnShop">Shop</button>
-            <button id="btnStats">Stats</button>
             <button class="good" id="btnMenu">Menu</button>
           </div>
         </div>
       </div>
 
-<!-- BOTTOM: Log FULL WIDTH -->
-      <div class="card logCard">
-        <div class="sectionTitle">
-          <div><b>LOG</b></div>
-          <div class="pill muted" id="logHint">Battle log</div>
-        </div>
-        <div class="log" id="log"></div>
-      </div>
+    </div>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="battleResultBackdrop" class="battleResultBackdrop" style="display:none;">
+    <div class="battleResultCard">
+      <div class="battleResultTitle" id="battleResultTitle">Victory</div>
+      <div class="battleResultEnemy" id="battleResultEnemy"></div>
+      <div class="battleResultLine" id="battleResultGold">Gold +0</div>
+      <div class="battleResultLine" id="battleResultXp">XP +0</div>
+      <div class="battleResultLine" id="battleResultDrops">Drop: -</div>
+      <button class="battleResultBtn" id="battleResultClose">Continue</button>
     </div>
   </div>
 
