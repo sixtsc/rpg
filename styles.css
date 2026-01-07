@@ -315,6 +315,15 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   gap:6px;
   min-height:120px;
 }
+.modalBody.marketGrid.marketSubCompact{
+  gap:0;
+}
+.modalBody.marketGrid.marketSubCompact .choice{
+  margin:6px;
+}
+.modalBody.marketGrid.marketSubCompact .choice.marketCategory.marketSub{
+  margin:0;
+}
 .modalBody.marketGrid .choice .right{
   align-self:flex-end;
 }
@@ -333,10 +342,10 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   padding:10px;
 }
 .modalBody.marketGrid .choice.marketCategory.marketSub{
-  font-size:11px;
-  padding:8px;
-  min-height:48px;
-  border-style:dashed;
+  font-size:16px;
+  padding:6px;
+  min-height:40px;
+  border-style:solid;
 }
 .modalBody.marketGrid .choice.marketCategory.active{
   border-color: rgba(74,163,255,.75);

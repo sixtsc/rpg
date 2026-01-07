@@ -5,7 +5,12 @@ try{var _el=document.getElementById('menuSub'); if(_el && _el.textContent && _el
 
 /* ===== data.js ===== */
 const SKILLS = {
-  fireball: { name:"Fireball", mpCost:6, power:10, cooldown:3, desc:"Serangan api (damage tinggi)." }
+  fireball: { name:"Fireball", mpCost:6, power:10, cooldown:3, desc:"Serangan api (damage tinggi)." },
+  spark: { name:"Spark", mpCost:3, power:6, cooldown:2, desc:"Sambaran listrik ringan." },
+  frostBite: { name:"Frost Bite", mpCost:5, power:9, cooldown:2, desc:"Es tajam yang menusuk." },
+  shadowCut: { name:"Shadow Cut", mpCost:7, power:12, cooldown:3, desc:"Tebasan gelap yang cepat." },
+  earthSpike: { name:"Earth Spike", mpCost:9, power:15, cooldown:3, desc:"Paku tanah menghantam musuh." },
+  meteor: { name:"Meteor", mpCost:12, power:20, cooldown:4, desc:"Pukulan meteor dengan damage besar." }
 };
 const ITEMS = {
   potion: { name:"Potion", kind:"heal_hp", amount:25, desc:"Memulihkan 25 HP" },
@@ -14,7 +19,17 @@ const ITEMS = {
   clothHat: { name:"Cloth Hat", kind:"gear", slot:"head", desc:"Topi kain lusuh.", def:1 },
   leatherArmor: { name:"Leather Armor", kind:"gear", slot:"armor", desc:"Armor kulit ringan.", def:2 },
   leatherPants: { name:"Leather Pants", kind:"gear", slot:"pant", desc:"Celana kulit sederhana.", def:1 },
-  oldBoots: { name:"Old Boots", kind:"gear", slot:"shoes", desc:"Sepatu tua tapi nyaman.", spd:1 }
+  oldBoots: { name:"Old Boots", kind:"gear", slot:"shoes", desc:"Sepatu tua tapi nyaman.", spd:1 },
+  bronzeSword: { name:"Bronze Sword", kind:"gear", slot:"hand", desc:"Pedang Lv3 dengan serangan stabil.", atk:4 },
+  ironSword: { name:"Iron Sword", kind:"gear", slot:"hand", desc:"Pedang Lv6 yang kokoh.", atk:6 },
+  runeBlade: { name:"Rune Blade", kind:"gear", slot:"hand", desc:"Pedang Lv9 dengan rune kuno.", atk:9 },
+  leatherHood: { name:"Leather Hood", kind:"gear", slot:"head", desc:"Pelindung kepala Lv2.", def:2 },
+  ironHelm: { name:"Iron Helm", kind:"gear", slot:"head", desc:"Helm Lv7 yang berat.", def:4 },
+  chainVest: { name:"Chain Vest", kind:"gear", slot:"armor", desc:"Armor Lv4 berbahan rantai.", def:4 },
+  steelArmor: { name:"Steel Armor", kind:"gear", slot:"armor", desc:"Armor Lv8 dengan pertahanan tinggi.", def:7 },
+  travelerPants: { name:"Traveler Pants", kind:"gear", slot:"pant", desc:"Celana Lv3 untuk perjalanan.", def:2, spd:1 },
+  ironGreaves: { name:"Iron Greaves", kind:"gear", slot:"pant", desc:"Greaves Lv7 kokoh.", def:4 },
+  swiftBoots: { name:"Swift Boots", kind:"gear", slot:"shoes", desc:"Sepatu Lv5 meningkatkan kecepatan.", spd:2 }
 };
 const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton"];
 const SHOP_GOODS = [
@@ -25,6 +40,23 @@ const SHOP_GOODS = [
   { name:"Leather Armor", price:40, ref: ITEMS.leatherArmor },
   { name:"Leather Pants", price:28, ref: ITEMS.leatherPants },
   { name:"Old Boots", price:22, ref: ITEMS.oldBoots },
+  { name:"Bronze Sword", price:55, ref: ITEMS.bronzeSword },
+  { name:"Iron Sword", price:85, ref: ITEMS.ironSword },
+  { name:"Rune Blade", price:120, ref: ITEMS.runeBlade },
+  { name:"Leather Hood", price:35, ref: ITEMS.leatherHood },
+  { name:"Iron Helm", price:75, ref: ITEMS.ironHelm },
+  { name:"Chain Vest", price:60, ref: ITEMS.chainVest },
+  { name:"Steel Armor", price:110, ref: ITEMS.steelArmor },
+  { name:"Traveler Pants", price:48, ref: ITEMS.travelerPants },
+  { name:"Iron Greaves", price:90, ref: ITEMS.ironGreaves },
+  { name:"Swift Boots", price:68, ref: ITEMS.swiftBoots },
+];
+const SHOP_SKILLS = [
+  { key:"spark", level:1, price:18 },
+  { key:"frostBite", level:3, price:30 },
+  { key:"shadowCut", level:5, price:45 },
+  { key:"earthSpike", level:7, price:60 },
+  { key:"meteor", level:10, price:85 },
 ];
 
 
@@ -42,13 +74,13 @@ function genEnemy(plv){
   const enemy = {
     name,
     level:lvl,
-    maxHp:25 + lvl*8, maxMp:10 + lvl*3,
-    hp:25 + lvl*8, mp:10 + lvl*3,
-    atk:6 + lvl*2, def:2 + lvl, spd:4 + lvl,
-    str: Math.max(0, lvl - 1),
-    dex: Math.max(0, Math.floor(lvl / 2)),
-    int: Math.max(0, Math.floor(lvl / 2)),
-    vit: Math.max(0, lvl),
+    maxHp:28 + lvl*10, maxMp:12 + lvl*4,
+    hp:28 + lvl*10, mp:12 + lvl*4,
+    atk:7 + lvl*3, def:3 + lvl*2, spd:4 + lvl*2,
+    str: Math.max(0, lvl),
+    dex: Math.max(0, Math.floor(lvl * 0.6)),
+    int: Math.max(0, Math.floor(lvl * 0.6)),
+    vit: Math.max(0, Math.floor(lvl * 1.2)),
     critChance: clamp(5 + Math.floor(lvl/3), 5, 35),
     critDamage: 0,
     acc: Math.max(0, Math.floor(lvl / 6)),
@@ -103,7 +135,7 @@ function resolveAttack(att, def, basePower, opts = {}) {
   const rollComb = randInt(1, 100);
   let combustion = false;
   if (rollComb <= combustionChance) {
-    const combMult = randFloat(2.0, 2.5);
+    const combMult = randFloat(1.5, 1.9);
     dmg = Math.max(1, Math.round(dmg * combMult));
     combustion = true;
   }
@@ -156,11 +188,13 @@ function newPlayer(){
     escapeChance:0,
     statuses: [],
     equipment: { hand:null, head:null, pant:null, armor:null, shoes:null },
+    equipmentBonus: { atk:0, def:0, spd:0 },
 
     deprecatedSkillCooldown:0,
     xp:0, xpToLevel:50,
     gold:0,
     skills:[{ ...SKILLS.fireball, cdLeft:0 }],
+    skillSlots: ["Fireball", null, null, null, null, null, null, null],
     inv: { "Potion": { ...ITEMS.potion, qty:2 }, "Ether": { ...ITEMS.ether, qty:1 } }
   };
 }
@@ -215,12 +249,36 @@ function normalizePlayer(p){
     p.equipment.armor ??= null;
     p.equipment.shoes ??= null;
   }
+  if (!p.equipmentBonus || typeof p.equipmentBonus !== "object") {
+    p.equipmentBonus = { atk:0, def:0, spd:0 };
+  } else {
+    p.equipmentBonus.atk = Number(p.equipmentBonus.atk || 0);
+    p.equipmentBonus.def = Number(p.equipmentBonus.def || 0);
+    p.equipmentBonus.spd = Number(p.equipmentBonus.spd || 0);
+  }
+  if (!Array.isArray(p.skills)) p.skills = [];
+  if (!Array.isArray(p.skillSlots)) {
+    const slots = Array.from({ length: 8 }, (_, i) => {
+      const skill = p.skills[i];
+      return skill ? skill.name : null;
+    });
+    p.skillSlots = slots;
+  } else {
+    p.skillSlots = Array.from({ length: 8 }, (_, i) => {
+      const entry = p.skillSlots[i];
+      if (!entry) return null;
+      if (typeof entry === "string") return entry;
+      if (typeof entry === "object" && entry.name) return entry.name;
+      return null;
+    });
+  }
 
   // Safety defaults (older saves)
   if (typeof p.level !== "number") p.level = 1;
   if (typeof p.name !== "string") p.name = "Hero";
 
   applyDerivedStats(p);
+  applyEquipmentStats(p);
   return p;
 }
 
@@ -236,6 +294,40 @@ function applyDerivedStats(p){
   p.manaRegen = Math.max(1, Math.floor((p.maxMp || 0) * 0.06) + Math.floor(intVal * 0.8));
   p.blockRate = clamp(Math.round(p.baseBlockRate + vitVal * 1.2), 0, 80);
   p.escapeChance = clamp(Math.round(p.baseEscapeChance + intVal * 1.3), 0, 95);
+}
+
+function getItemRef(name, player){
+  if (!name) return null;
+  const p = player || state?.player;
+  const invItem = p && p.inv ? p.inv[name] : null;
+  if (invItem) return invItem;
+  const shopItem = getShopItem(name);
+  return shopItem ? shopItem.ref : null;
+}
+
+function calcEquipmentBonus(player){
+  const p = player;
+  const bonus = { atk:0, def:0, spd:0 };
+  if (!p || !p.equipment) return bonus;
+  Object.values(p.equipment).forEach((name) => {
+    const it = getItemRef(name, p);
+    if (!it) return;
+    if (typeof it.atk === "number") bonus.atk += it.atk;
+    if (typeof it.def === "number") bonus.def += it.def;
+    if (typeof it.spd === "number") bonus.spd += it.spd;
+  });
+  return bonus;
+}
+
+function applyEquipmentStats(player){
+  const p = player;
+  if (!p) return;
+  const prev = p.equipmentBonus || { atk:0, def:0, spd:0 };
+  const next = calcEquipmentBonus(p);
+  p.atk = Math.max(0, (p.atk || 0) - (prev.atk || 0) + next.atk);
+  p.def = Math.max(0, (p.def || 0) - (prev.def || 0) + next.def);
+  p.spd = Math.max(0, (p.spd || 0) - (prev.spd || 0) + next.spd);
+  p.equipmentBonus = next;
 }
 
 
@@ -522,10 +614,18 @@ function showBattleResultOverlay(summary, onClose) {
   }
 }
 
+function getSkillByName(player, name){
+  if (!player || !Array.isArray(player.skills) || !name) return null;
+  return player.skills.find((s) => s && s.name === name) || null;
+}
+
 function renderSkillSlots(){
   const grid = $("skillSlots");
   if (!grid) return;
   const p = state.player;
+  if (!Array.isArray(p.skillSlots)) {
+    p.skillSlots = Array.from({ length: 8 }, () => null);
+  }
   const slots = Array.from({ length: 8 });
   slots.forEach((_, i) => {
     let btn = grid.querySelector(`[data-slot="${i}"]`);
@@ -535,7 +635,8 @@ function renderSkillSlots(){
       btn.setAttribute("data-slot", `${i}`);
       grid.appendChild(btn);
     }
-    const skill = p.skills && p.skills[i];
+    const slotName = p.skillSlots ? p.skillSlots[i] : null;
+    const skill = slotName ? getSkillByName(p, slotName) : null;
     if (skill) {
       const cdLeft = skill.cdLeft || 0;
       btn.textContent = cdLeft > 0 ? `${skill.name} (CD ${cdLeft})` : skill.name;
@@ -553,7 +654,8 @@ function useSkillAtIndex(idx){
   const p = state.player;
   const e = state.enemy;
   if (!p || !e || !Array.isArray(p.skills)) return;
-  const s = p.skills[idx];
+  const slotName = p.skillSlots ? p.skillSlots[idx] : null;
+  const s = slotName ? getSkillByName(p, slotName) : null;
   if (!s) return;
   if (state.turn !== "player") return;
   const cdLeft = s.cdLeft || 0;
@@ -667,9 +769,13 @@ const modal = {
     body.classList.remove("statsGrid");
     body.classList.remove("marketGrid");
     body.classList.remove("equipmentGrid");
+    body.classList.remove("marketSubCompact");
     if (String(title).toLowerCase().includes("stats")) body.classList.add("statsGrid");
     if (String(title).toLowerCase().includes("market")) body.classList.add("marketGrid");
     if (String(title).toLowerCase().includes("equipment")) body.classList.add("equipmentGrid");
+    if (choices.some((c) => String(c.className || "").includes("marketSub"))) {
+      body.classList.add("marketSubCompact");
+    }
 
     choices.forEach((c) => {
       const row = document.createElement("div");
@@ -1002,6 +1108,7 @@ function equipItem(slot, itemName){
   if (it.kind !== "gear") return false;
   if (it.slot !== slot) return false;
   p.equipment[slot] = itemName;
+  applyEquipmentStats(p);
   autosave(state);
   addLog("INFO", `${itemName} dipakai di slot ${slot}.`);
   refresh(state);
@@ -1014,10 +1121,20 @@ function unequipSlot(slot){
   if (!p.equipment[slot]) return false;
   const name = p.equipment[slot];
   p.equipment[slot] = null;
+  applyEquipmentStats(p);
   autosave(state);
   addLog("INFO", `${name} dilepas dari slot ${slot}.`);
   refresh(state);
   return true;
+}
+
+function formatItemStats(item){
+  if (!item) return "";
+  const stats = [];
+  if (typeof item.atk === "number" && item.atk !== 0) stats.push(`ATK +${item.atk}`);
+  if (typeof item.def === "number" && item.def !== 0) stats.push(`DEF +${item.def}`);
+  if (typeof item.spd === "number" && item.spd !== 0) stats.push(`SPD +${item.spd}`);
+  return stats.length ? stats.join(" | ") : "";
 }
 
 function getShopItem(name){
@@ -1064,6 +1181,28 @@ function sellItem(name){
   return true;
 }
 
+function learnSkill(skillKey){
+  const p = state.player;
+  const skill = SKILLS[skillKey];
+  const entry = SHOP_SKILLS.find((s) => s.key === skillKey);
+  if (!p || !skill || !entry) return { ok:false, reason:"not_found" };
+  const already = Array.isArray(p.skills) && p.skills.some((s) => s.name === skill.name);
+  if (already) return { ok:false, reason:"learned" };
+  if ((p.gold || 0) < entry.price) return { ok:false, reason:"gold" };
+  p.gold -= entry.price;
+  if (!Array.isArray(p.skills)) p.skills = [];
+  p.skills.push({ ...skill, cdLeft:0 });
+  if (!Array.isArray(p.skillSlots)) {
+    p.skillSlots = Array.from({ length: 8 }, () => null);
+  }
+  const emptyIdx = p.skillSlots.findIndex((slot) => !slot);
+  if (emptyIdx >= 0) p.skillSlots[emptyIdx] = skill.name;
+  autosave(state);
+  addLog("GOLD", `Belajar ${skill.name} (-${entry.price} gold)`);
+  refresh(state);
+  return { ok:true };
+}
+
 function openShopModal(mode = "menu"){
   if (state.inBattle) return;
   if (mode === "menu"){
@@ -1071,7 +1210,7 @@ function openShopModal(mode = "menu"){
       "Shop",
       [
         { title: "Market", desc: "Beli / jual item.", meta: "", value: "market" },
-        { title: "Learn Skill", desc: "Pelajari skill baru (coming soon).", meta: "", value: "learn" },
+        { title: "Learn Skill", desc: "Pelajari skill baru.", meta: "", value: "learn" },
       ],
       (pick) => openShopModal(String(pick || "menu"))
     );
@@ -1079,12 +1218,33 @@ function openShopModal(mode = "menu"){
   }
 
   if (mode === "learn"){
+    const p = state.player;
+    const rows = SHOP_SKILLS.map((entry) => {
+      const skill = SKILLS[entry.key];
+      const learned = Array.isArray(p.skills) && p.skills.some((s) => s.name === skill.name);
+      const meta = `Lv ${entry.level} • MP ${skill.mpCost} • Power ${skill.power} • ${entry.price} gold`;
+      return {
+        title: `${learned ? "✅ " : ""}${skill.name}`,
+        desc: skill.desc || "Skill",
+        meta: learned ? `${meta} • Learned` : meta,
+        value: learned ? undefined : `learn:${entry.key}`,
+        className: learned ? "readonly" : "",
+      };
+    });
     modal.open(
       "Shop - Learn Skill",
-      [
+      rows.length ? rows : [
         { title: "Skill belum tersedia", desc: "Trainer belum membuka skill baru.", meta: "", value: undefined, className:"readonly" },
       ],
-      () => {}
+      (pick) => {
+        const key = String(pick || "").replace(/^learn:/, "");
+        const res = learnSkill(key);
+        if (!res.ok) {
+          if (res.reason === "gold") addLog("WARN", "Gold tidak cukup.");
+          if (res.reason === "learned") addLog("INFO", "Skill sudah dipelajari.");
+        }
+        openShopModal("learn");
+      }
     );
     return;
   }
@@ -1123,7 +1283,7 @@ function openShopModal(mode = "menu"){
     const equipChoices = (state.shopMarketCategory === "equipment")
       ? equipCategories.map((c) => ({
           title: c.icon || c.label,
-          desc: c.desc || "",
+          desc: "",
           meta: "",
           value: `equipcat:${c.key}`,
           className: `marketCategory marketSub ${state.shopEquipCategory === c.key ? "active" : ""}`.trim(),
@@ -1518,17 +1678,18 @@ function explore() {
 }
 
 function openAdventureLevels(){
+  const stages = [1, 3, 5, 7, 10];
   modal.open(
     "Adventure - Level",
-    Array.from({ length: 10 }, (_, i) => ({
-      title: `Level ${i + 1}`,
-      desc: "Pilih level petualangan",
+    stages.map((lv) => ({
+      title: `Stage ${lv}`,
+      desc: "Pilih stage petualangan",
       meta: "",
-      value: i + 1,
+      value: lv,
     })),
     (level) => {
       const targetLv = clamp(Number(level) || 1, 1, MAX_LEVEL);
-      startAdventureBattle(targetLv, `Level ${targetLv}`);
+      startAdventureBattle(targetLv, `Stage ${targetLv}`);
     }
   );
 }
@@ -1690,6 +1851,9 @@ function useItem(name) {
     const before = p.mp;
     p.mp = clamp(p.mp + it.amount, 0, p.maxMp);
     addLog("ITEM", `Memakai ${name}. MP ${before}→${p.mp}`);
+  } else {
+    addLog("WARN", "Item ini bukan consumable.");
+    return false;
   }
 
   it.qty -= 1;
@@ -1770,10 +1934,13 @@ function openSkillModal() {
 
 function openItemModal() {
   const inv = state.player.inv;
-  const keys = Object.keys(inv);
+  const keys = Object.keys(inv).filter((k) => {
+    const it = inv[k];
+    return it && (it.kind === "heal_hp" || it.kind === "heal_mp");
+  });
 
   if (!keys.length) {
-    addLog("WARN", "Inventory kosong.");
+    addLog("WARN", "Tidak ada item consumable.");
     return;
   }
 
@@ -1813,9 +1980,9 @@ function applyAttributeDelta(statKey, delta){
 
   // apply derived changes (rebalanced)
   if (key === "str") {
-    // STR: ATK +2, Combustion Chance +3%
+    // STR: ATK +2, Combustion Chance +2%
     p.atk = (p.atk || 0) + (2 * delta);
-    p.combustionChance = clamp((p.combustionChance || 0) + (3 * delta), 0, 100);
+    p.combustionChance = clamp((p.combustionChance || 0) + (2 * delta), 0, 100);
   }
   if (key === "dex") {
     // DEX: Evasion +1%, Accuracy +2, SPD +1
@@ -1865,10 +2032,12 @@ function openProfileModal(){
     [
       { title: "Equipment", desc: "Kelola gear (hand, head, pant, armor, shoes).", meta: "", value: "equip" },
       { title: "Stat", desc: "Atur stat poin.", meta: "", value: "stat" },
+      { title: "Skill Slot", desc: "Pilih skill untuk slot battle.", meta: "", value: "skill_slot" },
     ],
     (pick) => {
       if (pick === "equip") return openEquipmentModal();
       if (pick === "stat") return openProfileStatModal();
+      if (pick === "skill_slot") return openSkillSlotModal();
     }
   );
 }
@@ -1920,6 +2089,85 @@ function openProfileStatModal(){
   );
 }
 
+function openSkillSlotModal(){
+  const p = state.player;
+  if (!p) return;
+  if (!Array.isArray(p.skillSlots)) {
+    p.skillSlots = Array.from({ length: 8 }, () => null);
+  }
+  const choices = Array.from({ length: 8 }, (_, i) => {
+    const slotName = p.skillSlots[i];
+    const skill = slotName ? getSkillByName(p, slotName) : null;
+    return {
+      title: `Slot ${i + 1}`,
+      desc: skill ? skill.desc : "Kosong",
+      meta: skill ? skill.name : "Klik untuk pilih",
+      value: `slot:${i}`,
+      allowClick: true,
+      buttons: [
+        { text: "Clear", value: `clear:${i}`, disabled: !skill },
+      ],
+      keepOpen: true,
+    };
+  });
+
+  modal.open(
+    "Skill Slot",
+    choices,
+    (pick) => {
+      const [action, rawIdx] = String(pick || "").split(":");
+      const idx = parseInt(rawIdx, 10);
+      if (Number.isNaN(idx)) return;
+      if (action === "slot") {
+        openSkillSlotSelect(idx);
+        return;
+      }
+      if (action === "clear") {
+        p.skillSlots[idx] = null;
+        if (Array.isArray(state.slots)) state.slots[state.activeSlot] = p;
+        autosave(state);
+        refresh(state);
+        openSkillSlotModal();
+      }
+    }
+  );
+}
+
+function openSkillSlotSelect(slotIdx){
+  const p = state.player;
+  if (!p || !Array.isArray(p.skills)) return;
+  if (!Array.isArray(p.skillSlots)) {
+    p.skillSlots = Array.from({ length: 8 }, () => null);
+  }
+  const rows = p.skills.map((skill) => {
+    const equippedIndex = p.skillSlots.findIndex((name) => name === skill.name);
+    const alreadyEquipped = equippedIndex !== -1 && equippedIndex !== slotIdx;
+    const meta = `MP ${skill.mpCost} • Power ${skill.power}${alreadyEquipped ? " • Equipped" : ""}`;
+    return {
+      title: skill.name,
+      desc: skill.desc || "Skill",
+      meta,
+      value: alreadyEquipped ? undefined : `pick:${skill.name}`,
+      className: alreadyEquipped ? "readonly" : "",
+    };
+  });
+
+  modal.open(
+    `Pilih Skill (Slot ${slotIdx + 1})`,
+    rows.length ? rows : [{ title: "Belum ada skill", desc: "Pelajari skill di Shop.", meta: "", value: undefined, className:"readonly" }],
+    (pick) => {
+      const name = String(pick || "").replace(/^pick:/, "");
+      const skill = getSkillByName(p, name);
+      if (!skill) return;
+      p.skillSlots[slotIdx] = skill.name;
+      if (Array.isArray(state.slots)) state.slots[state.activeSlot] = p;
+      autosave(state);
+      refresh(state);
+      openSkillSlotModal();
+    }
+  );
+}
+
 function openEquipmentModal(){
   const p = state.player;
   if (!p || !p.equipment) return;
@@ -1934,7 +2182,11 @@ function openEquipmentModal(){
 
   const choices = slots.map((s) => {
     const cur = p.equipment[s.key] || null;
-    const desc = cur ? `Memakai: ${cur}` : "Kosong";
+    const curItem = cur ? getItemRef(cur, p) : null;
+    const statText = curItem ? formatItemStats(curItem) : "";
+    const desc = cur
+      ? `Memakai: ${cur}${statText ? ` (${statText})` : ""}`
+      : "Kosong";
     const meta = cur
       ? "Klik untuk ganti"
       : (hasGear ? "Klik untuk equip" : "Tidak ada gear");
@@ -1986,7 +2238,7 @@ function openEquipSelect(slot){
     keys.map((k) => ({
       title: `${k} x${p.inv[k].qty}`,
       desc: p.inv[k].desc || "Perlengkapan",
-      meta: `Equip (${p.inv[k].slot || "-"})`,
+      meta: formatItemStats(p.inv[k]) || `Equip (${p.inv[k].slot || "-"})`,
       value: k,
     })),
     (name) => {
