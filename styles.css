@@ -305,6 +305,39 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
 .modalBody.marketGrid .choice .right{
   align-self:flex-end;
 }
+.modalBody.marketGrid .choice.marketCategory{
+  align-items:center;
+  justify-content:center;
+  min-height:64px;
+  text-align:center;
+  font-weight:900;
+  cursor:pointer;
+  background: linear-gradient(180deg, rgba(44,64,88,.45), rgba(15,23,34,.95));
+  border-color: rgba(66,94,126,.7);
+}
+.modalBody.marketGrid .choice.marketCategory.active{
+  border-color: rgba(74,163,255,.75);
+  box-shadow: 0 0 0 2px rgba(74,163,255,.2) inset;
+  background: linear-gradient(180deg, rgba(74,163,255,.25), rgba(15,23,34,.95));
+}
+
+/* Equipment grid layout */
+.modalBody.equipmentGrid{
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (min-width: 700px){
+  .modalBody.equipmentGrid{
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.modalBody.equipmentGrid .choice.equipmentCard{
+  flex-direction:column;
+  align-items:flex-start;
+  gap:6px;
+  min-height:120px;
+  background: linear-gradient(160deg, rgba(41,54,72,.6), rgba(15,23,34,.9));
+  border-color: rgba(72,92,118,.7);
+}
 
 /* XP progress fill (used for Lv badge / row) */
 .xpProgress{ position:relative; overflow:hidden; }

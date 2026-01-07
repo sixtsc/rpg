@@ -250,6 +250,8 @@ function newState(){
     enemy: null,
     inBattle: false,
     battleResult: null,
+    shopMarketCategory: "consumable",
+    shopEquipCategory: "weapon",
     playerDefending: false,
     playerDodging: false,
     turn: "town",
@@ -664,8 +666,10 @@ const modal = {
     // Layout: make Stats modals show 2-3 columns
     body.classList.remove("statsGrid");
     body.classList.remove("marketGrid");
+    body.classList.remove("equipmentGrid");
     if (String(title).toLowerCase().includes("stats")) body.classList.add("statsGrid");
     if (String(title).toLowerCase().includes("market")) body.classList.add("marketGrid");
+    if (String(title).toLowerCase().includes("equipment")) body.classList.add("equipmentGrid");
 
     choices.forEach((c) => {
       const row = document.createElement("div");
@@ -700,7 +704,7 @@ const modal = {
       row.appendChild(right);
 
       // Clickable row (only if value provided and no buttons)
-      if (c.value !== undefined && !(Array.isArray(c.buttons) && c.buttons.length)) {
+      if (c.value !== undefined && (!(Array.isArray(c.buttons) && c.buttons.length) || c.allowClick)) {
         row.onclick = () => {
           if (!c.keepOpen) modal.close();
           onPick(c.value);
@@ -1020,6 +1024,16 @@ function getShopItem(name){
   return SHOP_GOODS.find((g) => g.name === name);
 }
 
+function getMarketGoods(){
+  const category = state.shopMarketCategory || "consumable";
+  const equipCategory = state.shopEquipCategory || "weapon";
+  if (category === "equipment") {
+    const slot = equipCategory === "weapon" ? "hand" : equipCategory;
+    return SHOP_GOODS.filter((g) => g.ref && g.ref.kind === "gear" && g.ref.slot === slot);
+  }
+  return SHOP_GOODS.filter((g) => g.ref && g.ref.kind !== "gear");
+}
+
 function buyItem(name){
   const p = state.player;
   const g = getShopItem(name);
@@ -1088,16 +1102,60 @@ function openShopModal(mode = "menu"){
   }
 
   if (mode === "buy"){
+    const categories = [
+      { key:"consumable", label:"Consumable", desc:"Potion & item sekali pakai." },
+      { key:"equipment", label:"Equipment", desc:"Senjata & armor." },
+    ];
+    const equipCategories = [
+      { key:"weapon", label:"Weapon", slot:"hand", desc:"Slot: Hand" },
+      { key:"head", label:"Head", slot:"head", desc:"Slot: Head" },
+      { key:"armor", label:"Armor", slot:"armor", desc:"Slot: Armor" },
+      { key:"pant", label:"Pant", slot:"pant", desc:"Slot: Pant" },
+      { key:"shoes", label:"Shoes", slot:"shoes", desc:"Slot: Shoes" },
+    ];
+    const categoryChoices = categories.map((c) => ({
+      title: c.label,
+      desc: c.desc || "",
+      meta: "",
+      value: `cat:${c.key}`,
+      className: `marketCategory ${state.shopMarketCategory === c.key ? "active" : ""}`.trim(),
+    }));
+    const equipChoices = (state.shopMarketCategory === "equipment")
+      ? equipCategories.map((c) => ({
+          title: c.label,
+          desc: c.desc || "",
+          meta: "",
+          value: `equipcat:${c.key}`,
+          className: `marketCategory ${state.shopEquipCategory === c.key ? "active" : ""}`.trim(),
+        }))
+      : [];
+
+    const goods = getMarketGoods();
     modal.open(
       "Market - Beli",
-      SHOP_GOODS.map((g) => ({
-        title: `${g.name}`,
-        desc: g.ref.desc || "Item",
-        meta: `${g.price} gold`,
-        value: `buy:${g.name}`,
-      })),
+      categoryChoices
+        .concat(equipChoices)
+        .concat(
+          goods.map((g) => ({
+            title: `${g.name}`,
+            desc: g.ref.desc || "Item",
+            meta: `${g.price} gold`,
+            value: `buy:${g.name}`,
+          }))
+        ),
       (pick) => {
         const name = String(pick || "").replace(/^buy:/, "");
+        if (String(pick || "").startsWith("cat:")) {
+          state.shopMarketCategory = String(pick || "").replace("cat:", "");
+          if (state.shopMarketCategory !== "equipment") state.shopEquipCategory = "weapon";
+          openShopModal("buy");
+          return;
+        }
+        if (String(pick || "").startsWith("equipcat:")) {
+          state.shopEquipCategory = String(pick || "").replace("equipcat:", "");
+          openShopModal("buy");
+          return;
+        }
         const ok = buyItem(name);
         if (!ok) addLog("WARN", "Gold tidak cukup atau item tidak tersedia.");
         openShopModal("buy");
@@ -1876,12 +1934,16 @@ function openEquipmentModal(){
   const choices = slots.map((s) => {
     const cur = p.equipment[s.key] || null;
     const desc = cur ? `Memakai: ${cur}` : "Kosong";
+    const meta = cur
+      ? "Klik untuk ganti"
+      : (hasGear ? "Klik untuk equip" : "Tidak ada gear");
     return {
-      title: `${s.label} : ${cur || "-"}`,
+      title: `${s.label}`,
       desc,
-      meta: "",
+      meta,
+      value: `equip:${s.key}`,
+      allowClick: true,
       buttons: [
-        { text: "Equip", value: `equip:${s.key}`, disabled: !hasGear },
         { text: "Unequip", value: `unequip:${s.key}`, disabled: !cur },
       ],
       keepOpen: true,
@@ -1890,7 +1952,7 @@ function openEquipmentModal(){
 
   modal.open(
     "Equipment",
-    choices,
+    choices.map((c) => ({ ...c, className: `equipmentCard ${c.className || ""}`.trim(), value: c.value })),
     (pick) => {
       const [action, slot] = String(pick || "").split(":");
       if (!slot) return;
