@@ -338,6 +338,23 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   min-height:48px;
   border-style:dashed;
 }
+.modalBody.marketGrid.equipSubGrid{
+  gap:4px;
+}
+.modalBody.marketGrid .choice.marketCategory.equipSub{
+  min-height:44px;
+  padding:6px;
+  border-radius:10px;
+  border-style:solid;
+}
+.modalBody.marketGrid .choice.marketCategory.equipSub b{
+  font-size:18px;
+  line-height:1;
+  margin:0;
+}
+.modalBody.marketGrid .choice.marketCategory.equipSub .desc{
+  display:none;
+}
 .modalBody.marketGrid .choice.marketCategory.active{
   border-color: rgba(74,163,255,.75);
   box-shadow: 0 0 0 2px rgba(74,163,255,.2) inset;

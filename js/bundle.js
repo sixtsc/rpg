@@ -7,6 +7,14 @@ try{var _el=document.getElementById('menuSub'); if(_el && _el.textContent && _el
 const SKILLS = {
   fireball: { name:"Fireball", mpCost:6, power:10, cooldown:3, desc:"Serangan api (damage tinggi)." }
 };
+const SKILL_SHOP = [
+  { key:"spark", levelReq:1, price:12, skill:{ name:"Spark Bolt", mpCost:4, power:6, cooldown:2, desc:"Petir kecil untuk serangan cepat." } },
+  { key:"slash", levelReq:2, price:20, skill:{ name:"Twin Slash", mpCost:5, power:8, cooldown:2, desc:"Tebasan ganda dengan damage stabil." } },
+  { key:"frost", levelReq:4, price:35, skill:{ name:"Frost Shard", mpCost:7, power:12, cooldown:3, desc:"Serangan es dengan damage tinggi." } },
+  { key:"quake", levelReq:6, price:55, skill:{ name:"Quake", mpCost:9, power:16, cooldown:3, desc:"Gelombang tanah yang mengguncang musuh." } },
+  { key:"nova", levelReq:8, price:80, skill:{ name:"Shadow Nova", mpCost:12, power:20, cooldown:4, desc:"Ledakan gelap dengan damage besar." } },
+  { key:"meteor", levelReq:10, price:110, skill:{ name:"Meteor Crash", mpCost:14, power:24, cooldown:4, desc:"Serangan pamungkas dari langit." } },
+];
 const ITEMS = {
   potion: { name:"Potion", kind:"heal_hp", amount:25, desc:"Memulihkan 25 HP" },
   ether:  { name:"Ether",  kind:"heal_mp", amount:10, desc:"Memulihkan 10 MP" },
@@ -42,9 +50,9 @@ function genEnemy(plv){
   const enemy = {
     name,
     level:lvl,
-    maxHp:25 + lvl*8, maxMp:10 + lvl*3,
-    hp:25 + lvl*8, mp:10 + lvl*3,
-    atk:6 + lvl*2, def:2 + lvl, spd:4 + lvl,
+    maxHp:30 + lvl*10, maxMp:12 + lvl*4,
+    hp:30 + lvl*10, mp:12 + lvl*4,
+    atk:7 + lvl*3, def:2 + Math.floor(lvl*1.5), spd:4 + Math.floor(lvl*1.2),
     str: Math.max(0, lvl - 1),
     dex: Math.max(0, Math.floor(lvl / 2)),
     int: Math.max(0, Math.floor(lvl / 2)),
@@ -103,7 +111,7 @@ function resolveAttack(att, def, basePower, opts = {}) {
   const rollComb = randInt(1, 100);
   let combustion = false;
   if (rollComb <= combustionChance) {
-    const combMult = randFloat(2.0, 2.5);
+    const combMult = randFloat(1.5, 1.9);
     dmg = Math.max(1, Math.round(dmg * combMult));
     combustion = true;
   }
@@ -224,11 +232,66 @@ function normalizePlayer(p){
   return p;
 }
 
+function getEquipmentBonus(p){
+  const bonus = {
+    atk:0,
+    def:0,
+    spd:0,
+    maxHp:0,
+    maxMp:0,
+    acc:0,
+    critChance:0,
+    critDamage:0,
+    combustionChance:0,
+    evasion:0,
+  };
+  if (!p || !p.equipment) return bonus;
+  const inv = p.inv || {};
+  Object.values(p.equipment).forEach((name) => {
+    if (!name) return;
+    const item = inv[name] || Object.values(ITEMS).find((it) => it && it.name === name);
+    if (!item) return;
+    Object.keys(bonus).forEach((key) => {
+      if (typeof item[key] === "number") bonus[key] += item[key];
+    });
+  });
+  return bonus;
+}
+
 function applyDerivedStats(p){
   if (!p) return;
   if (typeof p.baseBlockRate !== "number") p.baseBlockRate = 0;
   if (typeof p.baseEscapeChance !== "number") p.baseEscapeChance = 0;
   if (!Array.isArray(p.statuses)) p.statuses = [];
+
+  const prevBonus = p.equipBonus || {};
+  const baseAtk = Math.max(0, (p.atk || 0) - (prevBonus.atk || 0));
+  const baseDef = Math.max(0, (p.def || 0) - (prevBonus.def || 0));
+  const baseSpd = Math.max(0, (p.spd || 0) - (prevBonus.spd || 0));
+  const baseMaxHp = Math.max(1, (p.maxHp || 1) - (prevBonus.maxHp || 0));
+  const baseMaxMp = Math.max(0, (p.maxMp || 0) - (prevBonus.maxMp || 0));
+  const baseAcc = Math.max(0, (p.acc || 0) - (prevBonus.acc || 0));
+  const baseCritChance = Math.max(0, (p.critChance || 0) - (prevBonus.critChance || 0));
+  const baseCritDamage = Math.max(0, (p.critDamage || 0) - (prevBonus.critDamage || 0));
+  const baseCombust = Math.max(0, (p.combustionChance || 0) - (prevBonus.combustionChance || 0));
+  const baseEvasion = Math.max(0, (p.evasion || 0) - (prevBonus.evasion || 0));
+
+  const equipBonus = getEquipmentBonus(p);
+  p.equipBonus = equipBonus;
+
+  p.atk = baseAtk + equipBonus.atk;
+  p.def = baseDef + equipBonus.def;
+  p.spd = baseSpd + equipBonus.spd;
+  p.maxHp = Math.max(1, baseMaxHp + equipBonus.maxHp);
+  p.maxMp = Math.max(0, baseMaxMp + equipBonus.maxMp);
+  p.acc = baseAcc + equipBonus.acc;
+  p.critChance = clamp(baseCritChance + equipBonus.critChance, 0, 100);
+  p.critDamage = Math.max(0, baseCritDamage + equipBonus.critDamage);
+  p.combustionChance = clamp(baseCombust + equipBonus.combustionChance, 0, 100);
+  p.evasion = clamp(baseEvasion + equipBonus.evasion, 0, 100);
+
+  p.hp = clamp(p.hp || 0, 0, p.maxHp);
+  p.mp = clamp(p.mp || 0, 0, p.maxMp);
 
   const intVal = Math.max(0, p.int || 0);
   const vitVal = Math.max(0, p.vit || 0);
@@ -667,9 +730,11 @@ const modal = {
     body.classList.remove("statsGrid");
     body.classList.remove("marketGrid");
     body.classList.remove("equipmentGrid");
+    body.classList.remove("equipSubGrid");
     if (String(title).toLowerCase().includes("stats")) body.classList.add("statsGrid");
     if (String(title).toLowerCase().includes("market")) body.classList.add("marketGrid");
     if (String(title).toLowerCase().includes("equipment")) body.classList.add("equipmentGrid");
+    if (choices.some((c) => String(c.className || "").includes("equipSub"))) body.classList.add("equipSubGrid");
 
     choices.forEach((c) => {
       const row = document.createElement("div");
@@ -1002,6 +1067,7 @@ function equipItem(slot, itemName){
   if (it.kind !== "gear") return false;
   if (it.slot !== slot) return false;
   p.equipment[slot] = itemName;
+  applyDerivedStats(p);
   autosave(state);
   addLog("INFO", `${itemName} dipakai di slot ${slot}.`);
   refresh(state);
@@ -1014,6 +1080,7 @@ function unequipSlot(slot){
   if (!p.equipment[slot]) return false;
   const name = p.equipment[slot];
   p.equipment[slot] = null;
+  applyDerivedStats(p);
   autosave(state);
   addLog("INFO", `${name} dilepas dari slot ${slot}.`);
   refresh(state);
@@ -1022,6 +1089,32 @@ function unequipSlot(slot){
 
 function getShopItem(name){
   return SHOP_GOODS.find((g) => g.name === name);
+}
+
+function getSkillEntry(key){
+  return SKILL_SHOP.find((s) => s.key === key);
+}
+
+function hasSkill(name){
+  const p = state.player;
+  if (!p || !Array.isArray(p.skills)) return false;
+  return p.skills.some((s) => s && s.name === name);
+}
+
+function learnSkill(key){
+  const p = state.player;
+  const entry = getSkillEntry(key);
+  if (!p || !entry || !entry.skill) return false;
+  if ((p.level || 1) < entry.levelReq) return false;
+  if (hasSkill(entry.skill.name)) return false;
+  if ((p.gold || 0) < entry.price) return false;
+  p.gold -= entry.price;
+  if (!Array.isArray(p.skills)) p.skills = [];
+  p.skills.push({ ...entry.skill, cdLeft: 0 });
+  autosave(state);
+  addLog("INFO", `Skill ${entry.skill.name} dipelajari!`);
+  refresh(state);
+  return true;
 }
 
 function getMarketGoods(){
@@ -1079,12 +1172,37 @@ function openShopModal(mode = "menu"){
   }
 
   if (mode === "learn"){
+    const p = state.player || {};
+    const choices = SKILL_SHOP.map((entry) => {
+      const skill = entry.skill;
+      const learned = hasSkill(skill.name);
+      const locked = (p.level || 1) < entry.levelReq;
+      const poor = (p.gold || 0) < entry.price;
+      let status = "";
+      if (learned) status = "Sudah dipelajari";
+      else if (locked) status = `Butuh Lv${entry.levelReq}`;
+      else if (poor) status = "Gold kurang";
+      return {
+        title: skill.name,
+        desc: skill.desc || "Skill baru",
+        meta: `MP ${skill.mpCost} | Power ${skill.power} | ${entry.price} gold${status ? ` • ${status}` : ""}`,
+        value: (!learned && !locked && !poor) ? `learn:${entry.key}` : undefined,
+        className: (!learned && !locked && !poor) ? "" : "readonly",
+      };
+    });
+
     modal.open(
       "Shop - Learn Skill",
-      [
-        { title: "Skill belum tersedia", desc: "Trainer belum membuka skill baru.", meta: "", value: undefined, className:"readonly" },
-      ],
-      () => {}
+      choices.length
+        ? choices
+        : [{ title: "Skill belum tersedia", desc: "Trainer belum membuka skill baru.", meta: "", value: undefined, className:"readonly" }],
+      (pick) => {
+        const key = String(pick || "").replace(/^learn:/, "");
+        if (!key) return;
+        const ok = learnSkill(key);
+        if (!ok) addLog("WARN", "Skill tidak bisa dipelajari.");
+        openShopModal("learn");
+      }
     );
     return;
   }
@@ -1123,10 +1241,10 @@ function openShopModal(mode = "menu"){
     const equipChoices = (state.shopMarketCategory === "equipment")
       ? equipCategories.map((c) => ({
           title: c.icon || c.label,
-          desc: c.desc || "",
+          desc: "",
           meta: "",
           value: `equipcat:${c.key}`,
-          className: `marketCategory marketSub ${state.shopEquipCategory === c.key ? "active" : ""}`.trim(),
+          className: `marketCategory marketSub equipSub ${state.shopEquipCategory === c.key ? "active" : ""}`.trim(),
         }))
       : [];
 
@@ -1518,13 +1636,14 @@ function explore() {
 }
 
 function openAdventureLevels(){
+  const stages = [1, 3, 5, 8, 10];
   modal.open(
     "Adventure - Level",
-    Array.from({ length: 10 }, (_, i) => ({
-      title: `Level ${i + 1}`,
-      desc: "Pilih level petualangan",
+    stages.map((stage) => ({
+      title: `Level ${stage}`,
+      desc: "Stage utama petualangan",
       meta: "",
-      value: i + 1,
+      value: stage,
     })),
     (level) => {
       const targetLv = clamp(Number(level) || 1, 1, MAX_LEVEL);
@@ -1690,6 +1809,9 @@ function useItem(name) {
     const before = p.mp;
     p.mp = clamp(p.mp + it.amount, 0, p.maxMp);
     addLog("ITEM", `Memakai ${name}. MP ${before}→${p.mp}`);
+  } else {
+    addLog("WARN", "Item ini tidak bisa digunakan saat battle.");
+    return false;
   }
 
   it.qty -= 1;
@@ -1770,10 +1892,10 @@ function openSkillModal() {
 
 function openItemModal() {
   const inv = state.player.inv;
-  const keys = Object.keys(inv);
+  const keys = Object.keys(inv).filter((k) => inv[k] && inv[k].kind !== "gear");
 
   if (!keys.length) {
-    addLog("WARN", "Inventory kosong.");
+    addLog("WARN", "Tidak ada consumable.");
     return;
   }
 
@@ -1813,9 +1935,9 @@ function applyAttributeDelta(statKey, delta){
 
   // apply derived changes (rebalanced)
   if (key === "str") {
-    // STR: ATK +2, Combustion Chance +3%
+    // STR: ATK +2, Combustion Chance +2%
     p.atk = (p.atk || 0) + (2 * delta);
-    p.combustionChance = clamp((p.combustionChance || 0) + (3 * delta), 0, 100);
+    p.combustionChance = clamp((p.combustionChance || 0) + (2 * delta), 0, 100);
   }
   if (key === "dex") {
     // DEX: Evasion +1%, Accuracy +2, SPD +1
