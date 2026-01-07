@@ -5,12 +5,12 @@ try{var _el=document.getElementById('menuSub'); if(_el && _el.textContent && _el
 
 /* ===== data.js ===== */
 const SKILLS = {
-  fireball: { name:"Fireball", mpCost:6, power:10, cooldown:3, desc:"Serangan api (damage tinggi)." },
-  spark: { name:"Spark", mpCost:3, power:6, cooldown:2, desc:"Sambaran listrik ringan." },
-  frostBite: { name:"Frost Bite", mpCost:5, power:9, cooldown:2, desc:"Es tajam yang menusuk." },
-  shadowCut: { name:"Shadow Cut", mpCost:7, power:12, cooldown:3, desc:"Tebasan gelap yang cepat." },
-  earthSpike: { name:"Earth Spike", mpCost:9, power:15, cooldown:3, desc:"Paku tanah menghantam musuh." },
-  meteor: { name:"Meteor", mpCost:12, power:20, cooldown:4, desc:"Pukulan meteor dengan damage besar." }
+  fireball: { name:"Fireball", icon:"🔥", mpCost:6, power:10, cooldown:3, desc:"Serangan api (damage tinggi)." },
+  spark: { name:"Spark", icon:"⚡", mpCost:3, power:6, cooldown:2, desc:"Sambaran listrik ringan." },
+  frostBite: { name:"Frost Bite", icon:"❄️", mpCost:5, power:9, cooldown:2, desc:"Es tajam yang menusuk." },
+  shadowCut: { name:"Shadow Cut", icon:"🗡️", mpCost:7, power:12, cooldown:3, desc:"Tebasan gelap yang cepat." },
+  earthSpike: { name:"Earth Spike", icon:"🪨", mpCost:9, power:15, cooldown:3, desc:"Paku tanah menghantam musuh." },
+  meteor: { name:"Meteor", icon:"☄️", mpCost:12, power:20, cooldown:4, desc:"Pukulan meteor dengan damage besar." }
 };
 const ITEMS = {
   potion: { name:"Potion", kind:"heal_hp", amount:25, desc:"Memulihkan 25 HP" },
@@ -639,7 +639,8 @@ function renderSkillSlots(){
     const skill = slotName ? getSkillByName(p, slotName) : null;
     if (skill) {
       const cdLeft = skill.cdLeft || 0;
-      btn.textContent = cdLeft > 0 ? `${skill.name} (CD ${cdLeft})` : skill.name;
+      const label = `${skill.icon ? `${skill.icon} ` : ""}${skill.name}`;
+      btn.textContent = cdLeft > 0 ? `${label} (CD ${cdLeft})` : label;
       btn.disabled = (state.turn !== "player") || p.mp < skill.mpCost || cdLeft > 0;
       btn.onclick = () => useSkillAtIndex(i);
     } else {
@@ -1223,8 +1224,9 @@ function openShopModal(mode = "menu"){
       const skill = SKILLS[entry.key];
       const learned = Array.isArray(p.skills) && p.skills.some((s) => s.name === skill.name);
       const meta = `Lv ${entry.level} • MP ${skill.mpCost} • Power ${skill.power} • ${entry.price} gold`;
+      const title = `${learned ? "✅ " : ""}${skill.icon ? `${skill.icon} ` : ""}${skill.name}`;
       return {
-        title: `${learned ? "✅ " : ""}${skill.name}`,
+        title,
         desc: skill.desc || "Skill",
         meta: learned ? `${meta} • Learned` : meta,
         value: learned ? undefined : `learn:${entry.key}`,
@@ -1870,12 +1872,13 @@ function openSkillModal() {
     const cdLeft = s.cdLeft || 0;
     const cdText = (s.cooldown ? `CD ${cdLeft}/${s.cooldown}` : "CD -");
     const meta = `MP ${s.mpCost} • ${cdText}`;
+    const title = `${s.icon ? `${s.icon} ` : ""}${s.name}`;
 
     // If on cooldown, make it readonly by omitting value
     if (cdLeft > 0) {
-      return { title: `${s.name}`, desc: `${s.desc}`, meta, value: undefined, className: "readonly" };
+      return { title, desc: `${s.desc}`, meta, value: undefined, className: "readonly" };
     }
-    return { title: `${s.name}`, desc: `${s.desc}`, meta, value: i };
+    return { title, desc: `${s.desc}`, meta, value: i };
   });
 
   modal.open("Skill", choices, (idx) => {
@@ -2098,10 +2101,11 @@ function openSkillSlotModal(){
   const choices = Array.from({ length: 8 }, (_, i) => {
     const slotName = p.skillSlots[i];
     const skill = slotName ? getSkillByName(p, slotName) : null;
+    const title = skill ? `${skill.icon ? `${skill.icon} ` : ""}${skill.name}` : "Kosong";
     return {
       title: `Slot ${i + 1}`,
       desc: skill ? skill.desc : "Kosong",
-      meta: skill ? skill.name : "Klik untuk pilih",
+      meta: skill ? title : "Klik untuk pilih",
       value: `slot:${i}`,
       allowClick: true,
       buttons: [
@@ -2144,7 +2148,7 @@ function openSkillSlotSelect(slotIdx){
     const alreadyEquipped = equippedIndex !== -1 && equippedIndex !== slotIdx;
     const meta = `MP ${skill.mpCost} • Power ${skill.power}${alreadyEquipped ? " • Equipped" : ""}`;
     return {
-      title: skill.name,
+      title: `${skill.icon ? `${skill.icon} ` : ""}${skill.name}`,
       desc: skill.desc || "Skill",
       meta,
       value: alreadyEquipped ? undefined : `pick:${skill.name}`,
