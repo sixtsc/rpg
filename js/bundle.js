@@ -621,7 +621,31 @@ function getSkillByName(player, name){
 
 function skillIconHtml(skill){
   if (!skill || !skill.icon) return "";
-  return `<img class="skillIcon" src="${escapeHtml(skill.icon)}" alt="" />`;
+  return `<span class="skillIconWrap"><img class="skillIcon" src="${escapeHtml(skill.icon)}" alt="" /></span>`;
+}
+
+const damageTimers = { player: null, enemy: null };
+function showDamageText(target, text){
+  const el = $(target === "player" ? "playerDamage" : "enemyDamage");
+  if (!el) return;
+  el.textContent = text;
+  el.classList.remove("show");
+  void el.offsetWidth;
+  el.classList.add("show");
+  if (damageTimers[target]) clearTimeout(damageTimers[target]);
+  damageTimers[target] = setTimeout(() => {
+    el.classList.remove("show");
+  }, 1400);
+}
+
+function formatDamageText(res, dmg){
+  if (!res || res.missed) return "MISS";
+  const tags = [];
+  if (res.crit) tags.push("CRIT");
+  if (res.combustion) tags.push("COMBUST");
+  if (res.blocked > 0) tags.push("BLOCK");
+  const base = dmg > 0 ? `-${dmg}` : "0";
+  return tags.length ? `${base} (${tags.join(" ")})` : base;
 }
 
 function renderSkillSlots(){
@@ -644,10 +668,10 @@ function renderSkillSlots(){
     const skill = slotName ? getSkillByName(p, slotName) : null;
     if (skill) {
       const cdLeft = skill.cdLeft || 0;
-      const label = `${escapeHtml(skill.name)}`;
       const icon = skillIconHtml(skill);
-      btn.innerHTML = cdLeft > 0 ? `${icon}${label} (CD ${cdLeft})` : `${icon}${label}`;
+      btn.innerHTML = icon;
       btn.disabled = (state.turn !== "player") || p.mp < skill.mpCost || cdLeft > 0;
+      btn.classList.toggle("cooldown", cdLeft > 0);
       btn.onclick = () => useSkillAtIndex(i);
     } else {
       btn.textContent = "-";
@@ -682,9 +706,8 @@ function useSkillAtIndex(idx){
   const res = resolveAttack(p, e, s.power);
   if (res.missed) {
     playDodgeFade("enemy");
-    addLog("ENEMY", `${e.name} menghindar! (Evasion ${res.evasion}%)`);
+    showDamageText("enemy", "MISS");
   } else {
-    if (res.blocked > 0) addLog("INFO", `${e.name} memblokir skillmu!`);
     if (res.dmg > 0) {
       e.hp = clamp(e.hp - res.dmg, 0, e.maxHp);
       playSlash("enemy", 80);
@@ -693,13 +716,10 @@ function useSkillAtIndex(idx){
       p.hp = clamp(p.hp - res.reflected, 0, p.maxHp);
       playSlash("player", 150);
     }
-    if (res.crit || res.combustion) {
-      playCritShake("enemy");
-      if (res.crit && res.combustion) addLog("YOU", `CRITICAL + COMBUSTION! ${s.name}! Damage ${res.dmg}.`);
-      else if (res.crit) addLog("YOU", `CRITICAL! ${s.name}! Damage ${res.dmg}.`);
-      else addLog("YOU", `COMBUSTION! ${s.name}! Damage ${res.dmg}.`);
-    } else {
-      addLog("YOU", `${s.name}! Damage ${res.dmg}.`);
+    if (res.crit || res.combustion) playCritShake("enemy");
+    showDamageText("enemy", formatDamageText(res, res.dmg));
+    if (res.reflected > 0) {
+      showDamageText("player", `-${res.reflected} (REFLECT)`);
     }
   }
 
@@ -910,14 +930,14 @@ function refresh(state) {
 
     const turnCountEl = $("turnCount");
     if (turnCountEl) {
-      turnCountEl.style.display = "inline-flex";
-      turnCountEl.textContent = `Turn: ${Math.max(1, state.battleTurn || 0)}`;
+      turnCountEl.style.display = "none";
+      turnCountEl.textContent = "";
     }
 
     const actionHint = $("actionHint");
     if (actionHint) {
-      actionHint.style.display = "inline-flex";
-      actionHint.textContent = (state.turn === "player" ? "Giliran: Kamu" : "Giliran: Musuh");
+      actionHint.style.display = "none";
+      actionHint.textContent = "";
     }
 
     // Enemy title + name
@@ -986,14 +1006,13 @@ function refresh(state) {
     $("modePill").textContent = "Town";
     const battleHintEl = $("battleHint");
     if (battleHintEl) {
-      battleHintEl.style.display = "inline-flex";
-      battleHintEl.textContent = "Explore untuk cari musuh";
+      battleHintEl.style.display = "none";
+      battleHintEl.textContent = "";
     }
     const turnCountEl = $("turnCount");
     if (turnCountEl) {
-      // Town: gunakan pill kecil kanan atas untuk Gold
-      turnCountEl.style.display = "inline-flex";
-      turnCountEl.textContent = `Gold: ${p.gold}`;
+      turnCountEl.style.display = "none";
+      turnCountEl.textContent = "";
     }
 
     const actionHint = $("actionHint");
@@ -1596,26 +1615,20 @@ function enemyTurn() {
     if (res.missed) {
       playDodgeFade("player");
       playDodgeFade("player");
-      if (state.playerDodging) addLog("YOU", "Dodge berhasil! Serangan musuh meleset.");
-      else addLog("YOU", "Menghindar! Serangan musuh meleset.");
-      addLog("ENEMY", `${e.name} memakai Rage Strike, tapi meleset!`);
+      showDamageText("player", "MISS");
       endTurnAfter(0);
     } else {
       const delays = [];
-      if (res.blocked > 0) addLog("INFO", "Serangan diblokir sebagian!");
       if (res.dmg > 0) {
         delays.push(applyDamageAfterDelay(p, res.dmg, "player", 230));
       }
       if (res.reflected > 0) {
         delays.push(applyDamageAfterDelay(e, res.reflected, "enemy", 430));
       }
-      if (res.crit || res.combustion) {
-        playCritShake("player");
-        if (res.crit && res.combustion) addLog("ENEMY", `CRITICAL + COMBUSTION! ${e.name} memakai Rage Strike! Damage ${res.dmg}.`);
-        else if (res.crit) addLog("ENEMY", `CRITICAL! ${e.name} memakai Rage Strike! Damage ${res.dmg}.`);
-        else addLog("ENEMY", `COMBUSTION! ${e.name} memakai Rage Strike! Damage ${res.dmg}.`);
-      } else {
-        addLog("ENEMY", `${e.name} memakai Rage Strike! Damage ${res.dmg}.`);
+      if (res.crit || res.combustion) playCritShake("player");
+      showDamageText("player", formatDamageText(res, res.dmg));
+      if (res.reflected > 0) {
+        showDamageText("enemy", `-${res.reflected} (REFLECT)`);
       }
       const wait = delays.length ? Math.max(...delays, 180) + 40 : 0;
       endTurnAfter(wait);
@@ -1624,26 +1637,20 @@ function enemyTurn() {
     const res = resolveAttack(e, p, 2, { dodgeBonus: state.playerDodging ? 30 : 0 });
 
     if (res.missed) {
-      if (state.playerDodging) addLog("YOU", "Dodge berhasil! Serangan musuh meleset.");
-      else addLog("YOU", "Menghindar! Serangan musuh meleset.");
-      addLog("ENEMY", `${e.name} menyerang, tapi meleset!`);
+      showDamageText("player", "MISS");
       endTurnAfter(0);
     } else {
       const delays = [];
-      if (res.blocked > 0) addLog("INFO", "Serangan diblokir sebagian!");
       if (res.dmg > 0) {
         delays.push(applyDamageAfterDelay(p, res.dmg, "player", 230));
       }
       if (res.reflected > 0) {
         delays.push(applyDamageAfterDelay(e, res.reflected, "enemy", 430));
       }
-      if (res.crit || res.combustion) {
-        playCritShake("player");
-        if (res.crit && res.combustion) addLog("ENEMY", `CRITICAL + COMBUSTION! ${e.name} menyerang! Damage ${res.dmg}.`);
-        else if (res.crit) addLog("ENEMY", `CRITICAL! ${e.name} menyerang! Damage ${res.dmg}.`);
-        else addLog("ENEMY", `COMBUSTION! ${e.name} menyerang! Damage ${res.dmg}.`);
-      } else {
-        addLog("ENEMY", `${e.name} menyerang! Damage ${res.dmg}.`);
+      if (res.crit || res.combustion) playCritShake("player");
+      showDamageText("player", formatDamageText(res, res.dmg));
+      if (res.reflected > 0) {
+        showDamageText("enemy", `-${res.reflected} (REFLECT)`);
       }
       const wait = delays.length ? Math.max(...delays, 180) + 40 : 0;
       endTurnAfter(wait);
@@ -1779,11 +1786,10 @@ function attack() {
   if (res.missed) {
     playDodgeFade("enemy");
     playDodgeFade("enemy");
-    addLog("ENEMY", `${e.name} menghindar! (Evasion ${res.evasion}%)`);
+    showDamageText("enemy", "MISS");
     return;
   }
 
-  if (res.blocked > 0) addLog("INFO", `${e.name} memblokir seranganmu!`);
   if (res.dmg > 0) {
     e.hp = clamp(e.hp - res.dmg, 0, e.maxHp);
     playSlash("enemy", 80);
@@ -1793,13 +1799,10 @@ function attack() {
     playSlash("player", 150);
   }
 
-  if (res.crit || res.combustion) {
-    playCritShake("enemy");
-    if (res.crit && res.combustion) addLog("YOU", `CRITICAL + COMBUSTION! Attack Damage ${res.dmg}.`);
-    else if (res.crit) addLog("YOU", `CRITICAL! Attack Damage ${res.dmg}.`);
-    else addLog("YOU", `COMBUSTION! Attack Damage ${res.dmg}.`);
-  } else {
-    addLog("YOU", `Attack! Damage ${res.dmg}.`);
+  if (res.crit || res.combustion) playCritShake("enemy");
+  showDamageText("enemy", formatDamageText(res, res.dmg));
+  if (res.reflected > 0) {
+    showDamageText("player", `-${res.reflected} (REFLECT)`);
   }
 
   if (p.hp <= 0) {
@@ -1911,9 +1914,8 @@ function openSkillModal() {
     const res = resolveAttack(p, state.enemy, s.power);
     if (res.missed) {
       playDodgeFade("enemy");
-      addLog("ENEMY", `${state.enemy.name} menghindar! (Evasion ${res.evasion}%)`);
+      showDamageText("enemy", "MISS");
     } else {
-      if (res.blocked > 0) addLog("INFO", `${state.enemy.name} memblokir skillmu!`);
       if (res.dmg > 0) {
         state.enemy.hp = clamp(state.enemy.hp - res.dmg, 0, state.enemy.maxHp);
         playSlash("enemy", 80);
@@ -1922,12 +1924,10 @@ function openSkillModal() {
         p.hp = clamp(p.hp - res.reflected, 0, p.maxHp);
         playSlash("player", 150);
       }
-      if (res.crit || res.combustion) {
-        if (res.crit && res.combustion) addLog("YOU", `CRITICAL + COMBUSTION! ${s.name}! Damage ${res.dmg}.`);
-        else if (res.crit) addLog("YOU", `CRITICAL! ${s.name}! Damage ${res.dmg}.`);
-        else addLog("YOU", `COMBUSTION! ${s.name}! Damage ${res.dmg}.`);
-      } else {
-        addLog("YOU", `${s.name}! Damage ${res.dmg}.`);
+      if (res.crit || res.combustion) playCritShake("enemy");
+      showDamageText("enemy", formatDamageText(res, res.dmg));
+      if (res.reflected > 0) {
+        showDamageText("player", `-${res.reflected} (REFLECT)`);
       }
     }
 
@@ -2111,9 +2111,9 @@ function openSkillSlotModal(){
     const skill = slotName ? getSkillByName(p, slotName) : null;
     const title = skill ? `${skill.name}` : "Kosong";
     return {
-      title: `Slot ${i + 1}`,
-      desc: skill ? skill.desc : "Kosong",
-      meta: skill ? title : "Klik untuk pilih",
+        title: `Slot ${i + 1}`,
+        desc: skill ? skill.desc : "Kosong",
+        meta: skill ? title : "Klik untuk pilih",
       icon: skill ? skill.icon : "",
       value: `slot:${i}`,
       allowClick: true,
