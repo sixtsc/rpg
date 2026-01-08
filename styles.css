@@ -352,6 +352,10 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   border-color: rgba(74, 222, 128, 0.9);
   box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25);
 }
+.choice.skillLearned .right{
+  color: var(--good);
+  font-weight:900;
+}
 .choice.skillDetail{
   align-items:flex-start;
 }
@@ -360,6 +364,7 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
 }
 .choice.skillDetail .titleRow{
   align-items:center;
+  gap:10px;
 }
 .choice.skillDetail .skillIconWrap{
   padding:8px;
@@ -371,6 +376,7 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
 }
 .choice.skillDetail .titleRow b{
   font-size:16px;
+  line-height:1.1;
 }
 .skillDetailDesc{
   margin-top:8px;
@@ -391,6 +397,12 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   width:18px;
   height:18px;
   object-fit:contain;
+}
+
+#turnCount,
+#actionHint,
+#battleHint{
+  display:none !important;
 }
 
 .damageText{

@@ -1240,6 +1240,7 @@ function openShopModal(mode = "menu"){
     modal.open(
       "Shop",
       [
+        { title: `Gold ${state.player?.gold ?? 0}`, desc: "", meta: "", value: undefined, className: "readonly", icon: "./assets/icons/coin.svg" },
         { title: "Market", desc: "Beli / jual item.", meta: "", value: "market" },
         { title: "Learn Skill", desc: "Pelajari skill baru.", meta: "", value: "learn" },
       ],
@@ -1254,7 +1255,7 @@ function openShopModal(mode = "menu"){
     const rows = SHOP_SKILLS.map((entry) => {
       const skill = SKILLS[entry.key];
       const learned = Array.isArray(p.skills) && p.skills.some((s) => s.name === skill.name);
-      const meta = "";
+      const meta = learned ? "Learned" : `${entry.price} gold`;
       const title = `${learned ? "✓ " : ""}${skill.name}`;
       return {
         title,
@@ -1483,10 +1484,7 @@ function beginPlayerTurn(){
     }, 380);
     return false;
   }
-  const regen = applyManaRegen(state.player);
-  if (regen > 0) {
-    showDamageText("player", `+${regen} MP`);
-  }
+  applyManaRegen(state.player);
   refresh(state);
   return true;
 }
