@@ -794,6 +794,21 @@ const modal = {
     const body = $("modalBody");
     body.innerHTML = "";
 
+    const backBtn = $("modalBack");
+    let backChoice = null;
+    if (Array.isArray(choices)) {
+      backChoice = choices.find((c) => c && c.value === "back") || null;
+      if (backChoice) {
+        choices = choices.filter((c) => c !== backChoice);
+      }
+    }
+    if (backBtn) {
+      backBtn.style.display = backChoice ? "inline-flex" : "none";
+      backBtn.onclick = backChoice
+        ? () => onPick("back")
+        : null;
+    }
+
     // Layout: make Stats modals show 2-3 columns
     body.classList.remove("statsGrid");
     body.classList.remove("marketGrid");
@@ -878,6 +893,7 @@ const modal = {
 
   bind() {
     $("modalClose").onclick = () => modal.close();
+    const back = $("modalBack"); if (back) back.onclick = () => modal.close();
     const c = $("modalCancel"); if (c) c.onclick = () => modal.close();
   },
 };
@@ -1379,13 +1395,12 @@ function openSkillLearnDetail(skillKey){
   }
   const learned = Array.isArray(p.skills) && p.skills.some((s) => s.name === skill.name);
   const detailDesc = `
-    <div class="skillDetailDesc">${escapeHtml(skill.desc || "Skill")}</div>
     <div class="skillDetailStats">
       <div class="statRow"><img class="statIcon" src="./assets/icons/mp.svg" alt="" /><span>MP ${skill.mpCost}</span></div>
       <div class="statRow"><img class="statIcon" src="./assets/icons/damage.svg" alt="" /><span>Damage ${skill.power}</span></div>
       <div class="statRow"><img class="statIcon" src="./assets/icons/cooldown.svg" alt="" /><span>Cooldown ${skill.cooldown || 0}</span></div>
-      <div class="statRow"><img class="statIcon" src="./assets/icons/coin.svg" alt="" /><span>Cost ${entry.price} gold</span></div>
     </div>
+    <div class="skillDetailDesc">${escapeHtml(skill.desc || "Skill")}</div>
   `;
   const price = entry.price;
   modal.open(
@@ -1402,7 +1417,7 @@ function openSkillLearnDetail(skillKey){
       },
       {
         title: learned ? "Sudah dimiliki" : "Learn Skill",
-        desc: learned ? "Skill sudah dipelajari." : "",
+        desc: learned ? "Skill sudah dipelajari." : `Cost ${price} gold`,
         meta: "",
         buttons: [
           { text: learned ? "Owned" : "Learn", value: `learn:${skillKey}`, disabled: learned },
@@ -1467,6 +1482,10 @@ function beginPlayerTurn(){
       if (state.inBattle) enemyTurn();
     }, 380);
     return false;
+  }
+  const regen = applyManaRegen(state.player);
+  if (regen > 0) {
+    showDamageText("player", `+${regen} MP`);
   }
   refresh(state);
   return true;

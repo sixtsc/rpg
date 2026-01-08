@@ -286,6 +286,11 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   align-items:center;
   gap:10px;
 }
+.modalHeaderActions{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
 
 .modalTitle{ font-weight:900; }
 
@@ -351,10 +356,10 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   align-items:flex-start;
 }
 .choice.skillDetail .desc{
-  white-space: pre-line;
+  white-space: normal;
 }
 .choice.skillDetail .titleRow{
-  align-items:flex-start;
+  align-items:center;
 }
 .choice.skillDetail .skillIconWrap{
   padding:8px;
@@ -368,7 +373,7 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   font-size:16px;
 }
 .skillDetailDesc{
-  margin-bottom:8px;
+  margin-top:8px;
 }
 .skillDetailStats{
   display:flex;
@@ -593,6 +598,10 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   border:1px solid var(--line);
   padding:8px 10px;
   border-radius:12px;
+}
+.xbtn.back{
+  padding:6px 8px;
+  font-size:12px;
 }
 
 
