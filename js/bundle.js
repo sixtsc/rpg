@@ -669,7 +669,8 @@ function renderSkillSlots(){
     if (skill) {
       const cdLeft = skill.cdLeft || 0;
       const icon = skillIconHtml(skill);
-      btn.innerHTML = icon;
+      const cdBadge = cdLeft > 0 ? `<span class="skillCooldown">CD ${cdLeft}</span>` : "";
+      btn.innerHTML = `${icon}${cdBadge}`;
       btn.disabled = (state.turn !== "player") || p.mp < skill.mpCost || cdLeft > 0;
       btn.classList.toggle("cooldown", cdLeft > 0);
       btn.onclick = () => useSkillAtIndex(i);
@@ -883,6 +884,22 @@ const modal = {
 function refresh(state) {
   const p = state.player;
 
+  const turnCountEl = $("turnCount");
+  if (turnCountEl) {
+    turnCountEl.style.display = "none";
+    turnCountEl.textContent = "";
+  }
+  const actionHint = $("actionHint");
+  if (actionHint) {
+    actionHint.style.display = "none";
+    actionHint.textContent = "";
+  }
+  const battleHintEl = $("battleHint");
+  if (battleHintEl) {
+    battleHintEl.style.display = "none";
+    battleHintEl.textContent = "";
+  }
+
   // Player title + name
   const pNameTitle = $("pNameTitle");
   if (pNameTitle) pNameTitle.textContent = p.name;
@@ -922,23 +939,7 @@ function refresh(state) {
 
     $("modePill").textContent = "Battle";
 
-    const battleHintEl = $("battleHint");
-    if (battleHintEl) {
-      battleHintEl.style.display = "none";
-      battleHintEl.textContent = "";
-    }
-
-    const turnCountEl = $("turnCount");
-    if (turnCountEl) {
-      turnCountEl.style.display = "none";
-      turnCountEl.textContent = "";
-    }
-
-    const actionHint = $("actionHint");
-    if (actionHint) {
-      actionHint.style.display = "none";
-      actionHint.textContent = "";
-    }
+    // turnCount/actionHint/battleHint hidden globally above
 
     // Enemy title + name
     const eNameTitle = $("eNameTitle");
@@ -1004,22 +1005,7 @@ function refresh(state) {
     if (enemyBtns) enemyBtns.style.display = "flex";
   } else {
     $("modePill").textContent = "Town";
-    const battleHintEl = $("battleHint");
-    if (battleHintEl) {
-      battleHintEl.style.display = "none";
-      battleHintEl.textContent = "";
-    }
-    const turnCountEl = $("turnCount");
-    if (turnCountEl) {
-      turnCountEl.style.display = "none";
-      turnCountEl.textContent = "";
-    }
-
-    const actionHint = $("actionHint");
-    if (actionHint) {
-      actionHint.textContent = "";
-      actionHint.style.display = "none";
-    }
+    // turnCount/actionHint/battleHint hidden globally above
 
     const eNameTitle = $("eNameTitle");
     if (eNameTitle) eNameTitle.textContent = "-";
@@ -1254,10 +1240,10 @@ function openShopModal(mode = "menu"){
       return {
         title,
         icon: skill.icon,
-        desc: skill.desc || "Skill",
+        desc: "",
         meta: learned ? `${meta} • Learned` : meta,
-        value: learned ? undefined : `learn:${entry.key}`,
-        className: learned ? "readonly" : "",
+        value: `detail:${entry.key}`,
+        className: learned ? "skillLearned" : "",
       };
     });
     modal.open(
@@ -1266,13 +1252,8 @@ function openShopModal(mode = "menu"){
         { title: "Skill belum tersedia", desc: "Trainer belum membuka skill baru.", meta: "", value: undefined, className:"readonly" },
       ],
       (pick) => {
-        const key = String(pick || "").replace(/^learn:/, "");
-        const res = learnSkill(key);
-        if (!res.ok) {
-          if (res.reason === "gold") addLog("WARN", "Gold tidak cukup.");
-          if (res.reason === "learned") addLog("INFO", "Skill sudah dipelajari.");
-        }
-        openShopModal("learn");
+        const key = String(pick || "").replace(/^detail:/, "");
+        openSkillLearnDetail(key);
       }
     );
     return;
@@ -1375,6 +1356,51 @@ function openShopModal(mode = "menu"){
       }
     );
   }
+}
+
+function openSkillLearnDetail(skillKey){
+  const p = state.player;
+  const entry = SHOP_SKILLS.find((s) => s.key === skillKey);
+  const skill = SKILLS[skillKey];
+  if (!entry || !skill) {
+    openShopModal("learn");
+    return;
+  }
+  const learned = Array.isArray(p.skills) && p.skills.some((s) => s.name === skill.name);
+  const detailDesc = `${skill.desc}\nMP: ${skill.mpCost} • Damage: ${skill.power} • Cooldown: ${skill.cooldown || 0}`;
+  const price = entry.price;
+  modal.open(
+    "Skill Detail",
+    [
+      {
+        title: skill.name,
+        icon: skill.icon,
+        desc: detailDesc,
+        meta: "",
+        value: undefined,
+        className: "skillDetail readonly",
+      },
+      {
+        title: learned ? "Sudah dimiliki" : "Learn Skill",
+        desc: learned ? "Skill sudah dipelajari." : `Cost: ${price} gold`,
+        meta: "",
+        buttons: [
+          { text: learned ? "Owned" : `Learn (${price}g)`, value: `learn:${skillKey}`, disabled: learned },
+        ],
+        keepOpen: true,
+      },
+    ],
+    (pick) => {
+      const key = String(pick || "").replace(/^learn:/, "");
+      if (!key) return;
+      const res = learnSkill(key);
+      if (!res.ok) {
+        if (res.reason === "gold") addLog("WARN", "Gold tidak cukup.");
+        if (res.reason === "learned") addLog("INFO", "Skill sudah dipelajari.");
+      }
+      openSkillLearnDetail(key);
+    }
+  );
 }
 
 /* ----------------------------- Core helpers ----------------------------- */
@@ -1504,7 +1530,7 @@ function levelUp() {
   p.mp = p.maxMp;
   applyDerivedStats(p);
 
-  p.xpToLevel = Math.floor(p.xpToLevel * 1.25);
+  p.xpToLevel = Math.floor(p.xpToLevel * 1.4);
 
   const dhp = p.maxHp - prevMaxHp;
   const dmp = p.maxMp - prevMaxMp;
