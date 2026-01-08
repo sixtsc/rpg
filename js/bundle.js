@@ -669,7 +669,7 @@ function renderSkillSlots(){
     if (skill) {
       const cdLeft = skill.cdLeft || 0;
       const icon = skillIconHtml(skill);
-      const cdBadge = cdLeft > 0 ? `<span class="skillCooldown">CD ${cdLeft}</span>` : "";
+      const cdBadge = cdLeft > 0 ? `<span class="skillCooldown">${cdLeft}</span>` : "";
       btn.innerHTML = `${icon}${cdBadge}`;
       btn.disabled = (state.turn !== "player") || p.mp < skill.mpCost || cdLeft > 0;
       btn.classList.toggle("cooldown", cdLeft > 0);
@@ -704,6 +704,7 @@ function useSkillAtIndex(idx){
 
   p.mp -= s.mpCost;
 
+  addLog("INFO", s.desc || "Skill digunakan.");
   const res = resolveAttack(p, e, s.power);
   if (res.missed) {
     playDodgeFade("enemy");
@@ -815,9 +816,10 @@ const modal = {
 
       const left = document.createElement("div");
       const iconHtml = c.icon ? `<span class="skillIconWrap"><img class="skillIcon" src="${escapeHtml(c.icon)}" alt="" /></span>` : "";
+      const descHtml = c.descHtml ? String(c.descHtml) : escapeHtml(c.desc || "");
       left.innerHTML = `
         <div class="titleRow">${iconHtml}<b>${escapeHtml(c.title)}</b></div>
-        <div class="desc">${escapeHtml(c.desc || "")}</div>
+        <div class="desc">${descHtml}</div>
       `;
 
       const right = document.createElement("div");
@@ -1232,26 +1234,28 @@ function openShopModal(mode = "menu"){
 
   if (mode === "learn"){
     const p = state.player;
+    const header = [{ title: "Back", desc: "Kembali ke menu Shop.", meta: "", value: "back", className: "subMenuBack" }];
     const rows = SHOP_SKILLS.map((entry) => {
       const skill = SKILLS[entry.key];
       const learned = Array.isArray(p.skills) && p.skills.some((s) => s.name === skill.name);
-      const meta = `Lv ${entry.level} • MP ${skill.mpCost} • Power ${skill.power} • ${entry.price} gold`;
+      const meta = "";
       const title = `${learned ? "✓ " : ""}${skill.name}`;
       return {
         title,
         icon: skill.icon,
-        desc: "",
-        meta: learned ? `${meta} • Learned` : meta,
+        desc: `Lv ${entry.level}`,
+        meta,
         value: `detail:${entry.key}`,
         className: learned ? "skillLearned" : "",
       };
     });
     modal.open(
       "Shop - Learn Skill",
-      rows.length ? rows : [
+      header.concat(rows.length ? rows : [
         { title: "Skill belum tersedia", desc: "Trainer belum membuka skill baru.", meta: "", value: undefined, className:"readonly" },
-      ],
+      ]),
       (pick) => {
+        if (pick === "back") return openShopModal("menu");
         const key = String(pick || "").replace(/^detail:/, "");
         openSkillLearnDetail(key);
       }
@@ -1263,10 +1267,14 @@ function openShopModal(mode = "menu"){
     modal.open(
       "Market",
       [
+        { title: "Back", desc: "Kembali ke menu Shop.", meta: "", value: "back", className: "subMenuBack" },
         { title: "Beli", desc: "Beli item.", meta: "", value: "buy" },
         { title: "Jual", desc: "Jual item di inventory.", meta: "", value: "sell" },
       ],
-      (pick) => openShopModal(String(pick || "market"))
+      (pick) => {
+        if (pick === "back") return openShopModal("menu");
+        openShopModal(String(pick || "market"));
+      }
     );
     return;
   }
@@ -1303,7 +1311,8 @@ function openShopModal(mode = "menu"){
     const goods = getMarketGoods();
     modal.open(
       "Market - Beli",
-      categoryChoices
+      [{ title: "Back", desc: "Kembali ke Market.", meta: "", value: "back", className: "subMenuBack" }]
+        .concat(categoryChoices)
         .concat(equipChoices)
         .concat([{ title: "Item Market", desc: "", meta: "", value: undefined, className: "marketDivider readonly" }])
         .concat(
@@ -1315,6 +1324,7 @@ function openShopModal(mode = "menu"){
           }))
         ),
       (pick) => {
+        if (pick === "back") return openShopModal("market");
         const name = String(pick || "").replace(/^buy:/, "");
         if (String(pick || "").startsWith("cat:")) {
           state.shopMarketCategory = String(pick || "").replace("cat:", "");
@@ -1347,8 +1357,9 @@ function openShopModal(mode = "menu"){
 
     modal.open(
       "Market - Jual",
-      rows,
+      [{ title: "Back", desc: "Kembali ke Market.", meta: "", value: "back", className: "subMenuBack" }].concat(rows),
       (pick) => {
+        if (pick === "back") return openShopModal("market");
         const name = String(pick || "").replace(/^sell:/, "");
         const ok = sellItem(name);
         if (!ok) addLog("WARN", "Item tidak bisa dijual.");
@@ -1367,30 +1378,40 @@ function openSkillLearnDetail(skillKey){
     return;
   }
   const learned = Array.isArray(p.skills) && p.skills.some((s) => s.name === skill.name);
-  const detailDesc = `${skill.desc}\nMP: ${skill.mpCost} • Damage: ${skill.power} • Cooldown: ${skill.cooldown || 0}`;
+  const detailDesc = `
+    <div class="skillDetailDesc">${escapeHtml(skill.desc || "Skill")}</div>
+    <div class="skillDetailStats">
+      <div class="statRow"><img class="statIcon" src="./assets/icons/mp.svg" alt="" /><span>MP ${skill.mpCost}</span></div>
+      <div class="statRow"><img class="statIcon" src="./assets/icons/damage.svg" alt="" /><span>Damage ${skill.power}</span></div>
+      <div class="statRow"><img class="statIcon" src="./assets/icons/cooldown.svg" alt="" /><span>Cooldown ${skill.cooldown || 0}</span></div>
+      <div class="statRow"><img class="statIcon" src="./assets/icons/coin.svg" alt="" /><span>Cost ${entry.price} gold</span></div>
+    </div>
+  `;
   const price = entry.price;
   modal.open(
     "Skill Detail",
     [
+      { title: "Back", desc: "Kembali ke Learn Skill.", meta: "", value: "back", className: "subMenuBack" },
       {
         title: skill.name,
         icon: skill.icon,
-        desc: detailDesc,
+        descHtml: detailDesc,
         meta: "",
         value: undefined,
         className: "skillDetail readonly",
       },
       {
         title: learned ? "Sudah dimiliki" : "Learn Skill",
-        desc: learned ? "Skill sudah dipelajari." : `Cost: ${price} gold`,
+        desc: learned ? "Skill sudah dipelajari." : "",
         meta: "",
         buttons: [
-          { text: learned ? "Owned" : `Learn (${price}g)`, value: `learn:${skillKey}`, disabled: learned },
+          { text: learned ? "Owned" : "Learn", value: `learn:${skillKey}`, disabled: learned },
         ],
         keepOpen: true,
       },
     ],
     (pick) => {
+      if (pick === "back") return openShopModal("learn");
       const key = String(pick || "").replace(/^learn:/, "");
       if (!key) return;
       const res = learnSkill(key);
@@ -2100,6 +2121,7 @@ function openProfileStatModal(){
   modal.open(
     "Stat",
     [
+      { title: "Back", desc: "Kembali ke Profile.", meta: "", value: "back", className: "subMenuBack" },
       { title: `Stat Points : ${pts}`, desc: "Dapatkan dari level up. Gunakan tombol + untuk menambah stat.", meta: "" },
       mk("str", "STR", "Meningkatkan ATK dan Combustion Chance"),
       mk("dex", "DEX", "Meningkatkan Evasion, Accuracy, dan SPD"),
@@ -2108,6 +2130,7 @@ function openProfileStatModal(){
       mk("foc", "FOC", "Meningkatkan Critical Chance dan Critical Damage"),
     ],
     (pick) => {
+      if (pick === "back") return openProfileModal();
       const s = String(pick || "");
       const m = s.match(/^(str|dex|int|vit|foc):([+-]?\d+)$/);
       if (!m) return;
@@ -2132,14 +2155,15 @@ function openSkillSlotModal(){
   if (!Array.isArray(p.skillSlots)) {
     p.skillSlots = Array.from({ length: 8 }, () => null);
   }
-  const choices = Array.from({ length: 8 }, (_, i) => {
+  const choices = [{ title: "Back", desc: "Kembali ke Profile.", meta: "", value: "back", className: "subMenuBack" }]
+    .concat(Array.from({ length: 8 }, (_, i) => {
     const slotName = p.skillSlots[i];
     const skill = slotName ? getSkillByName(p, slotName) : null;
     const title = skill ? `${skill.name}` : "Kosong";
     return {
-        title: `Slot ${i + 1}`,
-        desc: skill ? skill.desc : "Kosong",
-        meta: skill ? title : "Klik untuk pilih",
+      title: `Slot ${i + 1}`,
+      desc: skill ? skill.desc : "Kosong",
+      meta: skill ? title : "Klik untuk pilih",
       icon: skill ? skill.icon : "",
       value: `slot:${i}`,
       allowClick: true,
@@ -2148,12 +2172,13 @@ function openSkillSlotModal(){
       ],
       keepOpen: true,
     };
-  });
+  }));
 
   modal.open(
     "Skill Slot",
     choices,
     (pick) => {
+      if (pick === "back") return openProfileModal();
       const [action, rawIdx] = String(pick || "").split(":");
       const idx = parseInt(rawIdx, 10);
       if (Number.isNaN(idx)) return;
@@ -2178,7 +2203,8 @@ function openSkillSlotSelect(slotIdx){
   if (!Array.isArray(p.skillSlots)) {
     p.skillSlots = Array.from({ length: 8 }, () => null);
   }
-  const rows = p.skills.map((skill) => {
+  const rows = [{ title: "Back", desc: "Kembali ke Skill Slot.", meta: "", value: "back", className: "subMenuBack" }]
+    .concat(p.skills.map((skill) => {
     const equippedIndex = p.skillSlots.findIndex((name) => name === skill.name);
     const alreadyEquipped = equippedIndex !== -1 && equippedIndex !== slotIdx;
     const meta = `MP ${skill.mpCost} • Power ${skill.power}${alreadyEquipped ? " • Equipped" : ""}`;
@@ -2190,12 +2216,13 @@ function openSkillSlotSelect(slotIdx){
       value: alreadyEquipped ? undefined : `pick:${skill.name}`,
       className: alreadyEquipped ? "readonly" : "",
     };
-  });
+  }));
 
   modal.open(
     `Pilih Skill (Slot ${slotIdx + 1})`,
     rows.length ? rows : [{ title: "Belum ada skill", desc: "Pelajari skill di Shop.", meta: "", value: undefined, className:"readonly" }],
     (pick) => {
+      if (pick === "back") return openSkillSlotModal();
       const name = String(pick || "").replace(/^pick:/, "");
       const skill = getSkillByName(p, name);
       if (!skill) return;
@@ -2220,7 +2247,8 @@ function openEquipmentModal(){
   ];
   const hasGear = (p.inv && Object.values(p.inv).some((it) => it.kind === "gear")) || false;
 
-  const choices = slots.map((s) => {
+  const choices = [{ title: "Back", desc: "Kembali ke Profile.", meta: "", value: "back", className: "subMenuBack" }]
+    .concat(slots.map((s) => {
     const cur = p.equipment[s.key] || null;
     const curItem = cur ? getItemRef(cur, p) : null;
     const statText = curItem ? formatItemStats(curItem) : "";
@@ -2241,12 +2269,13 @@ function openEquipmentModal(){
       ],
       keepOpen: true,
     };
-  });
+  }));
 
   modal.open(
     "Equipment",
     choices.map((c) => ({ ...c, className: `equipmentCard ${c.className || ""}`.trim(), value: c.value })),
     (pick) => {
+      if (pick === "back") return openProfileModal();
       const [action, slot] = String(pick || "").split(":");
       if (!slot) return;
       if (action === "equip") {
@@ -2275,13 +2304,15 @@ function openEquipSelect(slot){
 
   modal.open(
     `Pilih item untuk ${slot}`,
-    keys.map((k) => ({
-      title: `${k} x${p.inv[k].qty}`,
-      desc: p.inv[k].desc || "Perlengkapan",
-      meta: formatItemStats(p.inv[k]) || `Equip (${p.inv[k].slot || "-"})`,
-      value: k,
-    })),
+    [{ title: "Back", desc: "Kembali ke Equipment.", meta: "", value: "back", className: "subMenuBack" }]
+      .concat(keys.map((k) => ({
+        title: `${k} x${p.inv[k].qty}`,
+        desc: p.inv[k].desc || "Perlengkapan",
+        meta: formatItemStats(p.inv[k]) || `Equip (${p.inv[k].slot || "-"})`,
+        value: k,
+      }))),
     (name) => {
+      if (name === "back") return openEquipmentModal();
       const ok = equipItem(slot, name);
       if (!ok) addLog("WARN", "Item tidak bisa dipakai.");
       openEquipmentModal();

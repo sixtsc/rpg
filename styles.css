@@ -339,6 +339,10 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   border-radius:10px;
   padding:4px;
 }
+.subMenuBack{
+  border-color: rgba(148,163,184,.5);
+  background: rgba(15,23,42,.6);
+}
 .choice.skillLearned .skillIconWrap{
   border-color: rgba(74, 222, 128, 0.9);
   box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25);
@@ -351,6 +355,37 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
 }
 .choice.skillDetail .titleRow{
   align-items:flex-start;
+}
+.choice.skillDetail .skillIconWrap{
+  padding:8px;
+  border-radius:14px;
+}
+.choice.skillDetail .skillIcon{
+  width:32px;
+  height:32px;
+}
+.choice.skillDetail .titleRow b{
+  font-size:16px;
+}
+.skillDetailDesc{
+  margin-bottom:8px;
+}
+.skillDetailStats{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.skillDetailStats .statRow{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-weight:700;
+  color:#cbd5f5;
+}
+.statIcon{
+  width:18px;
+  height:18px;
+  object-fit:contain;
 }
 
 .damageText{
