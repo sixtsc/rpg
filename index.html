@@ -53,10 +53,17 @@
 
       <div class="authForm">
         <input id="ccName" class="authInput" placeholder="Nama karakter" autocomplete="off" />
-        <select id="ccGender" class="authInput">
-          <option value="male">Male</option>
-          <option value="female">Female</option>
-        </select>
+        <input type="hidden" id="ccGender" value="male" />
+        <div class="genderSelect">
+          <button class="genderOption active" type="button" data-gender="male">
+            <span class="genderIcon">🧑</span>
+            <span>Male</span>
+          </button>
+          <button class="genderOption" type="button" data-gender="female">
+            <span class="genderIcon">👩</span>
+            <span>Female</span>
+          </button>
+        </div>
       </div>
 
       <div class="menuBtns">
@@ -79,12 +86,23 @@
     <div class="grid">
       <!-- LEFT: Player + Actions -->
       <div class="card" id="playerCard">
+        <div class="damageText" id="playerDamage"></div>
         <div class="sectionTitle">
           <div class="playerTitle">
             <b id="pNameTitle">Hero</b> <span class="pill" id="pLvl">Lv1</span>
             <span class="pill statLink" id="playerStatLink">?</span>
           </div>
           <div class="pill" id="goldPill">Gold: 0</div>
+        </div>
+        <div class="playerCurrency">
+          <div class="pill currencyPill">
+            <img class="currencyIcon" src="./assets/icons/coin.svg" alt="" />
+            <span id="goldValue">0</span>
+          </div>
+          <div class="pill currencyPill">
+            <img class="currencyIcon" src="./assets/icons/gem.svg" alt="" />
+            <span id="gemValue">0</span>
+          </div>
         </div>
 
         <div class="nameSub" id="pSub">—</div>
@@ -119,6 +137,7 @@
 
       <!-- RIGHT: Enemy ONLY -->
       <div class="card" id="enemyCard">
+        <div class="damageText" id="enemyDamage"></div>
         <div class="sectionTitle">
           <div><b id="eNameTitle">-</b> <span class="pill" id="eLvl">-</span></div>
           <button class="pill muted iconPill" id="btnEnemyStats" type="button">?</button>
@@ -208,7 +227,10 @@
     <div class="modal">
       <div class="modalHeader">
         <div class="modalTitle" id="modalTitle">Pilih</div>
-        <button class="xbtn" id="modalClose">Tutup</button>
+        <div class="modalHeaderActions">
+          <button class="xbtn back" id="modalBack" type="button">Back</button>
+          <button class="xbtn" id="modalClose" type="button">Tutup</button>
+        </div>
       </div>
       <div class="modalBody" id="modalBody"></div>
 </div>

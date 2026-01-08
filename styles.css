@@ -94,6 +94,22 @@ h1{ font-size:18px; margin:0; font-weight:800; letter-spacing:.2px; }
   gap:6px;
   flex-wrap:wrap;
 }
+.playerCurrency{
+  display:flex;
+  gap:8px;
+  margin:8px 0 4px;
+}
+.currencyPill{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+}
+.currencyIcon{
+  width:16px;
+  height:16px;
+  object-fit:contain;
+}
 
 .mono{
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -146,6 +162,26 @@ h1{ font-size:18px; margin:0; font-weight:800; letter-spacing:.2px; }
   padding:10px;
   border-radius:12px;
   font-weight:800;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:48px;
+  position:relative;
+}
+.skillSlot.cooldown .skillIconWrap{
+  opacity:0.45;
+}
+.skillCooldown{
+  position:absolute;
+  bottom:6px;
+  right:6px;
+  font-size:10px;
+  font-weight:900;
+  padding:2px 6px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.22);
+  background: rgba(8,12,20,.85);
+  color:#ffd3a8;
 }
 
 
@@ -266,6 +302,11 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   align-items:center;
   gap:10px;
 }
+.modalHeaderActions{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
 
 .modalTitle{ font-weight:900; }
 
@@ -299,6 +340,110 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   gap:10px;
   align-items:center;
 }
+.titleRow{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.skillIcon{
+  width:18px;
+  height:18px;
+  object-fit:contain;
+  display:inline-block;
+}
+.skillIconWrap{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid rgba(255,255,255,.18);
+  background: rgba(12,18,30,.6);
+  border-radius:10px;
+  padding:4px;
+}
+.subMenuBack{
+  border-color: rgba(148,163,184,.5);
+  background: rgba(15,23,42,.6);
+}
+.choice.skillLearned .skillIconWrap{
+  border-color: rgba(74, 222, 128, 0.9);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25);
+}
+.choice.skillLearned .right{
+  color: var(--good);
+  font-weight:900;
+}
+.choice.skillDetail{
+  align-items:flex-start;
+}
+.choice.skillDetail .desc{
+  white-space: normal;
+}
+.choice.skillDetail .titleRow{
+  align-items:center;
+  gap:10px;
+}
+.choice.skillDetail .skillIconWrap{
+  padding:8px;
+  border-radius:14px;
+}
+.choice.skillDetail .skillIcon{
+  width:32px;
+  height:32px;
+}
+.choice.skillDetail .titleRow b{
+  font-size:16px;
+  line-height:1.1;
+}
+.skillDetailDesc{
+  margin-top:8px;
+}
+.skillDetailStats{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.skillDetailStats .statRow{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-weight:700;
+  color:#cbd5f5;
+}
+.statIcon{
+  width:18px;
+  height:18px;
+  object-fit:contain;
+}
+
+#turnCount,
+#actionHint,
+#battleHint{
+  display:none !important;
+}
+
+.damageText{
+  position:absolute;
+  top:-14px;
+  left:12px;
+  padding:6px 10px;
+  border-radius:999px;
+  background: rgba(10,16,26,.85);
+  border:1px solid rgba(255,255,255,.12);
+  font-weight:900;
+  font-size:12px;
+  color:#ffddb3;
+  opacity:0;
+  transform:translateY(6px);
+  transition:opacity .25s ease, transform .25s ease;
+  pointer-events:none;
+}
+.damageText.show{
+  opacity:1;
+  transform:translateY(0);
+}
+.card{
+  position:relative;
+}
 
 /* Market grid layout */
 .modalBody.marketGrid{
@@ -314,6 +459,15 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   align-items:flex-start;
   gap:6px;
   min-height:120px;
+}
+.modalBody.marketGrid.marketSubCompact{
+  gap:0;
+}
+.modalBody.marketGrid.marketSubCompact .choice{
+  margin:6px;
+}
+.modalBody.marketGrid.marketSubCompact .choice.marketCategory.marketSub{
+  margin:0;
 }
 .modalBody.marketGrid .choice .right{
   align-self:flex-end;
@@ -333,10 +487,10 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   padding:10px;
 }
 .modalBody.marketGrid .choice.marketCategory.marketSub{
-  font-size:11px;
-  padding:8px;
-  min-height:48px;
-  border-style:dashed;
+  font-size:16px;
+  padding:6px;
+  min-height:40px;
+  border-style:solid;
 }
 .modalBody.marketGrid .choice.marketCategory.active{
   border-color: rgba(74,163,255,.75);
@@ -472,6 +626,10 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   border:1px solid var(--line);
   padding:8px 10px;
   border-radius:12px;
+}
+.xbtn.back{
+  padding:6px 8px;
+  font-size:12px;
 }
 
 
@@ -744,6 +902,29 @@ body.inTown .grid{ grid-template-columns: 1fr !important; }
   gap:10px;
   margin:14px 0 10px;
 }
+.genderSelect{
+  display:flex;
+  gap:10px;
+}
+.genderOption{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  justify-content:center;
+  width:100%;
+  border:1px solid var(--line);
+  background:rgba(15,23,42,.6);
+  color:var(--text);
+  padding:10px;
+  border-radius:12px;
+  font-weight:900;
+  cursor:pointer;
+}
+.genderOption.active{
+  border-color: rgba(74,163,255,.8);
+  box-shadow: 0 0 0 2px rgba(74,163,255,.25) inset;
+}
+.genderIcon{ font-size:18px; }
 .authInput{
   width:100%;
   padding:10px 12px;
