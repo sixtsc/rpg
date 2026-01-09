@@ -794,6 +794,20 @@ const modal = {
   open(title, choices, onPick) {
     $("modalTitle").textContent = title;
 
+    const meta = $("modalMeta");
+    if (meta) {
+      const lowerTitle = String(title || "").toLowerCase();
+      const showCurrency = lowerTitle.includes("shop") || lowerTitle.includes("market") || lowerTitle.includes("inventory");
+      if (showCurrency) {
+        const gold = state.player?.gold ?? 0;
+        meta.innerHTML = `<img class="currencyIcon" src="./assets/icons/coin.svg" alt="" /><span>Gold ${gold}</span>`;
+        meta.style.display = "inline-flex";
+      } else {
+        meta.textContent = "";
+        meta.style.display = "none";
+      }
+    }
+
     const body = $("modalBody");
     body.innerHTML = "";
 
@@ -817,11 +831,10 @@ const modal = {
     body.classList.remove("marketGrid");
     body.classList.remove("equipmentGrid");
     body.classList.remove("marketSubCompact");
-    body.classList.remove("inventoryList");
+    const lowerTitle = String(title).toLowerCase();
     if (String(title).toLowerCase().includes("stats")) body.classList.add("statsGrid");
-    if (String(title).toLowerCase().includes("market")) body.classList.add("marketGrid");
+    if (lowerTitle.includes("market") || lowerTitle.includes("inventory")) body.classList.add("marketGrid");
     if (String(title).toLowerCase().includes("equipment")) body.classList.add("equipmentGrid");
-    if (String(title).toLowerCase().includes("inventory")) body.classList.add("inventoryList");
     if (choices.some((c) => String(c.className || "").includes("marketSub"))) {
       body.classList.add("marketSubCompact");
     }
@@ -1249,7 +1262,6 @@ function openShopModal(mode = "menu"){
     modal.open(
       "Shop",
       [
-        { title: `Gold ${state.player?.gold ?? 0}`, desc: "", meta: "", value: undefined, className: "readonly", icon: "./assets/icons/coin.svg" },
         { title: "Market", desc: "Beli / jual item.", meta: "", value: "market" },
         { title: "Learn Skill", desc: "Pelajari skill baru.", meta: "", value: "learn" },
       ],
@@ -2409,7 +2421,6 @@ function openInventoryReadOnly() {
   });
 
   const header = [
-    { title: `Gold ${state.player.gold}`, desc: "", meta: "", value: undefined, className: "readonly", icon: "./assets/icons/coin.svg" },
     { title: "Item", desc: "Consumable & item pakai.", meta: "", value: "invcat:item", className: `marketCategory marketPrimary ${category === "item" ? "active" : ""}`.trim() },
     { title: "Equipment", desc: "Gear & perlengkapan.", meta: "", value: "invcat:equipment", className: `marketCategory marketPrimary ${category === "equipment" ? "active" : ""}`.trim() },
   ];

@@ -311,7 +311,22 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   align-items:center;
 }
 
-.modalTitle{ font-weight:900; }
+.modalTitle{ font-weight:900; flex:1; }
+.modalMeta{
+  display:none;
+  align-items:center;
+  gap:8px;
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.06);
+  font-weight:800;
+  font-size:12px;
+}
+.modalMeta .currencyIcon{
+  width:14px;
+  height:14px;
+}
 
 .modalBody{
   padding:12px 14px;
@@ -319,13 +334,6 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   gap:10px;
   max-height:60vh;
   overflow:auto;
-}
-
-/* Inventory modal: use a vertical list to avoid grid confusion */
-.modalBody.inventoryList{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
 }
 
 
@@ -634,11 +642,8 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
 .xbtn{
   background:transparent;
   border:1px solid var(--line);
-  padding:8px 10px;
-  border-radius:12px;
-}
-.xbtn.back{
   padding:6px 8px;
+  border-radius:12px;
   font-size:12px;
 }
 
