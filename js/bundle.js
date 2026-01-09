@@ -5,7 +5,12 @@ try{var _el=document.getElementById('menuSub'); if(_el && _el.textContent && _el
 
 /* ===== data.js ===== */
 const SKILLS = {
-  fireball: { name:"Fireball", mpCost:6, power:10, cooldown:3, desc:"Serangan api (damage tinggi)." }
+  fireball: { name:"Fireball", icon:"./assets/skills/fireball.svg", mpCost:6, power:10, cooldown:3, desc:"Serangan api (damage tinggi)." },
+  spark: { name:"Spark", icon:"./assets/skills/spark.svg", mpCost:3, power:6, cooldown:2, desc:"Sambaran listrik ringan." },
+  frostBite: { name:"Frost Bite", icon:"./assets/skills/frost-bite.svg", mpCost:5, power:9, cooldown:2, desc:"Es tajam yang menusuk." },
+  shadowCut: { name:"Shadow Cut", icon:"./assets/skills/shadow-cut.svg", mpCost:7, power:12, cooldown:3, desc:"Tebasan gelap yang cepat." },
+  earthSpike: { name:"Earth Spike", icon:"./assets/skills/earth-spike.svg", mpCost:9, power:15, cooldown:3, desc:"Paku tanah menghantam musuh." },
+  meteor: { name:"Meteor", icon:"./assets/skills/meteor.svg", mpCost:12, power:20, cooldown:4, desc:"Pukulan meteor dengan damage besar." }
 };
 const ITEMS = {
   potion: { name:"Potion", kind:"heal_hp", amount:25, desc:"Memulihkan 25 HP" },
@@ -14,7 +19,17 @@ const ITEMS = {
   clothHat: { name:"Cloth Hat", kind:"gear", slot:"head", desc:"Topi kain lusuh.", def:1 },
   leatherArmor: { name:"Leather Armor", kind:"gear", slot:"armor", desc:"Armor kulit ringan.", def:2 },
   leatherPants: { name:"Leather Pants", kind:"gear", slot:"pant", desc:"Celana kulit sederhana.", def:1 },
-  oldBoots: { name:"Old Boots", kind:"gear", slot:"shoes", desc:"Sepatu tua tapi nyaman.", spd:1 }
+  oldBoots: { name:"Old Boots", kind:"gear", slot:"shoes", desc:"Sepatu tua tapi nyaman.", spd:1 },
+  bronzeSword: { name:"Bronze Sword", kind:"gear", slot:"hand", desc:"Pedang Lv3 dengan serangan stabil.", atk:4 },
+  ironSword: { name:"Iron Sword", kind:"gear", slot:"hand", desc:"Pedang Lv6 yang kokoh.", atk:6 },
+  runeBlade: { name:"Rune Blade", kind:"gear", slot:"hand", desc:"Pedang Lv9 dengan rune kuno.", atk:9 },
+  leatherHood: { name:"Leather Hood", kind:"gear", slot:"head", desc:"Pelindung kepala Lv2.", def:2 },
+  ironHelm: { name:"Iron Helm", kind:"gear", slot:"head", desc:"Helm Lv7 yang berat.", def:4 },
+  chainVest: { name:"Chain Vest", kind:"gear", slot:"armor", desc:"Armor Lv4 berbahan rantai.", def:4 },
+  steelArmor: { name:"Steel Armor", kind:"gear", slot:"armor", desc:"Armor Lv8 dengan pertahanan tinggi.", def:7 },
+  travelerPants: { name:"Traveler Pants", kind:"gear", slot:"pant", desc:"Celana Lv3 untuk perjalanan.", def:2, spd:1 },
+  ironGreaves: { name:"Iron Greaves", kind:"gear", slot:"pant", desc:"Greaves Lv7 kokoh.", def:4 },
+  swiftBoots: { name:"Swift Boots", kind:"gear", slot:"shoes", desc:"Sepatu Lv5 meningkatkan kecepatan.", spd:2 }
 };
 const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton"];
 const SHOP_GOODS = [
@@ -25,6 +40,23 @@ const SHOP_GOODS = [
   { name:"Leather Armor", price:40, ref: ITEMS.leatherArmor },
   { name:"Leather Pants", price:28, ref: ITEMS.leatherPants },
   { name:"Old Boots", price:22, ref: ITEMS.oldBoots },
+  { name:"Bronze Sword", price:55, ref: ITEMS.bronzeSword },
+  { name:"Iron Sword", price:85, ref: ITEMS.ironSword },
+  { name:"Rune Blade", price:120, ref: ITEMS.runeBlade },
+  { name:"Leather Hood", price:35, ref: ITEMS.leatherHood },
+  { name:"Iron Helm", price:75, ref: ITEMS.ironHelm },
+  { name:"Chain Vest", price:60, ref: ITEMS.chainVest },
+  { name:"Steel Armor", price:110, ref: ITEMS.steelArmor },
+  { name:"Traveler Pants", price:48, ref: ITEMS.travelerPants },
+  { name:"Iron Greaves", price:90, ref: ITEMS.ironGreaves },
+  { name:"Swift Boots", price:68, ref: ITEMS.swiftBoots },
+];
+const SHOP_SKILLS = [
+  { key:"spark", level:1, price:18 },
+  { key:"frostBite", level:3, price:30 },
+  { key:"shadowCut", level:5, price:45 },
+  { key:"earthSpike", level:7, price:60 },
+  { key:"meteor", level:10, price:85 },
 ];
 
 
@@ -42,13 +74,13 @@ function genEnemy(plv){
   const enemy = {
     name,
     level:lvl,
-    maxHp:25 + lvl*8, maxMp:10 + lvl*3,
-    hp:25 + lvl*8, mp:10 + lvl*3,
-    atk:6 + lvl*2, def:2 + lvl, spd:4 + lvl,
-    str: Math.max(0, lvl - 1),
-    dex: Math.max(0, Math.floor(lvl / 2)),
-    int: Math.max(0, Math.floor(lvl / 2)),
-    vit: Math.max(0, lvl),
+    maxHp:28 + lvl*10, maxMp:12 + lvl*4,
+    hp:28 + lvl*10, mp:12 + lvl*4,
+    atk:7 + lvl*3, def:3 + lvl*2, spd:4 + lvl*2,
+    str: Math.max(0, lvl),
+    dex: Math.max(0, Math.floor(lvl * 0.6)),
+    int: Math.max(0, Math.floor(lvl * 0.6)),
+    vit: Math.max(0, Math.floor(lvl * 1.2)),
     critChance: clamp(5 + Math.floor(lvl/3), 5, 35),
     critDamage: 0,
     acc: Math.max(0, Math.floor(lvl / 6)),
@@ -103,7 +135,7 @@ function resolveAttack(att, def, basePower, opts = {}) {
   const rollComb = randInt(1, 100);
   let combustion = false;
   if (rollComb <= combustionChance) {
-    const combMult = randFloat(2.0, 2.5);
+    const combMult = randFloat(1.5, 1.9);
     dmg = Math.max(1, Math.round(dmg * combMult));
     combustion = true;
   }
@@ -156,11 +188,14 @@ function newPlayer(){
     escapeChance:0,
     statuses: [],
     equipment: { hand:null, head:null, pant:null, armor:null, shoes:null },
+    equipmentBonus: { atk:0, def:0, spd:0 },
 
     deprecatedSkillCooldown:0,
     xp:0, xpToLevel:50,
     gold:0,
+    gems:0,
     skills:[{ ...SKILLS.fireball, cdLeft:0 }],
+    skillSlots: ["Fireball", null, null, null, null, null, null, null],
     inv: { "Potion": { ...ITEMS.potion, qty:2 }, "Ether": { ...ITEMS.ether, qty:1 } }
   };
 }
@@ -215,12 +250,37 @@ function normalizePlayer(p){
     p.equipment.armor ??= null;
     p.equipment.shoes ??= null;
   }
+  if (!p.equipmentBonus || typeof p.equipmentBonus !== "object") {
+    p.equipmentBonus = { atk:0, def:0, spd:0 };
+  } else {
+    p.equipmentBonus.atk = Number(p.equipmentBonus.atk || 0);
+    p.equipmentBonus.def = Number(p.equipmentBonus.def || 0);
+    p.equipmentBonus.spd = Number(p.equipmentBonus.spd || 0);
+  }
+  if (!Array.isArray(p.skills)) p.skills = [];
+  if (!Array.isArray(p.skillSlots)) {
+    const slots = Array.from({ length: 8 }, (_, i) => {
+      const skill = p.skills[i];
+      return skill ? skill.name : null;
+    });
+    p.skillSlots = slots;
+  } else {
+    p.skillSlots = Array.from({ length: 8 }, (_, i) => {
+      const entry = p.skillSlots[i];
+      if (!entry) return null;
+      if (typeof entry === "string") return entry;
+      if (typeof entry === "object" && entry.name) return entry.name;
+      return null;
+    });
+  }
 
   // Safety defaults (older saves)
   if (typeof p.level !== "number") p.level = 1;
   if (typeof p.name !== "string") p.name = "Hero";
+  if (typeof p.gems !== "number") p.gems = 0;
 
   applyDerivedStats(p);
+  applyEquipmentStats(p);
   return p;
 }
 
@@ -238,6 +298,40 @@ function applyDerivedStats(p){
   p.escapeChance = clamp(Math.round(p.baseEscapeChance + intVal * 1.3), 0, 95);
 }
 
+function getItemRef(name, player){
+  if (!name) return null;
+  const p = player || state?.player;
+  const invItem = p && p.inv ? p.inv[name] : null;
+  if (invItem) return invItem;
+  const shopItem = getShopItem(name);
+  return shopItem ? shopItem.ref : null;
+}
+
+function calcEquipmentBonus(player){
+  const p = player;
+  const bonus = { atk:0, def:0, spd:0 };
+  if (!p || !p.equipment) return bonus;
+  Object.values(p.equipment).forEach((name) => {
+    const it = getItemRef(name, p);
+    if (!it) return;
+    if (typeof it.atk === "number") bonus.atk += it.atk;
+    if (typeof it.def === "number") bonus.def += it.def;
+    if (typeof it.spd === "number") bonus.spd += it.spd;
+  });
+  return bonus;
+}
+
+function applyEquipmentStats(player){
+  const p = player;
+  if (!p) return;
+  const prev = p.equipmentBonus || { atk:0, def:0, spd:0 };
+  const next = calcEquipmentBonus(p);
+  p.atk = Math.max(0, (p.atk || 0) - (prev.atk || 0) + next.atk);
+  p.def = Math.max(0, (p.def || 0) - (prev.def || 0) + next.def);
+  p.spd = Math.max(0, (p.spd || 0) - (prev.spd || 0) + next.spd);
+  p.equipmentBonus = next;
+}
+
 
 function newState(){
   return {
@@ -252,6 +346,7 @@ function newState(){
     battleResult: null,
     shopMarketCategory: "consumable",
     shopEquipCategory: "weapon",
+    inventoryCategory: "item",
     playerDefending: false,
     playerDodging: false,
     turn: "town",
@@ -493,6 +588,7 @@ function showToast(msg, tag) {
 }
 
 function addLog(tag, msg) {
+  if (tag !== "SKILL") return;
   showToast(msg, tag);
 }
 
@@ -522,10 +618,73 @@ function showBattleResultOverlay(summary, onClose) {
   }
 }
 
+function getSkillByName(player, name){
+  if (!player || !Array.isArray(player.skills) || !name) return null;
+  return player.skills.find((s) => s && s.name === name) || null;
+}
+
+function skillIconHtml(skill){
+  if (!skill || !skill.icon) return "";
+  return `<span class="skillIconWrap"><img class="skillIcon" src="${escapeHtml(skill.icon)}" alt="" /></span>`;
+}
+
+function renderEnemyRow() {
+  const row = $("enemyRow");
+  if (!row) return;
+  row.querySelectorAll(".enemyCard.extra").forEach((el) => el.remove());
+
+  const queue = Array.isArray(state.enemyQueue) && state.enemyQueue.length
+    ? state.enemyQueue
+    : (state.enemy ? [state.enemy] : []);
+
+  queue.slice(1, 3).forEach((enemy) => {
+    const card = document.createElement("div");
+    card.className = "card enemyCard extra";
+    const hpPct = enemy.maxHp ? clamp((enemy.hp / enemy.maxHp) * 100, 0, 100) : 0;
+    card.innerHTML = `
+      <div class="sectionTitle">
+        <div><b>${escapeHtml(enemy.name)}</b> <span class="pill">Lv${enemy.level}</span></div>
+      </div>
+      <div class="enemyMiniMeta">
+        <div class="bar"><div class="fill hp" style="width:${hpPct}%"></div></div>
+        <div class="muted">${enemy.hp}/${enemy.maxHp}</div>
+      </div>
+    `;
+    row.appendChild(card);
+  });
+}
+
+const damageTimers = { player: null, enemy: null };
+function showDamageText(target, text){
+  const el = $(target === "player" ? "playerDamage" : "enemyDamage");
+  if (!el) return;
+  el.textContent = text;
+  el.classList.remove("show");
+  void el.offsetWidth;
+  el.classList.add("show");
+  if (damageTimers[target]) clearTimeout(damageTimers[target]);
+  damageTimers[target] = setTimeout(() => {
+    el.classList.remove("show");
+  }, 1400);
+}
+
+function formatDamageText(res, dmg){
+  if (!res || res.missed) return "MISS";
+  const tags = [];
+  if (res.crit) tags.push("CRIT");
+  if (res.combustion) tags.push("COMBUST");
+  if (res.blocked > 0) tags.push("BLOCK");
+  const base = dmg > 0 ? `-${dmg}` : "0";
+  return tags.length ? `${base} (${tags.join(" ")})` : base;
+}
+
 function renderSkillSlots(){
   const grid = $("skillSlots");
   if (!grid) return;
   const p = state.player;
+  if (!Array.isArray(p.skillSlots)) {
+    p.skillSlots = Array.from({ length: 8 }, () => null);
+  }
   const slots = Array.from({ length: 8 });
   slots.forEach((_, i) => {
     let btn = grid.querySelector(`[data-slot="${i}"]`);
@@ -535,11 +694,15 @@ function renderSkillSlots(){
       btn.setAttribute("data-slot", `${i}`);
       grid.appendChild(btn);
     }
-    const skill = p.skills && p.skills[i];
+    const slotName = p.skillSlots ? p.skillSlots[i] : null;
+    const skill = slotName ? getSkillByName(p, slotName) : null;
     if (skill) {
       const cdLeft = skill.cdLeft || 0;
-      btn.textContent = cdLeft > 0 ? `${skill.name} (CD ${cdLeft})` : skill.name;
+      const icon = skillIconHtml(skill);
+      const cdBadge = cdLeft > 0 ? `<span class="skillCooldown">${cdLeft}</span>` : "";
+      btn.innerHTML = `${icon}${cdBadge}`;
       btn.disabled = (state.turn !== "player") || p.mp < skill.mpCost || cdLeft > 0;
+      btn.classList.toggle("cooldown", cdLeft > 0);
       btn.onclick = () => useSkillAtIndex(i);
     } else {
       btn.textContent = "-";
@@ -553,7 +716,8 @@ function useSkillAtIndex(idx){
   const p = state.player;
   const e = state.enemy;
   if (!p || !e || !Array.isArray(p.skills)) return;
-  const s = p.skills[idx];
+  const slotName = p.skillSlots ? p.skillSlots[idx] : null;
+  const s = slotName ? getSkillByName(p, slotName) : null;
   if (!s) return;
   if (state.turn !== "player") return;
   const cdLeft = s.cdLeft || 0;
@@ -570,12 +734,12 @@ function useSkillAtIndex(idx){
 
   p.mp -= s.mpCost;
 
+  addLog("SKILL", s.name);
   const res = resolveAttack(p, e, s.power);
   if (res.missed) {
     playDodgeFade("enemy");
-    addLog("ENEMY", `${e.name} menghindar! (Evasion ${res.evasion}%)`);
+    showDamageText("enemy", "MISS");
   } else {
-    if (res.blocked > 0) addLog("INFO", `${e.name} memblokir skillmu!`);
     if (res.dmg > 0) {
       e.hp = clamp(e.hp - res.dmg, 0, e.maxHp);
       playSlash("enemy", 80);
@@ -584,13 +748,10 @@ function useSkillAtIndex(idx){
       p.hp = clamp(p.hp - res.reflected, 0, p.maxHp);
       playSlash("player", 150);
     }
-    if (res.crit || res.combustion) {
-      playCritShake("enemy");
-      if (res.crit && res.combustion) addLog("YOU", `CRITICAL + COMBUSTION! ${s.name}! Damage ${res.dmg}.`);
-      else if (res.crit) addLog("YOU", `CRITICAL! ${s.name}! Damage ${res.dmg}.`);
-      else addLog("YOU", `COMBUSTION! ${s.name}! Damage ${res.dmg}.`);
-    } else {
-      addLog("YOU", `${s.name}! Damage ${res.dmg}.`);
+    if (res.crit || res.combustion) playCritShake("enemy");
+    showDamageText("enemy", formatDamageText(res, res.dmg));
+    if (res.reflected > 0) {
+      showDamageText("player", `-${res.reflected} (REFLECT)`);
     }
   }
 
@@ -660,16 +821,50 @@ const modal = {
   open(title, choices, onPick) {
     $("modalTitle").textContent = title;
 
+    const meta = $("modalMeta");
+    if (meta) {
+      const lowerTitle = String(title || "").toLowerCase();
+      const showCurrency = lowerTitle.includes("shop") || lowerTitle.includes("market") || lowerTitle.includes("inventory");
+      if (showCurrency) {
+        const gold = state.player?.gold ?? 0;
+        meta.innerHTML = `<img class="currencyIcon" src="./assets/icons/coin.svg" alt="" /><span>Gold ${gold}</span>`;
+        meta.style.display = "inline-flex";
+      } else {
+        meta.textContent = "";
+        meta.style.display = "none";
+      }
+    }
+
     const body = $("modalBody");
     body.innerHTML = "";
+
+    const backBtn = $("modalBack");
+    let backChoice = null;
+    if (Array.isArray(choices)) {
+      backChoice = choices.find((c) => c && c.value === "back") || null;
+      if (backChoice) {
+        choices = choices.filter((c) => c !== backChoice);
+      }
+    }
+    if (backBtn) {
+      backBtn.style.display = backChoice ? "inline-flex" : "none";
+      backBtn.onclick = backChoice
+        ? () => onPick("back")
+        : null;
+    }
 
     // Layout: make Stats modals show 2-3 columns
     body.classList.remove("statsGrid");
     body.classList.remove("marketGrid");
     body.classList.remove("equipmentGrid");
+    body.classList.remove("marketSubCompact");
+    const lowerTitle = String(title).toLowerCase();
     if (String(title).toLowerCase().includes("stats")) body.classList.add("statsGrid");
-    if (String(title).toLowerCase().includes("market")) body.classList.add("marketGrid");
+    if (lowerTitle.includes("market") || lowerTitle.includes("inventory")) body.classList.add("marketGrid");
     if (String(title).toLowerCase().includes("equipment")) body.classList.add("equipmentGrid");
+    if (choices.some((c) => String(c.className || "").includes("marketSub"))) {
+      body.classList.add("marketSubCompact");
+    }
 
     choices.forEach((c) => {
       const row = document.createElement("div");
@@ -680,9 +875,11 @@ const modal = {
       if (c.style) row.style.cssText += String(c.style);
 
       const left = document.createElement("div");
+      const iconHtml = c.icon ? `<span class="skillIconWrap"><img class="skillIcon" src="${escapeHtml(c.icon)}" alt="" /></span>` : "";
+      const descHtml = c.descHtml ? String(c.descHtml) : escapeHtml(c.desc || "");
       left.innerHTML = `
-        <b>${escapeHtml(c.title)}</b>
-        <div class="desc">${escapeHtml(c.desc || "")}</div>
+        <div class="titleRow">${iconHtml}<b>${escapeHtml(c.title)}</b></div>
+        <div class="desc">${descHtml}</div>
       `;
 
       const right = document.createElement("div");
@@ -741,6 +938,7 @@ const modal = {
 
   bind() {
     $("modalClose").onclick = () => modal.close();
+    const back = $("modalBack"); if (back) back.onclick = () => modal.close();
     const c = $("modalCancel"); if (c) c.onclick = () => modal.close();
   },
 };
@@ -748,6 +946,22 @@ const modal = {
 // TURN INDICATOR: state.turn = "player" | "enemy" | "town"
 function refresh(state) {
   const p = state.player;
+
+  const turnCountEl = $("turnCount");
+  if (turnCountEl) {
+    turnCountEl.style.display = "none";
+    turnCountEl.textContent = "";
+  }
+  const actionHint = $("actionHint");
+  if (actionHint) {
+    actionHint.style.display = "none";
+    actionHint.textContent = "";
+  }
+  const battleHintEl = $("battleHint");
+  if (battleHintEl) {
+    battleHintEl.style.display = "none";
+    battleHintEl.textContent = "";
+  }
 
   // Player title + name
   const pNameTitle = $("pNameTitle");
@@ -767,6 +981,10 @@ function refresh(state) {
     goldPill.textContent = `Gold: ${p.gold}`;
     goldPill.style.display = "none";
   }
+  const goldValue = $("goldValue");
+  if (goldValue) goldValue.textContent = `${p.gold}`;
+  const gemValue = $("gemValue");
+  if (gemValue) gemValue.textContent = `${p.gems || 0}`;
 
   // Player bars
   $("hpText").textContent = `${p.hp}/${p.maxHp}`;
@@ -788,23 +1006,7 @@ function refresh(state) {
 
     $("modePill").textContent = "Battle";
 
-    const battleHintEl = $("battleHint");
-    if (battleHintEl) {
-      battleHintEl.style.display = "none";
-      battleHintEl.textContent = "";
-    }
-
-    const turnCountEl = $("turnCount");
-    if (turnCountEl) {
-      turnCountEl.style.display = "inline-flex";
-      turnCountEl.textContent = `Turn: ${Math.max(1, state.battleTurn || 0)}`;
-    }
-
-    const actionHint = $("actionHint");
-    if (actionHint) {
-      actionHint.style.display = "inline-flex";
-      actionHint.textContent = (state.turn === "player" ? "Giliran: Kamu" : "Giliran: Musuh");
-    }
+    // turnCount/actionHint/battleHint hidden globally above
 
     // Enemy title + name
     const eNameTitle = $("eNameTitle");
@@ -870,23 +1072,7 @@ function refresh(state) {
     if (enemyBtns) enemyBtns.style.display = "flex";
   } else {
     $("modePill").textContent = "Town";
-    const battleHintEl = $("battleHint");
-    if (battleHintEl) {
-      battleHintEl.style.display = "inline-flex";
-      battleHintEl.textContent = "Explore untuk cari musuh";
-    }
-    const turnCountEl = $("turnCount");
-    if (turnCountEl) {
-      // Town: gunakan pill kecil kanan atas untuk Gold
-      turnCountEl.style.display = "inline-flex";
-      turnCountEl.textContent = `Gold: ${p.gold}`;
-    }
-
-    const actionHint = $("actionHint");
-    if (actionHint) {
-      actionHint.textContent = "";
-      actionHint.style.display = "none";
-    }
+    // turnCount/actionHint/battleHint hidden globally above
 
     const eNameTitle = $("eNameTitle");
     if (eNameTitle) eNameTitle.textContent = "-";
@@ -912,6 +1098,7 @@ function refresh(state) {
     const enemyBtns = $("enemyBtns");
     if (enemyBtns) enemyBtns.style.display = "none";
   }
+  renderEnemyRow();
 }
 
 
@@ -1002,6 +1189,7 @@ function equipItem(slot, itemName){
   if (it.kind !== "gear") return false;
   if (it.slot !== slot) return false;
   p.equipment[slot] = itemName;
+  applyEquipmentStats(p);
   autosave(state);
   addLog("INFO", `${itemName} dipakai di slot ${slot}.`);
   refresh(state);
@@ -1014,10 +1202,20 @@ function unequipSlot(slot){
   if (!p.equipment[slot]) return false;
   const name = p.equipment[slot];
   p.equipment[slot] = null;
+  applyEquipmentStats(p);
   autosave(state);
   addLog("INFO", `${name} dilepas dari slot ${slot}.`);
   refresh(state);
   return true;
+}
+
+function formatItemStats(item){
+  if (!item) return "";
+  const stats = [];
+  if (typeof item.atk === "number" && item.atk !== 0) stats.push(`ATK +${item.atk}`);
+  if (typeof item.def === "number" && item.def !== 0) stats.push(`DEF +${item.def}`);
+  if (typeof item.spd === "number" && item.spd !== 0) stats.push(`SPD +${item.spd}`);
+  return stats.length ? stats.join(" | ") : "";
 }
 
 function getShopItem(name){
@@ -1064,6 +1262,28 @@ function sellItem(name){
   return true;
 }
 
+function learnSkill(skillKey){
+  const p = state.player;
+  const skill = SKILLS[skillKey];
+  const entry = SHOP_SKILLS.find((s) => s.key === skillKey);
+  if (!p || !skill || !entry) return { ok:false, reason:"not_found" };
+  const already = Array.isArray(p.skills) && p.skills.some((s) => s.name === skill.name);
+  if (already) return { ok:false, reason:"learned" };
+  if ((p.gold || 0) < entry.price) return { ok:false, reason:"gold" };
+  p.gold -= entry.price;
+  if (!Array.isArray(p.skills)) p.skills = [];
+  p.skills.push({ ...skill, cdLeft:0 });
+  if (!Array.isArray(p.skillSlots)) {
+    p.skillSlots = Array.from({ length: 8 }, () => null);
+  }
+  const emptyIdx = p.skillSlots.findIndex((slot) => !slot);
+  if (emptyIdx >= 0) p.skillSlots[emptyIdx] = skill.name;
+  autosave(state);
+  addLog("GOLD", `Belajar ${skill.name} (-${entry.price} gold)`);
+  refresh(state);
+  return { ok:true };
+}
+
 function openShopModal(mode = "menu"){
   if (state.inBattle) return;
   if (mode === "menu"){
@@ -1071,7 +1291,7 @@ function openShopModal(mode = "menu"){
       "Shop",
       [
         { title: "Market", desc: "Beli / jual item.", meta: "", value: "market" },
-        { title: "Learn Skill", desc: "Pelajari skill baru (coming soon).", meta: "", value: "learn" },
+        { title: "Learn Skill", desc: "Pelajari skill baru.", meta: "", value: "learn" },
       ],
       (pick) => openShopModal(String(pick || "menu"))
     );
@@ -1079,12 +1299,32 @@ function openShopModal(mode = "menu"){
   }
 
   if (mode === "learn"){
+    const p = state.player;
+    const header = [{ title: "Back", desc: "Kembali ke menu Shop.", meta: "", value: "back", className: "subMenuBack" }];
+    const rows = SHOP_SKILLS.map((entry) => {
+      const skill = SKILLS[entry.key];
+      const learned = Array.isArray(p.skills) && p.skills.some((s) => s.name === skill.name);
+      const meta = learned ? "Learned" : `${entry.price} gold`;
+      const title = `${learned ? "✓ " : ""}${skill.name}`;
+      return {
+        title,
+        icon: skill.icon,
+        desc: `Lv ${entry.level}`,
+        meta,
+        value: `detail:${entry.key}`,
+        className: learned ? "skillLearned" : "",
+      };
+    });
     modal.open(
       "Shop - Learn Skill",
-      [
+      header.concat(rows.length ? rows : [
         { title: "Skill belum tersedia", desc: "Trainer belum membuka skill baru.", meta: "", value: undefined, className:"readonly" },
-      ],
-      () => {}
+      ]),
+      (pick) => {
+        if (pick === "back") return openShopModal("menu");
+        const key = String(pick || "").replace(/^detail:/, "");
+        openSkillLearnDetail(key);
+      }
     );
     return;
   }
@@ -1093,10 +1333,14 @@ function openShopModal(mode = "menu"){
     modal.open(
       "Market",
       [
+        { title: "Back", desc: "Kembali ke menu Shop.", meta: "", value: "back", className: "subMenuBack" },
         { title: "Beli", desc: "Beli item.", meta: "", value: "buy" },
         { title: "Jual", desc: "Jual item di inventory.", meta: "", value: "sell" },
       ],
-      (pick) => openShopModal(String(pick || "market"))
+      (pick) => {
+        if (pick === "back") return openShopModal("menu");
+        openShopModal(String(pick || "market"));
+      }
     );
     return;
   }
@@ -1123,7 +1367,7 @@ function openShopModal(mode = "menu"){
     const equipChoices = (state.shopMarketCategory === "equipment")
       ? equipCategories.map((c) => ({
           title: c.icon || c.label,
-          desc: c.desc || "",
+          desc: "",
           meta: "",
           value: `equipcat:${c.key}`,
           className: `marketCategory marketSub ${state.shopEquipCategory === c.key ? "active" : ""}`.trim(),
@@ -1133,7 +1377,8 @@ function openShopModal(mode = "menu"){
     const goods = getMarketGoods();
     modal.open(
       "Market - Beli",
-      categoryChoices
+      [{ title: "Back", desc: "Kembali ke Market.", meta: "", value: "back", className: "subMenuBack" }]
+        .concat(categoryChoices)
         .concat(equipChoices)
         .concat([{ title: "Item Market", desc: "", meta: "", value: undefined, className: "marketDivider readonly" }])
         .concat(
@@ -1145,6 +1390,7 @@ function openShopModal(mode = "menu"){
           }))
         ),
       (pick) => {
+        if (pick === "back") return openShopModal("market");
         const name = String(pick || "").replace(/^buy:/, "");
         if (String(pick || "").startsWith("cat:")) {
           state.shopMarketCategory = String(pick || "").replace("cat:", "");
@@ -1177,8 +1423,9 @@ function openShopModal(mode = "menu"){
 
     modal.open(
       "Market - Jual",
-      rows,
+      [{ title: "Back", desc: "Kembali ke Market.", meta: "", value: "back", className: "subMenuBack" }].concat(rows),
       (pick) => {
+        if (pick === "back") return openShopModal("market");
         const name = String(pick || "").replace(/^sell:/, "");
         const ok = sellItem(name);
         if (!ok) addLog("WARN", "Item tidak bisa dijual.");
@@ -1186,6 +1433,60 @@ function openShopModal(mode = "menu"){
       }
     );
   }
+}
+
+function openSkillLearnDetail(skillKey){
+  const p = state.player;
+  const entry = SHOP_SKILLS.find((s) => s.key === skillKey);
+  const skill = SKILLS[skillKey];
+  if (!entry || !skill) {
+    openShopModal("learn");
+    return;
+  }
+  const learned = Array.isArray(p.skills) && p.skills.some((s) => s.name === skill.name);
+  const detailDesc = `
+    <div class="skillDetailStats">
+      <div class="statRow"><img class="statIcon" src="./assets/icons/mp.svg" alt="" /><span>MP ${skill.mpCost}</span></div>
+      <div class="statRow"><img class="statIcon" src="./assets/icons/damage.svg" alt="" /><span>Damage ${skill.power}</span></div>
+      <div class="statRow"><img class="statIcon" src="./assets/icons/cooldown.svg" alt="" /><span>Cooldown ${skill.cooldown || 0}</span></div>
+    </div>
+    <div class="skillDetailDesc">${escapeHtml(skill.desc || "Skill")}</div>
+  `;
+  const price = entry.price;
+  modal.open(
+    "Skill Detail",
+    [
+      { title: "Back", desc: "Kembali ke Learn Skill.", meta: "", value: "back", className: "subMenuBack" },
+      {
+        title: skill.name,
+        icon: skill.icon,
+        descHtml: detailDesc,
+        meta: "",
+        value: undefined,
+        className: "skillDetail readonly",
+      },
+      {
+        title: learned ? "Sudah dimiliki" : "Learn Skill",
+        desc: learned ? "Skill sudah dipelajari." : "",
+        meta: learned ? "Learned" : `${price} gold`,
+        buttons: [
+          { text: learned ? "Owned" : "Learn", value: `learn:${skillKey}`, disabled: learned },
+        ],
+        keepOpen: true,
+      },
+    ],
+    (pick) => {
+      if (pick === "back") return openShopModal("learn");
+      const key = String(pick || "").replace(/^learn:/, "");
+      if (!key) return;
+      const res = learnSkill(key);
+      if (!res.ok) {
+        if (res.reason === "gold") addLog("WARN", "Gold tidak cukup.");
+        if (res.reason === "learned") addLog("INFO", "Skill sudah dipelajari.");
+      }
+      openSkillLearnDetail(key);
+    }
+  );
 }
 
 /* ----------------------------- Core helpers ----------------------------- */
@@ -1232,6 +1533,7 @@ function beginPlayerTurn(){
     }, 380);
     return false;
   }
+  applyManaRegen(state.player);
   refresh(state);
   return true;
 }
@@ -1266,6 +1568,8 @@ function endBattle(reason, summary) {
 function finalizeBattle(reason){
   state.inBattle = false;
   state.battleResult = null;
+  state.enemyQueue = null;
+  state.currentStageName = null;
   clearStatuses(state.enemy);
   state.enemy = null;
   state.playerDefending = false;
@@ -1315,7 +1619,7 @@ function levelUp() {
   p.mp = p.maxMp;
   applyDerivedStats(p);
 
-  p.xpToLevel = Math.floor(p.xpToLevel * 1.25);
+  p.xpToLevel = Math.floor(p.xpToLevel * 1.4);
 
   const dhp = p.maxHp - prevMaxHp;
   const dmp = p.maxMp - prevMaxMp;
@@ -1378,6 +1682,35 @@ function winBattle() {
   gainXp(xpGain);
   grantDropsToPlayer(drops);
 
+  if (Array.isArray(state.enemyQueue) && state.enemyQueue.length > 1) {
+    state.enemyQueue.shift();
+    state.enemy = state.enemyQueue[0];
+    state._animateEnemyIn = true;
+    state.playerDefending = false;
+    state.playerDodging = false;
+    state.battleTurn = 0;
+    clearStatuses(state.enemy);
+    ensureStatuses(state.enemy);
+    ensureStatuses(state.player);
+    addLog("INFO", `${state.currentStageName || "Stage"}: Musuh berikutnya muncul: ${state.enemy.name} (Lv${state.enemy.level})`);
+
+    if (state.enemy.spd > state.player.spd) {
+      setTurn("enemy");
+      addLog("TURN", `${state.enemy.name} lebih cepat! Musuh duluan.`);
+      refresh(state);
+      setTimeout(() => {
+        enemyTurn();
+        refresh(state);
+      }, 450);
+      return;
+    }
+    state.battleTurn = (state.battleTurn || 0) + 1;
+    beginPlayerTurn();
+    addLog("TURN", "Kamu lebih cepat!");
+    refresh(state);
+    return;
+  }
+
   const summary = { outcome: "win", gold: goldGain, xp: xpGain, drops, enemyName: e.name };
   endBattle("Pertarungan selesai.", summary);
 }
@@ -1426,26 +1759,20 @@ function enemyTurn() {
     if (res.missed) {
       playDodgeFade("player");
       playDodgeFade("player");
-      if (state.playerDodging) addLog("YOU", "Dodge berhasil! Serangan musuh meleset.");
-      else addLog("YOU", "Menghindar! Serangan musuh meleset.");
-      addLog("ENEMY", `${e.name} memakai Rage Strike, tapi meleset!`);
+      showDamageText("player", "MISS");
       endTurnAfter(0);
     } else {
       const delays = [];
-      if (res.blocked > 0) addLog("INFO", "Serangan diblokir sebagian!");
       if (res.dmg > 0) {
         delays.push(applyDamageAfterDelay(p, res.dmg, "player", 230));
       }
       if (res.reflected > 0) {
         delays.push(applyDamageAfterDelay(e, res.reflected, "enemy", 430));
       }
-      if (res.crit || res.combustion) {
-        playCritShake("player");
-        if (res.crit && res.combustion) addLog("ENEMY", `CRITICAL + COMBUSTION! ${e.name} memakai Rage Strike! Damage ${res.dmg}.`);
-        else if (res.crit) addLog("ENEMY", `CRITICAL! ${e.name} memakai Rage Strike! Damage ${res.dmg}.`);
-        else addLog("ENEMY", `COMBUSTION! ${e.name} memakai Rage Strike! Damage ${res.dmg}.`);
-      } else {
-        addLog("ENEMY", `${e.name} memakai Rage Strike! Damage ${res.dmg}.`);
+      if (res.crit || res.combustion) playCritShake("player");
+      showDamageText("player", formatDamageText(res, res.dmg));
+      if (res.reflected > 0) {
+        showDamageText("enemy", `-${res.reflected} (REFLECT)`);
       }
       const wait = delays.length ? Math.max(...delays, 180) + 40 : 0;
       endTurnAfter(wait);
@@ -1454,26 +1781,20 @@ function enemyTurn() {
     const res = resolveAttack(e, p, 2, { dodgeBonus: state.playerDodging ? 30 : 0 });
 
     if (res.missed) {
-      if (state.playerDodging) addLog("YOU", "Dodge berhasil! Serangan musuh meleset.");
-      else addLog("YOU", "Menghindar! Serangan musuh meleset.");
-      addLog("ENEMY", `${e.name} menyerang, tapi meleset!`);
+      showDamageText("player", "MISS");
       endTurnAfter(0);
     } else {
       const delays = [];
-      if (res.blocked > 0) addLog("INFO", "Serangan diblokir sebagian!");
       if (res.dmg > 0) {
         delays.push(applyDamageAfterDelay(p, res.dmg, "player", 230));
       }
       if (res.reflected > 0) {
         delays.push(applyDamageAfterDelay(e, res.reflected, "enemy", 430));
       }
-      if (res.crit || res.combustion) {
-        playCritShake("player");
-        if (res.crit && res.combustion) addLog("ENEMY", `CRITICAL + COMBUSTION! ${e.name} menyerang! Damage ${res.dmg}.`);
-        else if (res.crit) addLog("ENEMY", `CRITICAL! ${e.name} menyerang! Damage ${res.dmg}.`);
-        else addLog("ENEMY", `COMBUSTION! ${e.name} menyerang! Damage ${res.dmg}.`);
-      } else {
-        addLog("ENEMY", `${e.name} menyerang! Damage ${res.dmg}.`);
+      if (res.crit || res.combustion) playCritShake("player");
+      showDamageText("player", formatDamageText(res, res.dmg));
+      if (res.reflected > 0) {
+        showDamageText("enemy", `-${res.reflected} (REFLECT)`);
       }
       const wait = delays.length ? Math.max(...delays, 180) + 40 : 0;
       endTurnAfter(wait);
@@ -1518,23 +1839,31 @@ function explore() {
 }
 
 function openAdventureLevels(){
+  const stages = [1, 3, 5, 7, 10, 11];
   modal.open(
     "Adventure - Level",
-    Array.from({ length: 10 }, (_, i) => ({
-      title: `Level ${i + 1}`,
-      desc: "Pilih level petualangan",
+    stages.map((lv) => ({
+      title: `Stage ${lv}`,
+      desc: lv === 11 ? "Stage spesial: 3 musuh." : "Pilih stage petualangan",
       meta: "",
-      value: i + 1,
+      value: lv,
     })),
     (level) => {
       const targetLv = clamp(Number(level) || 1, 1, MAX_LEVEL);
-      startAdventureBattle(targetLv, `Level ${targetLv}`);
+      startAdventureBattle(targetLv, `Stage ${targetLv}`);
     }
   );
 }
 
 function startAdventureBattle(targetLevel, stageName){
-  state.enemy = genEnemy(targetLevel);
+  state.currentStageName = stageName;
+  if (targetLevel === 11) {
+    state.enemyQueue = Array.from({ length: 3 }, () => genEnemy(targetLevel));
+    state.enemy = state.enemyQueue[0];
+  } else {
+    state.enemyQueue = null;
+    state.enemy = genEnemy(targetLevel);
+  }
   state.inBattle = true;
   state._animateEnemyIn = true;
   state.playerDefending = false;
@@ -1608,11 +1937,10 @@ function attack() {
   if (res.missed) {
     playDodgeFade("enemy");
     playDodgeFade("enemy");
-    addLog("ENEMY", `${e.name} menghindar! (Evasion ${res.evasion}%)`);
+    showDamageText("enemy", "MISS");
     return;
   }
 
-  if (res.blocked > 0) addLog("INFO", `${e.name} memblokir seranganmu!`);
   if (res.dmg > 0) {
     e.hp = clamp(e.hp - res.dmg, 0, e.maxHp);
     playSlash("enemy", 80);
@@ -1622,13 +1950,10 @@ function attack() {
     playSlash("player", 150);
   }
 
-  if (res.crit || res.combustion) {
-    playCritShake("enemy");
-    if (res.crit && res.combustion) addLog("YOU", `CRITICAL + COMBUSTION! Attack Damage ${res.dmg}.`);
-    else if (res.crit) addLog("YOU", `CRITICAL! Attack Damage ${res.dmg}.`);
-    else addLog("YOU", `COMBUSTION! Attack Damage ${res.dmg}.`);
-  } else {
-    addLog("YOU", `Attack! Damage ${res.dmg}.`);
+  if (res.crit || res.combustion) playCritShake("enemy");
+  showDamageText("enemy", formatDamageText(res, res.dmg));
+  if (res.reflected > 0) {
+    showDamageText("player", `-${res.reflected} (REFLECT)`);
   }
 
   if (p.hp <= 0) {
@@ -1690,6 +2015,9 @@ function useItem(name) {
     const before = p.mp;
     p.mp = clamp(p.mp + it.amount, 0, p.maxMp);
     addLog("ITEM", `Memakai ${name}. MP ${before}→${p.mp}`);
+  } else {
+    addLog("WARN", "Item ini bukan consumable.");
+    return false;
   }
 
   it.qty -= 1;
@@ -1706,12 +2034,13 @@ function openSkillModal() {
     const cdLeft = s.cdLeft || 0;
     const cdText = (s.cooldown ? `CD ${cdLeft}/${s.cooldown}` : "CD -");
     const meta = `MP ${s.mpCost} • ${cdText}`;
+    const title = `${s.name}`;
 
     // If on cooldown, make it readonly by omitting value
     if (cdLeft > 0) {
-      return { title: `${s.name}`, desc: `${s.desc}`, meta, value: undefined, className: "readonly" };
+      return { title, icon: s.icon, desc: `${s.desc}`, meta, value: undefined, className: "readonly" };
     }
-    return { title: `${s.name}`, desc: `${s.desc}`, meta, value: i };
+    return { title, icon: s.icon, desc: `${s.desc}`, meta, value: i };
   });
 
   modal.open("Skill", choices, (idx) => {
@@ -1736,9 +2065,8 @@ function openSkillModal() {
     const res = resolveAttack(p, state.enemy, s.power);
     if (res.missed) {
       playDodgeFade("enemy");
-      addLog("ENEMY", `${state.enemy.name} menghindar! (Evasion ${res.evasion}%)`);
+      showDamageText("enemy", "MISS");
     } else {
-      if (res.blocked > 0) addLog("INFO", `${state.enemy.name} memblokir skillmu!`);
       if (res.dmg > 0) {
         state.enemy.hp = clamp(state.enemy.hp - res.dmg, 0, state.enemy.maxHp);
         playSlash("enemy", 80);
@@ -1747,12 +2075,10 @@ function openSkillModal() {
         p.hp = clamp(p.hp - res.reflected, 0, p.maxHp);
         playSlash("player", 150);
       }
-      if (res.crit || res.combustion) {
-        if (res.crit && res.combustion) addLog("YOU", `CRITICAL + COMBUSTION! ${s.name}! Damage ${res.dmg}.`);
-        else if (res.crit) addLog("YOU", `CRITICAL! ${s.name}! Damage ${res.dmg}.`);
-        else addLog("YOU", `COMBUSTION! ${s.name}! Damage ${res.dmg}.`);
-      } else {
-        addLog("YOU", `${s.name}! Damage ${res.dmg}.`);
+      if (res.crit || res.combustion) playCritShake("enemy");
+      showDamageText("enemy", formatDamageText(res, res.dmg));
+      if (res.reflected > 0) {
+        showDamageText("player", `-${res.reflected} (REFLECT)`);
       }
     }
 
@@ -1770,10 +2096,13 @@ function openSkillModal() {
 
 function openItemModal() {
   const inv = state.player.inv;
-  const keys = Object.keys(inv);
+  const keys = Object.keys(inv).filter((k) => {
+    const it = inv[k];
+    return it && (it.kind === "heal_hp" || it.kind === "heal_mp");
+  });
 
   if (!keys.length) {
-    addLog("WARN", "Inventory kosong.");
+    addLog("WARN", "Tidak ada item consumable.");
     return;
   }
 
@@ -1813,9 +2142,9 @@ function applyAttributeDelta(statKey, delta){
 
   // apply derived changes (rebalanced)
   if (key === "str") {
-    // STR: ATK +2, Combustion Chance +3%
+    // STR: ATK +2, Combustion Chance +2%
     p.atk = (p.atk || 0) + (2 * delta);
-    p.combustionChance = clamp((p.combustionChance || 0) + (3 * delta), 0, 100);
+    p.combustionChance = clamp((p.combustionChance || 0) + (2 * delta), 0, 100);
   }
   if (key === "dex") {
     // DEX: Evasion +1%, Accuracy +2, SPD +1
@@ -1865,10 +2194,12 @@ function openProfileModal(){
     [
       { title: "Equipment", desc: "Kelola gear (hand, head, pant, armor, shoes).", meta: "", value: "equip" },
       { title: "Stat", desc: "Atur stat poin.", meta: "", value: "stat" },
+      { title: "Skill Slot", desc: "Pilih skill untuk slot battle.", meta: "", value: "skill_slot" },
     ],
     (pick) => {
       if (pick === "equip") return openEquipmentModal();
       if (pick === "stat") return openProfileStatModal();
+      if (pick === "skill_slot") return openSkillSlotModal();
     }
   );
 }
@@ -1894,6 +2225,7 @@ function openProfileStatModal(){
   modal.open(
     "Stat",
     [
+      { title: "Back", desc: "Kembali ke Profile.", meta: "", value: "back", className: "subMenuBack" },
       { title: `Stat Points : ${pts}`, desc: "Dapatkan dari level up. Gunakan tombol + untuk menambah stat.", meta: "" },
       mk("str", "STR", "Meningkatkan ATK dan Combustion Chance"),
       mk("dex", "DEX", "Meningkatkan Evasion, Accuracy, dan SPD"),
@@ -1902,6 +2234,7 @@ function openProfileStatModal(){
       mk("foc", "FOC", "Meningkatkan Critical Chance dan Critical Damage"),
     ],
     (pick) => {
+      if (pick === "back") return openProfileModal();
       const s = String(pick || "");
       const m = s.match(/^(str|dex|int|vit|foc):([+-]?\d+)$/);
       if (!m) return;
@@ -1920,6 +2253,92 @@ function openProfileStatModal(){
   );
 }
 
+function openSkillSlotModal(){
+  const p = state.player;
+  if (!p) return;
+  if (!Array.isArray(p.skillSlots)) {
+    p.skillSlots = Array.from({ length: 8 }, () => null);
+  }
+  const choices = [{ title: "Back", desc: "Kembali ke Profile.", meta: "", value: "back", className: "subMenuBack" }]
+    .concat(Array.from({ length: 8 }, (_, i) => {
+    const slotName = p.skillSlots[i];
+    const skill = slotName ? getSkillByName(p, slotName) : null;
+    const title = skill ? `${skill.name}` : "Kosong";
+    return {
+      title: `Slot ${i + 1}`,
+      desc: skill ? skill.desc : "Kosong",
+      meta: skill ? title : "Klik untuk pilih",
+      icon: skill ? skill.icon : "",
+      value: `slot:${i}`,
+      allowClick: true,
+      buttons: [
+        { text: "Clear", value: `clear:${i}`, disabled: !skill },
+      ],
+      keepOpen: true,
+    };
+  }));
+
+  modal.open(
+    "Skill Slot",
+    choices,
+    (pick) => {
+      if (pick === "back") return openProfileModal();
+      const [action, rawIdx] = String(pick || "").split(":");
+      const idx = parseInt(rawIdx, 10);
+      if (Number.isNaN(idx)) return;
+      if (action === "slot") {
+        openSkillSlotSelect(idx);
+        return;
+      }
+      if (action === "clear") {
+        p.skillSlots[idx] = null;
+        if (Array.isArray(state.slots)) state.slots[state.activeSlot] = p;
+        autosave(state);
+        refresh(state);
+        openSkillSlotModal();
+      }
+    }
+  );
+}
+
+function openSkillSlotSelect(slotIdx){
+  const p = state.player;
+  if (!p || !Array.isArray(p.skills)) return;
+  if (!Array.isArray(p.skillSlots)) {
+    p.skillSlots = Array.from({ length: 8 }, () => null);
+  }
+  const rows = [{ title: "Back", desc: "Kembali ke Skill Slot.", meta: "", value: "back", className: "subMenuBack" }]
+    .concat(p.skills.map((skill) => {
+    const equippedIndex = p.skillSlots.findIndex((name) => name === skill.name);
+    const alreadyEquipped = equippedIndex !== -1 && equippedIndex !== slotIdx;
+    const meta = `MP ${skill.mpCost} • Power ${skill.power}${alreadyEquipped ? " • Equipped" : ""}`;
+    return {
+      title: skill.name,
+      icon: skill.icon,
+      desc: skill.desc || "Skill",
+      meta,
+      value: alreadyEquipped ? undefined : `pick:${skill.name}`,
+      className: alreadyEquipped ? "readonly" : "",
+    };
+  }));
+
+  modal.open(
+    `Pilih Skill (Slot ${slotIdx + 1})`,
+    rows.length ? rows : [{ title: "Belum ada skill", desc: "Pelajari skill di Shop.", meta: "", value: undefined, className:"readonly" }],
+    (pick) => {
+      if (pick === "back") return openSkillSlotModal();
+      const name = String(pick || "").replace(/^pick:/, "");
+      const skill = getSkillByName(p, name);
+      if (!skill) return;
+      p.skillSlots[slotIdx] = skill.name;
+      if (Array.isArray(state.slots)) state.slots[state.activeSlot] = p;
+      autosave(state);
+      refresh(state);
+      openSkillSlotModal();
+    }
+  );
+}
+
 function openEquipmentModal(){
   const p = state.player;
   if (!p || !p.equipment) return;
@@ -1932,9 +2351,14 @@ function openEquipmentModal(){
   ];
   const hasGear = (p.inv && Object.values(p.inv).some((it) => it.kind === "gear")) || false;
 
-  const choices = slots.map((s) => {
+  const choices = [{ title: "Back", desc: "Kembali ke Profile.", meta: "", value: "back", className: "subMenuBack" }]
+    .concat(slots.map((s) => {
     const cur = p.equipment[s.key] || null;
-    const desc = cur ? `Memakai: ${cur}` : "Kosong";
+    const curItem = cur ? getItemRef(cur, p) : null;
+    const statText = curItem ? formatItemStats(curItem) : "";
+    const desc = cur
+      ? `Memakai: ${cur}${statText ? ` (${statText})` : ""}`
+      : "Kosong";
     const meta = cur
       ? "Klik untuk ganti"
       : (hasGear ? "Klik untuk equip" : "Tidak ada gear");
@@ -1949,12 +2373,13 @@ function openEquipmentModal(){
       ],
       keepOpen: true,
     };
-  });
+  }));
 
   modal.open(
     "Equipment",
     choices.map((c) => ({ ...c, className: `equipmentCard ${c.className || ""}`.trim(), value: c.value })),
     (pick) => {
+      if (pick === "back") return openProfileModal();
       const [action, slot] = String(pick || "").split(":");
       if (!slot) return;
       if (action === "equip") {
@@ -1983,13 +2408,15 @@ function openEquipSelect(slot){
 
   modal.open(
     `Pilih item untuk ${slot}`,
-    keys.map((k) => ({
-      title: `${k} x${p.inv[k].qty}`,
-      desc: p.inv[k].desc || "Perlengkapan",
-      meta: `Equip (${p.inv[k].slot || "-"})`,
-      value: k,
-    })),
+    [{ title: "Back", desc: "Kembali ke Equipment.", meta: "", value: "back", className: "subMenuBack" }]
+      .concat(keys.map((k) => ({
+        title: `${k} x${p.inv[k].qty}`,
+        desc: p.inv[k].desc || "Perlengkapan",
+        meta: formatItemStats(p.inv[k]) || `Equip (${p.inv[k].slot || "-"})`,
+        value: k,
+      }))),
     (name) => {
+      if (name === "back") return openEquipmentModal();
       const ok = equipItem(slot, name);
       if (!ok) addLog("WARN", "Item tidak bisa dipakai.");
       openEquipmentModal();
@@ -2052,15 +2479,28 @@ function openStatsModal() {
 
 function openInventoryReadOnly() {
   const inv = state.player.inv;
-  const keys = Object.keys(inv);
+  const category = state.inventoryCategory || "item";
+  const keys = Object.keys(inv).filter((k) => {
+    const it = inv[k];
+    if (!it) return false;
+    return category === "equipment" ? it.kind === "gear" : it.kind !== "gear";
+  });
 
-  const header = [{ title: `Gold: ${state.player.gold}`, desc: "", meta: "" }];
+  const header = [
+    { title: "Item", desc: "Consumable & item pakai.", meta: "", value: "invcat:item", className: `marketCategory marketPrimary ${category === "item" ? "active" : ""}`.trim() },
+    { title: "Equipment", desc: "Gear & perlengkapan.", meta: "", value: "invcat:equipment", className: `marketCategory marketPrimary ${category === "equipment" ? "active" : ""}`.trim() },
+  ];
 
   if (!keys.length) {
     modal.open(
       "Inventory",
-      header.concat([{ title: "Kosong", desc: "Belum punya item.", meta: "" }]),
-      () => {}
+      header.concat([{ title: "Kosong", desc: "Belum ada item di kategori ini.", meta: "" }]),
+      (pick) => {
+        if (String(pick || "").startsWith("invcat:")) {
+          state.inventoryCategory = String(pick || "").replace("invcat:", "");
+          openInventoryReadOnly();
+        }
+      }
     );
     return;
   }
@@ -2075,7 +2515,12 @@ function openInventoryReadOnly() {
         value: k,
       }))
     ),
-    () => {}
+    (pick) => {
+      if (String(pick || "").startsWith("invcat:")) {
+        state.inventoryCategory = String(pick || "").replace("invcat:", "");
+        openInventoryReadOnly();
+      }
+    }
   );
 }
 
@@ -2229,6 +2674,14 @@ function bind() {
   if (ccCreate) ccCreate.onclick = handleCreateCharacter;
   const ccCancel = byId("ccCancel");
   if (ccCancel) ccCancel.onclick = cancelCreateCharacter;
+  document.querySelectorAll(".genderOption").forEach((btn) => {
+    btn.onclick = () => {
+      document.querySelectorAll(".genderOption").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      const genderEl = byId("ccGender");
+      if (genderEl) genderEl.value = btn.getAttribute("data-gender") || "male";
+    };
+  });
 
 
   // Battle
