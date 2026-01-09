@@ -81,11 +81,10 @@ h1{ font-size:18px; margin:0; font-weight:800; letter-spacing:.2px; }
 }
 .enemyRow{
   display:flex;
+  flex-direction:column;
   gap:10px;
-  flex-wrap:wrap;
 }
 .enemyCard{
-  flex:1 1 0;
   min-width:200px;
 }
 .enemyCard.extra{
@@ -238,18 +237,21 @@ button.danger{ border-color: rgba(255, 120, 120, .55); background:#2a1212; color
 button:disabled{ opacity:.45; cursor:not-allowed; }
 
 body.inBattle .grid{
-  gap:8px;
-  grid-template-columns: 1fr 1.1fr 1fr;
+  gap:10px;
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr);
+  grid-template-areas:
+    "player enemies"
+    "action action";
 }
 body.inBattle #playerCard{
-  grid-column: 2;
+  grid-area: player;
 }
 body.inBattle #enemyRow{
-  grid-column: 1 / -1;
-  justify-content:center;
+  grid-area: enemies;
+  align-items:flex-end;
 }
 body.inBattle #actionCard{
-  grid-column: 1 / -1;
+  grid-area: action;
 }
 body.inBattle .card{
   padding:8px;
