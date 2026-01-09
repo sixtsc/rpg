@@ -628,6 +628,32 @@ function skillIconHtml(skill){
   return `<span class="skillIconWrap"><img class="skillIcon" src="${escapeHtml(skill.icon)}" alt="" /></span>`;
 }
 
+function renderEnemyRow() {
+  const row = $("enemyRow");
+  if (!row) return;
+  row.querySelectorAll(".enemyCard.extra").forEach((el) => el.remove());
+
+  const queue = Array.isArray(state.enemyQueue) && state.enemyQueue.length
+    ? state.enemyQueue
+    : (state.enemy ? [state.enemy] : []);
+
+  queue.slice(1, 3).forEach((enemy) => {
+    const card = document.createElement("div");
+    card.className = "card enemyCard extra";
+    const hpPct = enemy.maxHp ? clamp((enemy.hp / enemy.maxHp) * 100, 0, 100) : 0;
+    card.innerHTML = `
+      <div class="sectionTitle">
+        <div><b>${escapeHtml(enemy.name)}</b> <span class="pill">Lv${enemy.level}</span></div>
+      </div>
+      <div class="enemyMiniMeta">
+        <div class="bar"><div class="fill hp" style="width:${hpPct}%"></div></div>
+        <div class="muted">${enemy.hp}/${enemy.maxHp}</div>
+      </div>
+    `;
+    row.appendChild(card);
+  });
+}
+
 const damageTimers = { player: null, enemy: null };
 function showDamageText(target, text){
   const el = $(target === "player" ? "playerDamage" : "enemyDamage");
@@ -1072,6 +1098,7 @@ function refresh(state) {
     const enemyBtns = $("enemyBtns");
     if (enemyBtns) enemyBtns.style.display = "none";
   }
+  renderEnemyRow();
 }
 
 
@@ -1817,7 +1844,7 @@ function openAdventureLevels(){
     "Adventure - Level",
     stages.map((lv) => ({
       title: `Stage ${lv}`,
-      desc: lv === 11 ? "Stage spesial: 2 musuh." : "Pilih stage petualangan",
+      desc: lv === 11 ? "Stage spesial: 1-3 musuh." : "Pilih stage petualangan",
       meta: "",
       value: lv,
     })),
@@ -1831,7 +1858,8 @@ function openAdventureLevels(){
 function startAdventureBattle(targetLevel, stageName){
   state.currentStageName = stageName;
   if (targetLevel === 11) {
-    state.enemyQueue = [genEnemy(targetLevel), genEnemy(targetLevel)];
+    const enemyCount = randInt(1, 3);
+    state.enemyQueue = Array.from({ length: enemyCount }, () => genEnemy(targetLevel));
     state.enemy = state.enemyQueue[0];
   } else {
     state.enemyQueue = null;

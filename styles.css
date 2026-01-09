@@ -79,6 +79,26 @@ h1{ font-size:18px; margin:0; font-weight:800; letter-spacing:.2px; }
   padding:12px;
   box-shadow:0 6px 18px rgba(0,0,0,.35);
 }
+.enemyRow{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.enemyCard{
+  flex:1 1 0;
+  min-width:200px;
+}
+.enemyCard.extra{
+  padding:10px;
+}
+.enemyMiniMeta{
+  margin-top:6px;
+  display:grid;
+  gap:6px;
+}
+.enemyMiniMeta .muted{
+  font-size:11px;
+}
 
 .sectionTitle{
   display:flex;
@@ -219,6 +239,17 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
 
 body.inBattle .grid{
   gap:8px;
+  grid-template-columns: 1fr 1.1fr 1fr;
+}
+body.inBattle #playerCard{
+  grid-column: 2;
+}
+body.inBattle #enemyRow{
+  grid-column: 1 / -1;
+  justify-content:center;
+}
+body.inBattle #actionCard{
+  grid-column: 1 / -1;
 }
 body.inBattle .card{
   padding:8px;

@@ -136,33 +136,35 @@
 
 
       <!-- RIGHT: Enemy ONLY -->
-      <div class="card" id="enemyCard">
-        <div class="damageText" id="enemyDamage"></div>
-        <div class="sectionTitle">
-          <div><b id="eNameTitle">-</b> <span class="pill" id="eLvl">-</span></div>
-          <button class="pill muted iconPill" id="btnEnemyStats" type="button">?</button>
-        </div>
+      <div class="enemyRow" id="enemyRow">
+        <div class="card enemyCard" id="enemyCard">
+          <div class="damageText" id="enemyDamage"></div>
+          <div class="sectionTitle">
+            <div><b id="eNameTitle">-</b> <span class="pill" id="eLvl">-</span></div>
+            <button class="pill muted iconPill" id="btnEnemyStats" type="button">?</button>
+          </div>
 
-        <div class="nameSub" id="eSub">—</div>
-        <div class="avatarWrap" id="eAvatarWrap" style="display:none;">
-          <div class="avatarBox" id="eAvatarBox"></div>
-        </div>
+          <div class="nameSub" id="eSub">—</div>
+          <div class="avatarWrap" id="eAvatarWrap" style="display:none;">
+            <div class="avatarBox" id="eAvatarBox"></div>
+          </div>
 
 <div class="bars" id="enemyBars" style="display:none;">
-          <div>
-            <div class="barRow">
-              <span class="muted">Enemy HP</span><span class="muted" id="eHpText">0/0</span>
+            <div>
+              <div class="barRow">
+                <span class="muted">Enemy HP</span><span class="muted" id="eHpText">0/0</span>
+              </div>
+              <div class="bar"><div class="fill hp" id="eHpBar"></div></div>
             </div>
-            <div class="bar"><div class="fill hp" id="eHpBar"></div></div>
-          </div>
-          <div>
-            <div class="barRow">
-              <span class="muted">Enemy MP</span><span class="muted" id="eMpText">0/0</span>
+            <div>
+              <div class="barRow">
+                <span class="muted">Enemy MP</span><span class="muted" id="eMpText">0/0</span>
+              </div>
+              <div class="bar"><div class="fill mp" id="eMpBar"></div></div>
             </div>
-            <div class="bar"><div class="fill mp" id="eMpBar"></div></div>
           </div>
         </div>
-</div>
+      </div>
 
       
       <!-- ACTION: Battle actions FULL WIDTH -->
