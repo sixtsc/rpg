@@ -588,6 +588,7 @@ function showToast(msg, tag) {
 }
 
 function addLog(tag, msg) {
+  if (tag !== "SKILL") return;
   showToast(msg, tag);
 }
 
@@ -707,7 +708,7 @@ function useSkillAtIndex(idx){
 
   p.mp -= s.mpCost;
 
-  addLog("INFO", s.desc || "Skill digunakan.");
+  addLog("SKILL", s.name);
   const res = resolveAttack(p, e, s.power);
   if (res.missed) {
     playDodgeFade("enemy");
