@@ -817,9 +817,11 @@ const modal = {
     body.classList.remove("marketGrid");
     body.classList.remove("equipmentGrid");
     body.classList.remove("marketSubCompact");
+    body.classList.remove("inventoryList");
     if (String(title).toLowerCase().includes("stats")) body.classList.add("statsGrid");
     if (String(title).toLowerCase().includes("market")) body.classList.add("marketGrid");
     if (String(title).toLowerCase().includes("equipment")) body.classList.add("equipmentGrid");
+    if (String(title).toLowerCase().includes("inventory")) body.classList.add("inventoryList");
     if (choices.some((c) => String(c.className || "").includes("marketSub"))) {
       body.classList.add("marketSubCompact");
     }

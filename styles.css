@@ -99,6 +99,9 @@ h1{ font-size:18px; margin:0; font-weight:800; letter-spacing:.2px; }
   gap:8px;
   margin:8px 0 4px;
 }
+body.inBattle .playerCurrency{
+  display:none;
+}
 .currencyPill{
   display:inline-flex;
   align-items:center;
@@ -316,6 +319,13 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   gap:10px;
   max-height:60vh;
   overflow:auto;
+}
+
+/* Inventory modal: use a vertical list to avoid grid confusion */
+.modalBody.inventoryList{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
 }
 
 
