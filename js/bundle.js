@@ -1541,6 +1541,8 @@ function endBattle(reason, summary) {
 function finalizeBattle(reason){
   state.inBattle = false;
   state.battleResult = null;
+  state.enemyQueue = null;
+  state.currentStageName = null;
   clearStatuses(state.enemy);
   state.enemy = null;
   state.playerDefending = false;
@@ -1652,6 +1654,35 @@ function winBattle() {
 
   gainXp(xpGain);
   grantDropsToPlayer(drops);
+
+  if (Array.isArray(state.enemyQueue) && state.enemyQueue.length > 1) {
+    state.enemyQueue.shift();
+    state.enemy = state.enemyQueue[0];
+    state._animateEnemyIn = true;
+    state.playerDefending = false;
+    state.playerDodging = false;
+    state.battleTurn = 0;
+    clearStatuses(state.enemy);
+    ensureStatuses(state.enemy);
+    ensureStatuses(state.player);
+    addLog("INFO", `${state.currentStageName || "Stage"}: Musuh berikutnya muncul: ${state.enemy.name} (Lv${state.enemy.level})`);
+
+    if (state.enemy.spd > state.player.spd) {
+      setTurn("enemy");
+      addLog("TURN", `${state.enemy.name} lebih cepat! Musuh duluan.`);
+      refresh(state);
+      setTimeout(() => {
+        enemyTurn();
+        refresh(state);
+      }, 450);
+      return;
+    }
+    state.battleTurn = (state.battleTurn || 0) + 1;
+    beginPlayerTurn();
+    addLog("TURN", "Kamu lebih cepat!");
+    refresh(state);
+    return;
+  }
 
   const summary = { outcome: "win", gold: goldGain, xp: xpGain, drops, enemyName: e.name };
   endBattle("Pertarungan selesai.", summary);
@@ -1781,12 +1812,12 @@ function explore() {
 }
 
 function openAdventureLevels(){
-  const stages = [1, 3, 5, 7, 10];
+  const stages = [1, 3, 5, 7, 10, 11];
   modal.open(
     "Adventure - Level",
     stages.map((lv) => ({
       title: `Stage ${lv}`,
-      desc: "Pilih stage petualangan",
+      desc: lv === 11 ? "Stage spesial: 2 musuh." : "Pilih stage petualangan",
       meta: "",
       value: lv,
     })),
@@ -1798,7 +1829,14 @@ function openAdventureLevels(){
 }
 
 function startAdventureBattle(targetLevel, stageName){
-  state.enemy = genEnemy(targetLevel);
+  state.currentStageName = stageName;
+  if (targetLevel === 11) {
+    state.enemyQueue = [genEnemy(targetLevel), genEnemy(targetLevel)];
+    state.enemy = state.enemyQueue[0];
+  } else {
+    state.enemyQueue = null;
+    state.enemy = genEnemy(targetLevel);
+  }
   state.inBattle = true;
   state._animateEnemyIn = true;
   state.playerDefending = false;
