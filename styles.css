@@ -326,6 +326,7 @@ body.inBattle .enemyCard{
   width:var(--battle-card-width);
   max-width:var(--battle-card-width);
   height:var(--battle-card-height);
+  box-sizing:border-box;
   margin:0;
   overflow:hidden;
 }
