@@ -287,9 +287,9 @@ body.inBattle .card{
 }
 body.inBattle .allyRow,
 body.inBattle .enemyRow{
-  display:grid;
-  grid-auto-rows: 170px;
-  align-content:start;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
   gap:14px;
 }
 body.inBattle .allyCard,
@@ -299,9 +299,11 @@ body.inBattle .enemyCard{
   gap:6px;
   font-size:13px;
   width:100%;
-  max-width:none;
-  height:170px;
-  margin:0;
+  max-width:220px;
+  min-width:160px;
+  height:160px;
+  margin:0 auto;
+  overflow:hidden;
 }
 body.inBattle .sectionTitle{
   flex-wrap:nowrap;
@@ -371,8 +373,7 @@ body.inBattle .enemyMiniMeta .muted{
   }
   body.inBattle .allyRow,
   body.inBattle .enemyRow{
-    grid-auto-rows: 150px;
-    align-content:start;
+    align-items:center;
     gap:12px;
   }
   body.inBattle .card{
@@ -381,7 +382,8 @@ body.inBattle .enemyMiniMeta .muted{
   body.inBattle .allyCard,
   body.inBattle .enemyCard{
     font-size:12px;
-    max-width:none;
+    max-width:200px;
+    min-width:140px;
     height:150px;
   }
   body.inBattle .bar{
