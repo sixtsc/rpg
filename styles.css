@@ -108,7 +108,7 @@ h1{ font-size:18px; margin:0; font-weight:800; letter-spacing:.2px; }
   gap:6px;
 }
 .enemyCard{
-  min-width:160px;
+  min-width:140px;
 }
 .enemyCard.active{
   border-color: rgba(97, 162, 255, 0.75);
@@ -287,7 +287,7 @@ body.inBattle .card{
 body.inBattle .allyCard,
 body.inBattle .enemyCard{
   font-size:13px;
-  max-width:200px;
+  max-width:190px;
 }
 body.inBattle .sectionTitle{
   margin-bottom:6px;
@@ -332,7 +332,7 @@ body.inBattle .enemyMiniMeta .muted{
   body.inBattle .allyCard,
   body.inBattle .enemyCard{
     font-size:12px;
-    max-width:170px;
+    max-width:160px;
   }
   body.inBattle .bar{
     height:7px;
