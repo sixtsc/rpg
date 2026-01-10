@@ -270,14 +270,17 @@ body.inBattle .grid{
     "allies enemies"
     "action action";
   align-items:start;
+  justify-items:center;
 }
 body.inBattle #allyRow{
   grid-area: allies;
   align-items:center;
+  width:100%;
 }
 body.inBattle #enemyRow{
   grid-area: enemies;
   align-items:center;
+  width:100%;
 }
 body.inBattle #actionCard{
   grid-area: action;
@@ -298,9 +301,8 @@ body.inBattle .enemyCard{
   flex-direction:column;
   gap:6px;
   font-size:13px;
-  width:100%;
-  max-width:220px;
-  min-width:160px;
+  width:180px;
+  max-width:180px;
   height:160px;
   margin:0 auto;
   overflow:hidden;
@@ -382,8 +384,8 @@ body.inBattle .enemyMiniMeta .muted{
   body.inBattle .allyCard,
   body.inBattle .enemyCard{
     font-size:12px;
-    max-width:200px;
-    min-width:140px;
+    width:150px;
+    max-width:150px;
     height:150px;
   }
   body.inBattle .bar{
