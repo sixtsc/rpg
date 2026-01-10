@@ -341,7 +341,9 @@ function newState(){
 
     // Current runtime
     player: normalizePlayer(newPlayer()),
+    allies: [],
     enemy: null,
+    enemyTargetIndex: 0,
     inBattle: false,
     battleResult: null,
     shopMarketCategory: "consumable",
@@ -628,19 +630,89 @@ function skillIconHtml(skill){
   return `<span class="skillIconWrap"><img class="skillIcon" src="${escapeHtml(skill.icon)}" alt="" /></span>`;
 }
 
+function normalizeEnemyQueue(){
+  if (!Array.isArray(state.enemyQueue)) return [];
+  state.enemyQueue = state.enemyQueue.filter((enemy) => enemy && enemy.hp > 0);
+  return state.enemyQueue;
+}
+
+function setActiveEnemyByIndex(index){
+  const queue = normalizeEnemyQueue();
+  if (!queue.length) return false;
+  const idx = clamp(index, 0, queue.length - 1);
+  state.enemy = queue[idx];
+  state.enemyTargetIndex = idx;
+  return true;
+}
+
+function renderAllyRow() {
+  const row = $("allyRow");
+  if (!row) return;
+  const allies = Array.isArray(state.allies) ? state.allies : [];
+  [1, 2].forEach((slotIndex, i) => {
+    const ally = allies[i] || null;
+    const nameEl = row.querySelector(`[data-ally-name="${slotIndex}"]`);
+    const lvlEl = row.querySelector(`[data-ally-lvl="${slotIndex}"]`);
+    const subEl = row.querySelector(`[data-ally-sub="${slotIndex}"]`);
+    const hpText = row.querySelector(`[data-ally-hp="${slotIndex}"]`);
+    const mpText = row.querySelector(`[data-ally-mp="${slotIndex}"]`);
+    const hpBar = row.querySelector(`[data-ally-hpbar="${slotIndex}"]`);
+    const mpBar = row.querySelector(`[data-ally-mpbar="${slotIndex}"]`);
+    const card = row.querySelector(`.allyCard.extra[data-ally-slot="${slotIndex}"]`);
+
+    if (!nameEl || !lvlEl || !subEl || !hpText || !mpText || !hpBar || !mpBar || !card) return;
+
+    if (ally) {
+      nameEl.textContent = ally.name || `NPC ${slotIndex}`;
+      lvlEl.textContent = `Lv${ally.level || 1}`;
+      subEl.textContent = ally.role || "Partner";
+      hpText.textContent = `${ally.hp}/${ally.maxHp}`;
+      mpText.textContent = `${ally.mp}/${ally.maxMp}`;
+      setBar(hpBar, ally.hp, ally.maxHp);
+      setBar(mpBar, ally.mp, ally.maxMp);
+      card.classList.remove("empty");
+      card.classList.add("active");
+      card.style.display = "block";
+    } else {
+      nameEl.textContent = `NPC ${slotIndex}`;
+      lvlEl.textContent = "Lv-";
+      subEl.textContent = "Slot kosong";
+      hpText.textContent = "0/0";
+      mpText.textContent = "0/0";
+      hpBar.style.width = "0%";
+      mpBar.style.width = "0%";
+      card.classList.add("empty");
+      card.classList.remove("active");
+      card.style.display = "none";
+    }
+  });
+}
+
 function renderEnemyRow() {
   const row = $("enemyRow");
   if (!row) return;
   row.querySelectorAll(".enemyCard.extra").forEach((el) => el.remove());
 
   const queue = Array.isArray(state.enemyQueue) && state.enemyQueue.length
-    ? state.enemyQueue
+    ? normalizeEnemyQueue()
     : (state.enemy ? [state.enemy] : []);
 
-  queue.slice(1, 3).forEach((enemy) => {
+  if (!queue.length) return;
+
+  const activeIndex = clamp(state.enemyTargetIndex || 0, 0, queue.length - 1);
+  if (queue[activeIndex] && queue[activeIndex] !== state.enemy) {
+    state.enemy = queue[activeIndex];
+  }
+  const activeEnemy = state.enemy;
+  const extras = queue.map((enemy, idx) => ({ enemy, idx }))
+    .filter((item) => item.idx !== activeIndex)
+    .slice(0, 2);
+
+  extras.forEach(({ enemy, idx }) => {
     const card = document.createElement("div");
     card.className = "card enemyCard extra";
     const hpPct = enemy.maxHp ? clamp((enemy.hp / enemy.maxHp) * 100, 0, 100) : 0;
+    if (enemy === activeEnemy) card.classList.add("active");
     card.innerHTML = `
       <div class="sectionTitle">
         <div><b>${escapeHtml(enemy.name)}</b> <span class="pill">Lv${enemy.level}</span></div>
@@ -650,6 +722,12 @@ function renderEnemyRow() {
         <div class="muted">${enemy.hp}/${enemy.maxHp}</div>
       </div>
     `;
+    card.onclick = () => {
+      if (setActiveEnemyByIndex(idx)) {
+        addLog("TARGET", `Target: ${enemy.name}`);
+        refresh(state);
+      }
+    };
     row.appendChild(card);
   });
 }
@@ -1070,6 +1148,16 @@ function refresh(state) {
 
     const enemyBtns = $("enemyBtns");
     if (enemyBtns) enemyBtns.style.display = "flex";
+    const enemyCard = $("enemyCard");
+    if (enemyCard) {
+      enemyCard.classList.toggle("active", !state.enemyQueue || state.enemyTargetIndex === 0);
+      enemyCard.onclick = () => {
+        if (setActiveEnemyByIndex(0)) {
+          addLog("TARGET", `Target: ${state.enemy?.name || "Musuh"}`);
+          refresh(state);
+        }
+      };
+    }
   } else {
     $("modePill").textContent = "Town";
     // turnCount/actionHint/battleHint hidden globally above
@@ -1097,7 +1185,13 @@ function refresh(state) {
 
     const enemyBtns = $("enemyBtns");
     if (enemyBtns) enemyBtns.style.display = "none";
+    const enemyCard = $("enemyCard");
+    if (enemyCard) {
+      enemyCard.classList.remove("active");
+      enemyCard.onclick = null;
+    }
   }
+  renderAllyRow();
   renderEnemyRow();
 }
 
@@ -1729,10 +1823,10 @@ function enemyTurn() {
   if (!beginEnemyTurn()) return;
 
   const p = state.player;
-  const e = state.enemy;
-  if (!e) return;
+  const enemies = Array.isArray(state.enemyQueue) && state.enemyQueue.length
+    ? normalizeEnemyQueue()
+    : (state.enemy ? [state.enemy] : []);
 
-  const isRage = e.mp >= 5 && Math.random() < 0.25;
   const endTurnAfter = (waitMs = 0) => {
     setTimeout(() => {
       state.playerDefending = false;
@@ -1742,9 +1836,14 @@ function enemyTurn() {
         loseBattle();
         return;
       }
-      if (e.hp <= 0) {
-        winBattle();
-        return;
+
+      if (Array.isArray(state.enemyQueue)) {
+        normalizeEnemyQueue();
+        if (!state.enemyQueue.length) {
+          winBattle();
+          return;
+        }
+        if (!state.enemy) setActiveEnemyByIndex(0);
       }
 
       state.battleTurn = (state.battleTurn || 0) + 1;
@@ -1752,54 +1851,60 @@ function enemyTurn() {
     }, waitMs);
   };
 
-  if (isRage) {
-    e.mp -= 5;
-    const res = resolveAttack(e, p, 8, { dodgeBonus: state.playerDodging ? 30 : 0 });
-
-    if (res.missed) {
-      playDodgeFade("player");
-      playDodgeFade("player");
-      showDamageText("player", "MISS");
-      endTurnAfter(0);
-    } else {
-      const delays = [];
-      if (res.dmg > 0) {
-        delays.push(applyDamageAfterDelay(p, res.dmg, "player", 230));
-      }
-      if (res.reflected > 0) {
-        delays.push(applyDamageAfterDelay(e, res.reflected, "enemy", 430));
-      }
-      if (res.crit || res.combustion) playCritShake("player");
-      showDamageText("player", formatDamageText(res, res.dmg));
-      if (res.reflected > 0) {
-        showDamageText("enemy", `-${res.reflected} (REFLECT)`);
-      }
-      const wait = delays.length ? Math.max(...delays, 180) + 40 : 0;
-      endTurnAfter(wait);
+  const enemyAttackOnce = (enemy, done) => {
+    if (!enemy || enemy.hp <= 0) {
+      done(0);
+      return;
     }
-  } else {
-    const res = resolveAttack(e, p, 2, { dodgeBonus: state.playerDodging ? 30 : 0 });
-
+    const isRage = enemy.mp >= 5 && Math.random() < 0.25;
+    if (isRage) enemy.mp -= 5;
+    const res = resolveAttack(enemy, p, isRage ? 8 : 2, { dodgeBonus: state.playerDodging ? 30 : 0 });
     if (res.missed) {
       showDamageText("player", "MISS");
-      endTurnAfter(0);
-    } else {
-      const delays = [];
-      if (res.dmg > 0) {
-        delays.push(applyDamageAfterDelay(p, res.dmg, "player", 230));
-      }
-      if (res.reflected > 0) {
-        delays.push(applyDamageAfterDelay(e, res.reflected, "enemy", 430));
-      }
-      if (res.crit || res.combustion) playCritShake("player");
-      showDamageText("player", formatDamageText(res, res.dmg));
-      if (res.reflected > 0) {
-        showDamageText("enemy", `-${res.reflected} (REFLECT)`);
-      }
-      const wait = delays.length ? Math.max(...delays, 180) + 40 : 0;
-      endTurnAfter(wait);
+      done(0);
+      return;
     }
-  }
+    const delays = [];
+    if (res.dmg > 0) {
+      delays.push(applyDamageAfterDelay(p, res.dmg, "player", 230));
+    }
+    if (res.reflected > 0) {
+      delays.push(applyDamageAfterDelay(enemy, res.reflected, "enemy", 430));
+    }
+    if (res.crit || res.combustion) playCritShake("player");
+    showDamageText("player", formatDamageText(res, res.dmg));
+    if (res.reflected > 0) {
+      showDamageText("enemy", `-${res.reflected} (REFLECT)`);
+    }
+    const wait = delays.length ? Math.max(...delays, 180) + 40 : 0;
+    done(wait);
+  };
+
+  let idx = 0;
+  const next = () => {
+    if (p.hp <= 0) {
+      loseBattle();
+      return;
+    }
+    const enemy = enemies[idx];
+    if (!enemy) {
+      endTurnAfter(0);
+      return;
+    }
+    idx += 1;
+    enemyAttackOnce(enemy, (waitMs) => {
+      setTimeout(() => {
+        if (p.hp <= 0) {
+          loseBattle();
+          return;
+        }
+        normalizeEnemyQueue();
+        next();
+      }, waitMs);
+    });
+  };
+
+  next();
 }
 
 function afterPlayerAction() {
@@ -1813,6 +1918,20 @@ function afterPlayerAction() {
   if (!e) return;
 
   if (e.hp <= 0) {
+    if (Array.isArray(state.enemyQueue)) {
+      normalizeEnemyQueue();
+      if (state.enemyQueue.length) {
+        setActiveEnemyByIndex(0);
+        addLog("INFO", `Musuh tersisa: ${state.enemyQueue.length}`);
+        setTurn("enemy");
+        refresh(state);
+        setTimeout(() => {
+          enemyTurn();
+          refresh(state);
+        }, 450);
+        return;
+      }
+    }
     winBattle();
     return;
   }
@@ -1844,7 +1963,11 @@ function openAdventureLevels(){
     "Adventure - Level",
     stages.map((lv) => ({
       title: `Stage ${lv}`,
-      desc: lv === 11 ? "Stage spesial: 3 musuh." : "Pilih stage petualangan",
+      desc: lv === 11
+        ? "Stage spesial: 3 musuh."
+        : lv === 10
+          ? "Stage spesial: 2 musuh."
+          : "Pilih stage petualangan",
       meta: "",
       value: lv,
     })),
@@ -1857,12 +1980,15 @@ function openAdventureLevels(){
 
 function startAdventureBattle(targetLevel, stageName){
   state.currentStageName = stageName;
-  if (targetLevel === 11) {
-    state.enemyQueue = Array.from({ length: 3 }, () => genEnemy(targetLevel));
+  if (targetLevel === 10 || targetLevel === 11) {
+    const count = targetLevel === 11 ? 3 : 2;
+    state.enemyQueue = Array.from({ length: count }, () => genEnemy(targetLevel));
     state.enemy = state.enemyQueue[0];
+    state.enemyTargetIndex = 0;
   } else {
     state.enemyQueue = null;
     state.enemy = genEnemy(targetLevel);
+    state.enemyTargetIndex = 0;
   }
   state.inBattle = true;
   state._animateEnemyIn = true;
@@ -1905,10 +2031,6 @@ function rest() {
   addLog("TOWN", `Istirahat... HP ${hb}→${p.hp}, MP ${mb}→${p.mp}`);
 
   setTurn("town");
-
-  // Setelah battle selesai (menang/kalah/kabur), pulihkan HP & MP player
-  state.player.hp = state.player.maxHp;
-  state.player.mp = state.player.maxMp;
 
   autosave(state);
 
@@ -2727,7 +2849,9 @@ function applyLoaded(payload){
     ? normalizePlayer(state.slots[state.activeSlot])
     : normalizePlayer(newPlayer());
 
+  state.allies = [];
   state.enemy = null;
+  state.enemyTargetIndex = 0;
   state.inBattle = false;
   state.playerDefending = false;
   state.playerDodging = false;
@@ -2757,7 +2881,9 @@ function startNewGame(slotIdx){
   state.activeSlot = idx;
   state.player = p;
 
+  state.allies = [];
   state.enemy = null;
+  state.enemyTargetIndex = 0;
   state.inBattle = false;
   state.playerDefending = false;
   state.playerDodging = false;

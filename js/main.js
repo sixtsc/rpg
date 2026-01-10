@@ -183,10 +183,6 @@ function rest() {
 
   setTurn("town");
 
-  // Setelah battle selesai (menang/kalah/kabur), pulihkan HP & MP player
-  state.player.hp = state.player.maxHp;
-  state.player.mp = state.player.maxMp;
-
   autosave(state);
   refresh(state);
 }
