@@ -267,22 +267,19 @@ body.inBattle .grid{
   --battle-card-width: 180px;
   --battle-card-height: 160px;
   gap:16px;
-  grid-template-columns: repeat(2, var(--battle-card-width));
+  grid-template-columns: 1fr 1fr;
   grid-template-areas:
     "allies enemies"
     "action action";
   align-items:start;
-  justify-items:stretch;
   justify-content:center;
 }
 body.inBattle #allyRow{
   grid-area: allies;
-  align-items:flex-start;
   width:100%;
 }
 body.inBattle #enemyRow{
   grid-area: enemies;
-  align-items:flex-start;
   width:100%;
 }
 body.inBattle #actionCard{
@@ -296,10 +293,15 @@ body.inBattle .card{
 }
 body.inBattle .allyRow,
 body.inBattle .enemyRow{
-  display:flex;
-  flex-direction:column;
-  align-items:flex-start;
+  display:grid;
+  grid-auto-rows: var(--battle-card-height);
   gap:14px;
+}
+body.inBattle .allyRow{
+  justify-items:start;
+}
+body.inBattle .enemyRow{
+  justify-items:end;
 }
 body.inBattle .allyCard,
 body.inBattle .enemyCard{
@@ -376,14 +378,14 @@ body.inBattle .enemyMiniMeta .muted{
     --battle-card-width: 150px;
     --battle-card-height: 150px;
     gap:12px;
-    grid-template-columns: repeat(2, var(--battle-card-width));
+    grid-template-columns: 1fr 1fr;
     grid-template-areas:
       "allies enemies"
       "action action";
   }
   body.inBattle .allyRow,
   body.inBattle .enemyRow{
-    align-items:center;
+    grid-auto-rows: var(--battle-card-height);
     gap:12px;
   }
   body.inBattle .card{
