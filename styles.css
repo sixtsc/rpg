@@ -85,6 +85,10 @@ h1{ font-size:18px; margin:0; font-weight:800; letter-spacing:.2px; }
   flex-direction:column;
   gap:10px;
 }
+.allyCard,
+.enemyCard{
+  cursor:pointer;
+}
 .allyCard.extra{
   padding:10px;
 }
@@ -273,6 +277,10 @@ body.inBattle #actionCard{
 body.inBattle .card{
   padding:8px;
 }
+body.inBattle .allyCard,
+body.inBattle .enemyCard{
+  font-size:14px;
+}
 body.inBattle .sectionTitle{
   margin-bottom:6px;
   gap:6px;
@@ -302,6 +310,13 @@ body.inBattle .battlePrimary{
   }
   body.inBattle #enemyRow{
     align-items:stretch;
+  }
+  body.inBattle .card{
+    padding:6px;
+  }
+  body.inBattle .allyCard,
+  body.inBattle .enemyCard{
+    font-size:13px;
   }
 }
 

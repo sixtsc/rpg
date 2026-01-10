@@ -343,6 +343,7 @@ function newState(){
     player: normalizePlayer(newPlayer()),
     allies: [],
     enemy: null,
+    enemyTargetIndex: 0,
     inBattle: false,
     battleResult: null,
     shopMarketCategory: "consumable",
@@ -629,6 +630,21 @@ function skillIconHtml(skill){
   return `<span class="skillIconWrap"><img class="skillIcon" src="${escapeHtml(skill.icon)}" alt="" /></span>`;
 }
 
+function normalizeEnemyQueue(){
+  if (!Array.isArray(state.enemyQueue)) return [];
+  state.enemyQueue = state.enemyQueue.filter((enemy) => enemy && enemy.hp > 0);
+  return state.enemyQueue;
+}
+
+function setActiveEnemyByIndex(index){
+  const queue = normalizeEnemyQueue();
+  if (!queue.length) return false;
+  const idx = clamp(index, 0, queue.length - 1);
+  state.enemy = queue[idx];
+  state.enemyTargetIndex = idx;
+  return true;
+}
+
 function renderAllyRow() {
   const row = $("allyRow");
   if (!row) return;
@@ -655,6 +671,7 @@ function renderAllyRow() {
       setBar(hpBar, ally.hp, ally.maxHp);
       setBar(mpBar, ally.mp, ally.maxMp);
       card.classList.remove("empty");
+      card.style.display = "block";
     } else {
       nameEl.textContent = `NPC ${slotIndex}`;
       lvlEl.textContent = "Lv-";
@@ -664,6 +681,7 @@ function renderAllyRow() {
       hpBar.style.width = "0%";
       mpBar.style.width = "0%";
       card.classList.add("empty");
+      card.style.display = "none";
     }
   });
 }
@@ -674,11 +692,11 @@ function renderEnemyRow() {
   row.querySelectorAll(".enemyCard.extra").forEach((el) => el.remove());
 
   const queue = Array.isArray(state.enemyQueue) && state.enemyQueue.length
-    ? state.enemyQueue
+    ? normalizeEnemyQueue()
     : (state.enemy ? [state.enemy] : []);
 
   const activeEnemy = state.enemy;
-  queue.slice(1, 3).forEach((enemy) => {
+  queue.slice(1, 3).forEach((enemy, offset) => {
     const card = document.createElement("div");
     card.className = "card enemyCard extra";
     const hpPct = enemy.maxHp ? clamp((enemy.hp / enemy.maxHp) * 100, 0, 100) : 0;
@@ -692,6 +710,13 @@ function renderEnemyRow() {
         <div class="muted">${enemy.hp}/${enemy.maxHp}</div>
       </div>
     `;
+    const targetIndex = offset + 1;
+    card.onclick = () => {
+      if (setActiveEnemyByIndex(targetIndex)) {
+        addLog("TARGET", `Target: ${enemy.name}`);
+        refresh(state);
+      }
+    };
     row.appendChild(card);
   });
 }
@@ -1113,7 +1138,15 @@ function refresh(state) {
     const enemyBtns = $("enemyBtns");
     if (enemyBtns) enemyBtns.style.display = "flex";
     const enemyCard = $("enemyCard");
-    if (enemyCard) enemyCard.classList.add("active");
+    if (enemyCard) {
+      enemyCard.classList.toggle("active", !state.enemyQueue || state.enemyTargetIndex === 0);
+      enemyCard.onclick = () => {
+        if (setActiveEnemyByIndex(0)) {
+          addLog("TARGET", `Target: ${state.enemy?.name || "Musuh"}`);
+          refresh(state);
+        }
+      };
+    }
   } else {
     $("modePill").textContent = "Town";
     // turnCount/actionHint/battleHint hidden globally above
@@ -1142,7 +1175,10 @@ function refresh(state) {
     const enemyBtns = $("enemyBtns");
     if (enemyBtns) enemyBtns.style.display = "none";
     const enemyCard = $("enemyCard");
-    if (enemyCard) enemyCard.classList.remove("active");
+    if (enemyCard) {
+      enemyCard.classList.remove("active");
+      enemyCard.onclick = null;
+    }
   }
   renderAllyRow();
   renderEnemyRow();
@@ -1776,10 +1812,10 @@ function enemyTurn() {
   if (!beginEnemyTurn()) return;
 
   const p = state.player;
-  const e = state.enemy;
-  if (!e) return;
+  const enemies = Array.isArray(state.enemyQueue) && state.enemyQueue.length
+    ? normalizeEnemyQueue()
+    : (state.enemy ? [state.enemy] : []);
 
-  const isRage = e.mp >= 5 && Math.random() < 0.25;
   const endTurnAfter = (waitMs = 0) => {
     setTimeout(() => {
       state.playerDefending = false;
@@ -1789,9 +1825,14 @@ function enemyTurn() {
         loseBattle();
         return;
       }
-      if (e.hp <= 0) {
-        winBattle();
-        return;
+
+      if (Array.isArray(state.enemyQueue)) {
+        normalizeEnemyQueue();
+        if (!state.enemyQueue.length) {
+          winBattle();
+          return;
+        }
+        if (!state.enemy) setActiveEnemyByIndex(0);
       }
 
       state.battleTurn = (state.battleTurn || 0) + 1;
@@ -1799,54 +1840,60 @@ function enemyTurn() {
     }, waitMs);
   };
 
-  if (isRage) {
-    e.mp -= 5;
-    const res = resolveAttack(e, p, 8, { dodgeBonus: state.playerDodging ? 30 : 0 });
-
-    if (res.missed) {
-      playDodgeFade("player");
-      playDodgeFade("player");
-      showDamageText("player", "MISS");
-      endTurnAfter(0);
-    } else {
-      const delays = [];
-      if (res.dmg > 0) {
-        delays.push(applyDamageAfterDelay(p, res.dmg, "player", 230));
-      }
-      if (res.reflected > 0) {
-        delays.push(applyDamageAfterDelay(e, res.reflected, "enemy", 430));
-      }
-      if (res.crit || res.combustion) playCritShake("player");
-      showDamageText("player", formatDamageText(res, res.dmg));
-      if (res.reflected > 0) {
-        showDamageText("enemy", `-${res.reflected} (REFLECT)`);
-      }
-      const wait = delays.length ? Math.max(...delays, 180) + 40 : 0;
-      endTurnAfter(wait);
+  const enemyAttackOnce = (enemy, done) => {
+    if (!enemy || enemy.hp <= 0) {
+      done(0);
+      return;
     }
-  } else {
-    const res = resolveAttack(e, p, 2, { dodgeBonus: state.playerDodging ? 30 : 0 });
-
+    const isRage = enemy.mp >= 5 && Math.random() < 0.25;
+    if (isRage) enemy.mp -= 5;
+    const res = resolveAttack(enemy, p, isRage ? 8 : 2, { dodgeBonus: state.playerDodging ? 30 : 0 });
     if (res.missed) {
       showDamageText("player", "MISS");
-      endTurnAfter(0);
-    } else {
-      const delays = [];
-      if (res.dmg > 0) {
-        delays.push(applyDamageAfterDelay(p, res.dmg, "player", 230));
-      }
-      if (res.reflected > 0) {
-        delays.push(applyDamageAfterDelay(e, res.reflected, "enemy", 430));
-      }
-      if (res.crit || res.combustion) playCritShake("player");
-      showDamageText("player", formatDamageText(res, res.dmg));
-      if (res.reflected > 0) {
-        showDamageText("enemy", `-${res.reflected} (REFLECT)`);
-      }
-      const wait = delays.length ? Math.max(...delays, 180) + 40 : 0;
-      endTurnAfter(wait);
+      done(0);
+      return;
     }
-  }
+    const delays = [];
+    if (res.dmg > 0) {
+      delays.push(applyDamageAfterDelay(p, res.dmg, "player", 230));
+    }
+    if (res.reflected > 0) {
+      delays.push(applyDamageAfterDelay(enemy, res.reflected, "enemy", 430));
+    }
+    if (res.crit || res.combustion) playCritShake("player");
+    showDamageText("player", formatDamageText(res, res.dmg));
+    if (res.reflected > 0) {
+      showDamageText("enemy", `-${res.reflected} (REFLECT)`);
+    }
+    const wait = delays.length ? Math.max(...delays, 180) + 40 : 0;
+    done(wait);
+  };
+
+  let idx = 0;
+  const next = () => {
+    if (p.hp <= 0) {
+      loseBattle();
+      return;
+    }
+    const enemy = enemies[idx];
+    if (!enemy) {
+      endTurnAfter(0);
+      return;
+    }
+    idx += 1;
+    enemyAttackOnce(enemy, (waitMs) => {
+      setTimeout(() => {
+        if (p.hp <= 0) {
+          loseBattle();
+          return;
+        }
+        normalizeEnemyQueue();
+        next();
+      }, waitMs);
+    });
+  };
+
+  next();
 }
 
 function afterPlayerAction() {
@@ -1860,6 +1907,20 @@ function afterPlayerAction() {
   if (!e) return;
 
   if (e.hp <= 0) {
+    if (Array.isArray(state.enemyQueue)) {
+      normalizeEnemyQueue();
+      if (state.enemyQueue.length) {
+        setActiveEnemyByIndex(0);
+        addLog("INFO", `Musuh tersisa: ${state.enemyQueue.length}`);
+        setTurn("enemy");
+        refresh(state);
+        setTimeout(() => {
+          enemyTurn();
+          refresh(state);
+        }, 450);
+        return;
+      }
+    }
     winBattle();
     return;
   }
@@ -1912,9 +1973,11 @@ function startAdventureBattle(targetLevel, stageName){
     const count = targetLevel === 11 ? 3 : 2;
     state.enemyQueue = Array.from({ length: count }, () => genEnemy(targetLevel));
     state.enemy = state.enemyQueue[0];
+    state.enemyTargetIndex = 0;
   } else {
     state.enemyQueue = null;
     state.enemy = genEnemy(targetLevel);
+    state.enemyTargetIndex = 0;
   }
   state.inBattle = true;
   state._animateEnemyIn = true;
@@ -2777,6 +2840,7 @@ function applyLoaded(payload){
 
   state.allies = [];
   state.enemy = null;
+  state.enemyTargetIndex = 0;
   state.inBattle = false;
   state.playerDefending = false;
   state.playerDodging = false;
@@ -2808,6 +2872,7 @@ function startNewGame(slotIdx){
 
   state.allies = [];
   state.enemy = null;
+  state.enemyTargetIndex = 0;
   state.inBattle = false;
   state.playerDefending = false;
   state.playerDodging = false;
