@@ -287,6 +287,8 @@ body.inBattle .card{
 }
 body.inBattle .allyRow,
 body.inBattle .enemyRow{
+  display:grid;
+  grid-auto-rows: minmax(170px, auto);
   gap:14px;
 }
 body.inBattle .allyCard,
@@ -297,8 +299,27 @@ body.inBattle .enemyCard{
   font-size:13px;
   width:100%;
   max-width:220px;
-  min-height:160px;
+  min-height:170px;
   margin:0 auto;
+}
+body.inBattle .sectionTitle{
+  flex-wrap:nowrap;
+}
+body.inBattle .sectionTitle b,
+body.inBattle .sectionTitle .playerTitle b{
+  max-width:110px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  display:inline-block;
+  vertical-align:bottom;
+}
+body.inBattle .sectionTitle .playerTitle{
+  flex:1;
+  min-width:0;
+}
+body.inBattle .sectionTitle .pill{
+  flex:0 0 auto;
 }
 body.inBattle .allyCard .bars,
 body.inBattle .enemyCard .bars,
@@ -308,6 +329,14 @@ body.inBattle .enemyMiniMeta{
 body.inBattle .sectionTitle{
   margin-bottom:4px;
   gap:6px;
+  min-height:28px;
+}
+body.inBattle .nameSub,
+body.inBattle .allySub{
+  min-height:18px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
 }
 body.inBattle .bars{
   gap:6px;
@@ -341,6 +370,7 @@ body.inBattle .enemyMiniMeta .muted{
   }
   body.inBattle .allyRow,
   body.inBattle .enemyRow{
+    grid-auto-rows: minmax(150px, auto);
     gap:12px;
   }
   body.inBattle .card{
@@ -350,7 +380,7 @@ body.inBattle .enemyMiniMeta .muted{
   body.inBattle .enemyCard{
     font-size:12px;
     max-width:200px;
-    min-height:140px;
+    min-height:150px;
   }
   body.inBattle .bar{
     height:7px;
