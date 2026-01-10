@@ -341,6 +341,7 @@ function newState(){
 
     // Current runtime
     player: normalizePlayer(newPlayer()),
+    allies: [],
     enemy: null,
     inBattle: false,
     battleResult: null,
@@ -628,6 +629,45 @@ function skillIconHtml(skill){
   return `<span class="skillIconWrap"><img class="skillIcon" src="${escapeHtml(skill.icon)}" alt="" /></span>`;
 }
 
+function renderAllyRow() {
+  const row = $("allyRow");
+  if (!row) return;
+  const allies = Array.isArray(state.allies) ? state.allies : [];
+  [1, 2].forEach((slotIndex, i) => {
+    const ally = allies[i] || null;
+    const nameEl = row.querySelector(`[data-ally-name="${slotIndex}"]`);
+    const lvlEl = row.querySelector(`[data-ally-lvl="${slotIndex}"]`);
+    const subEl = row.querySelector(`[data-ally-sub="${slotIndex}"]`);
+    const hpText = row.querySelector(`[data-ally-hp="${slotIndex}"]`);
+    const mpText = row.querySelector(`[data-ally-mp="${slotIndex}"]`);
+    const hpBar = row.querySelector(`[data-ally-hpbar="${slotIndex}"]`);
+    const mpBar = row.querySelector(`[data-ally-mpbar="${slotIndex}"]`);
+    const card = row.querySelector(`.allyCard.extra[data-ally-slot="${slotIndex}"]`);
+
+    if (!nameEl || !lvlEl || !subEl || !hpText || !mpText || !hpBar || !mpBar || !card) return;
+
+    if (ally) {
+      nameEl.textContent = ally.name || `NPC ${slotIndex}`;
+      lvlEl.textContent = `Lv${ally.level || 1}`;
+      subEl.textContent = ally.role || "Partner";
+      hpText.textContent = `${ally.hp}/${ally.maxHp}`;
+      mpText.textContent = `${ally.mp}/${ally.maxMp}`;
+      setBar(hpBar, ally.hp, ally.maxHp);
+      setBar(mpBar, ally.mp, ally.maxMp);
+      card.classList.remove("empty");
+    } else {
+      nameEl.textContent = `NPC ${slotIndex}`;
+      lvlEl.textContent = "Lv-";
+      subEl.textContent = "Slot kosong";
+      hpText.textContent = "0/0";
+      mpText.textContent = "0/0";
+      hpBar.style.width = "0%";
+      mpBar.style.width = "0%";
+      card.classList.add("empty");
+    }
+  });
+}
+
 function renderEnemyRow() {
   const row = $("enemyRow");
   if (!row) return;
@@ -637,10 +677,12 @@ function renderEnemyRow() {
     ? state.enemyQueue
     : (state.enemy ? [state.enemy] : []);
 
+  const activeEnemy = state.enemy;
   queue.slice(1, 3).forEach((enemy) => {
     const card = document.createElement("div");
     card.className = "card enemyCard extra";
     const hpPct = enemy.maxHp ? clamp((enemy.hp / enemy.maxHp) * 100, 0, 100) : 0;
+    if (enemy === activeEnemy) card.classList.add("active");
     card.innerHTML = `
       <div class="sectionTitle">
         <div><b>${escapeHtml(enemy.name)}</b> <span class="pill">Lv${enemy.level}</span></div>
@@ -1070,6 +1112,8 @@ function refresh(state) {
 
     const enemyBtns = $("enemyBtns");
     if (enemyBtns) enemyBtns.style.display = "flex";
+    const enemyCard = $("enemyCard");
+    if (enemyCard) enemyCard.classList.add("active");
   } else {
     $("modePill").textContent = "Town";
     // turnCount/actionHint/battleHint hidden globally above
@@ -1097,7 +1141,10 @@ function refresh(state) {
 
     const enemyBtns = $("enemyBtns");
     if (enemyBtns) enemyBtns.style.display = "none";
+    const enemyCard = $("enemyCard");
+    if (enemyCard) enemyCard.classList.remove("active");
   }
+  renderAllyRow();
   renderEnemyRow();
 }
 
@@ -1844,7 +1891,11 @@ function openAdventureLevels(){
     "Adventure - Level",
     stages.map((lv) => ({
       title: `Stage ${lv}`,
-      desc: lv === 11 ? "Stage spesial: 3 musuh." : "Pilih stage petualangan",
+      desc: lv === 11
+        ? "Stage spesial: 3 musuh."
+        : lv === 10
+          ? "Stage spesial: 2 musuh."
+          : "Pilih stage petualangan",
       meta: "",
       value: lv,
     })),
@@ -1857,8 +1908,9 @@ function openAdventureLevels(){
 
 function startAdventureBattle(targetLevel, stageName){
   state.currentStageName = stageName;
-  if (targetLevel === 11) {
-    state.enemyQueue = Array.from({ length: 3 }, () => genEnemy(targetLevel));
+  if (targetLevel === 10 || targetLevel === 11) {
+    const count = targetLevel === 11 ? 3 : 2;
+    state.enemyQueue = Array.from({ length: count }, () => genEnemy(targetLevel));
     state.enemy = state.enemyQueue[0];
   } else {
     state.enemyQueue = null;
@@ -2723,6 +2775,7 @@ function applyLoaded(payload){
     ? normalizePlayer(state.slots[state.activeSlot])
     : normalizePlayer(newPlayer());
 
+  state.allies = [];
   state.enemy = null;
   state.inBattle = false;
   state.playerDefending = false;
@@ -2753,6 +2806,7 @@ function startNewGame(slotIdx){
   state.activeSlot = idx;
   state.player = p;
 
+  state.allies = [];
   state.enemy = null;
   state.inBattle = false;
   state.playerDefending = false;

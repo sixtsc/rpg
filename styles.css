@@ -79,13 +79,30 @@ h1{ font-size:18px; margin:0; font-weight:800; letter-spacing:.2px; }
   padding:12px;
   box-shadow:0 6px 18px rgba(0,0,0,.35);
 }
+.allyRow,
 .enemyRow{
   display:flex;
   flex-direction:column;
   gap:10px;
 }
+.allyCard.extra{
+  padding:10px;
+}
+.allyCard.empty{
+  border-style:dashed;
+  opacity:.75;
+}
+.allyBars{
+  margin-top:6px;
+  display:grid;
+  gap:6px;
+}
 .enemyCard{
   min-width:200px;
+}
+.enemyCard.active{
+  border-color: rgba(97, 162, 255, 0.75);
+  box-shadow: 0 0 0 1px rgba(97, 162, 255, 0.35), 0 10px 20px rgba(0,0,0,.35);
 }
 .enemyCard.extra{
   padding:10px;
@@ -240,11 +257,11 @@ body.inBattle .grid{
   gap:10px;
   grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr);
   grid-template-areas:
-    "player enemies"
+    "allies enemies"
     "action action";
 }
-body.inBattle #playerCard{
-  grid-area: player;
+body.inBattle #allyRow{
+  grid-area: allies;
 }
 body.inBattle #enemyRow{
   grid-area: enemies;
@@ -279,7 +296,7 @@ body.inBattle .battlePrimary{
   body.inBattle .grid{
     grid-template-columns: 1fr;
     grid-template-areas:
-      "player"
+      "allies"
       "enemies"
       "action";
   }
@@ -883,8 +900,9 @@ select.authInput{
 }
 
 /* Town: hide enemy card and let player span full width */
-body.inTown #enemyCard{ display:none; }
-body.inTown #playerCard{ grid-column:1 / -1; }
+body.inTown #enemyRow{ display:none; }
+body.inTown #allyRow{ grid-column:1 / -1; }
+body.inTown .allyCard.extra{ display:none; }
 
 /* Nice appear animation when battle starts */
 @keyframes popIn{
