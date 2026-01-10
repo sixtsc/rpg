@@ -302,6 +302,7 @@ body.inBattle .card{
 body.inBattle .allyCard,
 body.inBattle .enemyCard{
   font-size:13px;
+  width:190px;
   max-width:190px;
 }
 body.inBattle .cardTitle b{
@@ -350,6 +351,7 @@ body.inBattle .enemyMiniMeta .muted{
   body.inBattle .allyCard,
   body.inBattle .enemyCard{
     font-size:12px;
+    width:160px;
     max-width:160px;
   }
   body.inBattle .cardTitle b{
