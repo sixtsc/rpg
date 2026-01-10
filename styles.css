@@ -295,6 +295,7 @@ body.inBattle .allyRow,
 body.inBattle .enemyRow{
   display:grid;
   grid-auto-rows: var(--battle-card-height);
+  align-content:start;
   gap:14px;
 }
 body.inBattle .allyRow{
