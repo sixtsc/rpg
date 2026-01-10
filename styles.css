@@ -288,10 +288,12 @@ body.inBattle .grid{
 body.inBattle #allyRow{
   grid-area: allies;
   align-items:flex-start;
+  display:flex;
 }
 body.inBattle #enemyRow{
   grid-area: enemies;
   align-items:flex-start;
+  display:flex;
 }
 body.inBattle #actionCard{
   grid-area: action;
@@ -329,6 +331,7 @@ body.inBattle .battlePrimary{
 body.inBattle .enemyCard.extra,
 body.inBattle .allyCard.extra{
   padding:6px;
+  display:block;
 }
 body.inBattle .enemyMiniMeta .muted{
   font-size:10px;
