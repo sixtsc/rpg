@@ -686,9 +686,10 @@ function setActiveEnemyByIndex(index){
 function renderAllyRow() {
   const row = $("allyRow");
   if (!row) return;
-  const allies = (Array.isArray(state.allies) && state.allies.length)
-    ? state.allies
-    : (Array.isArray(state.player?.allies) ? state.player.allies : []);
+  if ((!Array.isArray(state.allies) || !state.allies.length) && Array.isArray(state.player?.allies)) {
+    state.allies = state.player.allies;
+  }
+  const allies = Array.isArray(state.allies) ? state.allies : [];
   [1, 2].forEach((slotIndex, i) => {
     const ally = allies[i] || null;
     const nameEl = row.querySelector(`[data-ally-name="${slotIndex}"]`);
@@ -723,7 +724,7 @@ function renderAllyRow() {
       mpBar.style.width = "0%";
       card.classList.add("empty");
       card.classList.remove("active");
-      card.style.display = "block";
+      card.style.display = "none";
     }
   });
 }
