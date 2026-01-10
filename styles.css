@@ -270,16 +270,16 @@ body.inBattle .grid{
     "allies enemies"
     "action action";
   align-items:start;
-  justify-items:center;
+  justify-items:stretch;
 }
 body.inBattle #allyRow{
   grid-area: allies;
-  align-items:center;
+  align-items:flex-start;
   width:100%;
 }
 body.inBattle #enemyRow{
   grid-area: enemies;
-  align-items:center;
+  align-items:flex-end;
   width:100%;
 }
 body.inBattle #actionCard{
