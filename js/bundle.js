@@ -671,6 +671,7 @@ function renderAllyRow() {
       setBar(hpBar, ally.hp, ally.maxHp);
       setBar(mpBar, ally.mp, ally.maxMp);
       card.classList.remove("empty");
+      card.classList.add("active");
       card.style.display = "block";
     } else {
       nameEl.textContent = `NPC ${slotIndex}`;
@@ -681,6 +682,7 @@ function renderAllyRow() {
       hpBar.style.width = "0%";
       mpBar.style.width = "0%";
       card.classList.add("empty");
+      card.classList.remove("active");
       card.style.display = "none";
     }
   });

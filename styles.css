@@ -90,6 +90,12 @@ h1{ font-size:18px; margin:0; font-weight:800; letter-spacing:.2px; }
   cursor:pointer;
 }
 .allyCard.extra{
+  display:none;
+}
+.allyCard.extra.active{
+  display:block;
+}
+.allyCard.extra{
   padding:10px;
 }
 .allyCard.empty{
@@ -266,6 +272,7 @@ body.inBattle .grid{
 }
 body.inBattle #allyRow{
   grid-area: allies;
+  align-items:flex-start;
 }
 body.inBattle #enemyRow{
   grid-area: enemies;
@@ -275,11 +282,12 @@ body.inBattle #actionCard{
   grid-area: action;
 }
 body.inBattle .card{
-  padding:8px;
+  padding:6px;
 }
 body.inBattle .allyCard,
 body.inBattle .enemyCard{
-  font-size:14px;
+  font-size:13px;
+  max-width:240px;
 }
 body.inBattle .sectionTitle{
   margin-bottom:6px;
@@ -290,7 +298,7 @@ body.inBattle .bars{
   margin-top:6px;
 }
 body.inBattle .bar{
-  height:10px;
+  height:8px;
 }
 body.inBattle .battleActions{
   gap:8px;
@@ -298,6 +306,13 @@ body.inBattle .battleActions{
 }
 body.inBattle .battlePrimary{
   gap:8px;
+}
+body.inBattle .enemyCard.extra,
+body.inBattle .allyCard.extra{
+  padding:6px;
+}
+body.inBattle .enemyMiniMeta .muted{
+  font-size:10px;
 }
 
 @media (max-width:820px){
@@ -312,11 +327,15 @@ body.inBattle .battlePrimary{
     align-items:stretch;
   }
   body.inBattle .card{
-    padding:6px;
+    padding:5px;
   }
   body.inBattle .allyCard,
   body.inBattle .enemyCard{
-    font-size:13px;
+    font-size:12px;
+    max-width:210px;
+  }
+  body.inBattle .bar{
+    height:7px;
   }
 }
 
