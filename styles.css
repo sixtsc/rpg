@@ -139,6 +139,21 @@ h1{ font-size:18px; margin:0; font-weight:800; letter-spacing:.2px; }
   align-items:center;
   gap:6px;
   flex-wrap:wrap;
+  min-width:0;
+}
+.cardTitle{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  min-width:0;
+  flex:1;
+}
+.cardTitle b{
+  display:block;
+  max-width:140px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
 }
 .playerCurrency{
   display:flex;
@@ -289,6 +304,9 @@ body.inBattle .enemyCard{
   font-size:13px;
   max-width:190px;
 }
+body.inBattle .cardTitle b{
+  max-width:110px;
+}
 body.inBattle .sectionTitle{
   margin-bottom:6px;
   gap:6px;
@@ -333,6 +351,9 @@ body.inBattle .enemyMiniMeta .muted{
   body.inBattle .enemyCard{
     font-size:12px;
     max-width:160px;
+  }
+  body.inBattle .cardTitle b{
+    max-width:90px;
   }
   body.inBattle .bar{
     height:7px;
