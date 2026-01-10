@@ -268,9 +268,9 @@ body.inBattle .grid{
   justify-content:center;
 }
 body.inBattle .battleLayout{
-  --battle-card-width: clamp(160px, 44vw, 210px);
-  --battle-card-height: clamp(170px, 46vw, 210px);
-  --battle-gap: clamp(10px, 3vw, 16px);
+  --battle-card-width: clamp(160px, 40vw, 200px);
+  --battle-card-height: clamp(190px, 52vw, 230px);
+  --battle-gap: clamp(8px, 2.5vw, 14px);
   width:min(100%, calc((var(--battle-card-width) * 2) + var(--battle-gap)));
   margin:0 auto;
   display:flex;
