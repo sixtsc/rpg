@@ -68,6 +68,10 @@ const pick = (arr) => arr[Math.floor(Math.random()*arr.length)];
 const MAX_CHAR_SLOTS = 6;
 const STAT_POINTS_PER_LEVEL = 1;
 const MAX_LEVEL = 10;
+const MAX_ALLY_SLOTS = 2;
+const RECRUIT_LEVEL = 10;
+const RECRUIT_COST = 120;
+const RECRUIT_NAMES = ["Mercenary", "Vanguard", "Ranger", "Acolyte"];
 function genEnemy(plv){
   const lvl = clamp(plv + pick([-1,0,0,1]), 1, MAX_LEVEL);
   const name = pick(ENEMY_NAMES);
@@ -98,6 +102,40 @@ function genEnemy(plv){
   applyDerivedStats(enemy);
   enemy.blockRate = 0;
   return enemy;
+}
+function genRecruit(level = RECRUIT_LEVEL){
+  const lvl = clamp(level, 1, MAX_LEVEL);
+  const ally = {
+    name: pick(RECRUIT_NAMES),
+    level: lvl,
+    maxHp: 28 + lvl * 10,
+    maxMp: 12 + lvl * 4,
+    hp: 28 + lvl * 10,
+    mp: 12 + lvl * 4,
+    atk: 7 + lvl * 3,
+    def: 3 + lvl * 2,
+    spd: 4 + lvl * 2,
+    str: Math.max(0, lvl),
+    dex: Math.max(0, Math.floor(lvl * 0.6)),
+    int: Math.max(0, Math.floor(lvl * 0.6)),
+    vit: Math.max(0, Math.floor(lvl * 1.2)),
+    critChance: clamp(5 + Math.floor(lvl / 3), 5, 35),
+    critDamage: 0,
+    acc: Math.max(0, Math.floor(lvl / 6)),
+    foc: 0,
+    combustionChance: 0,
+    evasion: clamp(2 + Math.floor(lvl / 8), 2, 10),
+    baseBlockRate: 0,
+    baseEscapeChance: clamp(2 + Math.floor(lvl / 8), 2, 10),
+    blockRate: 0,
+    escapeChance: 0,
+    manaRegen: 0,
+    statuses: [],
+    role: "Rekrut"
+  };
+  applyDerivedStats(ally);
+  ally.blockRate = 0;
+  return ally;
 }
 function calcDamage(attAtk, defDef, basePower, defending){
   const variance = randInt(-2,3);
@@ -1908,26 +1946,13 @@ function afterPlayerAction() {
   const e = state.enemy;
   if (!e) return;
 
-  if (e.hp <= 0) {
-    if (Array.isArray(state.enemyQueue)) {
-      normalizeEnemyQueue();
-      if (state.enemyQueue.length) {
-        setActiveEnemyByIndex(0);
-        addLog("INFO", `Musuh tersisa: ${state.enemyQueue.length}`);
-        setTurn("enemy");
-        refresh(state);
-        setTimeout(() => {
-          enemyTurn();
-          refresh(state);
-        }, 450);
-        return;
-      }
-    }
-    winBattle();
-    return;
-  }
+  if (handleEnemyDefeat()) return;
 
   tickStatuses(state.player);
+
+  const allyHit = alliesAttack();
+  if (allyHit) refresh(state);
+  if (handleEnemyDefeat()) return;
 
   // Lock ke giliran musuh dulu supaya player tidak bisa spam tombol
   setTurn("enemy");
@@ -1940,7 +1965,107 @@ function afterPlayerAction() {
   }, 450);
 }
 
+function handleEnemyDefeat(){
+  const e = state.enemy;
+  if (!e || e.hp > 0) return false;
+  if (Array.isArray(state.enemyQueue)) {
+    normalizeEnemyQueue();
+    if (state.enemyQueue.length) {
+      setActiveEnemyByIndex(0);
+      addLog("INFO", `Musuh tersisa: ${state.enemyQueue.length}`);
+      setTurn("enemy");
+      refresh(state);
+      setTimeout(() => {
+        enemyTurn();
+        refresh(state);
+      }, 450);
+      return true;
+    }
+  }
+  winBattle();
+  return true;
+}
+
+function alliesAttack(){
+  const allies = Array.isArray(state.allies) ? state.allies : [];
+  const e = state.enemy;
+  if (!e || !allies.length) return false;
+  let acted = false;
+  allies.forEach((ally) => {
+    if (!ally || ally.hp <= 0) return;
+    const res = resolveAttack(ally, e, 2);
+    if (res.missed) {
+      addLog("ALLY", `${ally.name} meleset.`);
+      return;
+    }
+    e.hp = clamp(e.hp - res.dmg, 0, e.maxHp);
+    showDamageText("enemy", formatDamageText(res, res.dmg));
+    addLog("ALLY", `${ally.name} menyerang! Damage ${res.dmg}.`);
+    acted = true;
+  });
+  return acted;
+}
+
 /* ----------------------------- Town actions ----------------------------- */
+
+function getEmptyAllySlotIndex(){
+  const allies = Array.isArray(state.allies) ? state.allies : [];
+  for (let i = 0; i < MAX_ALLY_SLOTS; i += 1) {
+    if (!allies[i]) return i;
+  }
+  return -1;
+}
+
+function recruitNpc(){
+  if (state.inBattle) return;
+  const p = state.player;
+  const slotIdx = getEmptyAllySlotIndex();
+  if (slotIdx < 0) {
+    addLog("INFO", "Slot recruit penuh.");
+    return;
+  }
+  if (p.gold < RECRUIT_COST) {
+    addLog("WARN", `Gold tidak cukup. Butuh ${RECRUIT_COST} gold.`);
+    return;
+  }
+  const ally = genRecruit(RECRUIT_LEVEL);
+  p.gold -= RECRUIT_COST;
+  state.allies = Array.isArray(state.allies) ? state.allies : [];
+  state.allies[slotIdx] = ally;
+  p.allies = state.allies;
+  addLog("INFO", `${ally.name} (Lv${ally.level}) bergabung! Gold -${RECRUIT_COST}.`);
+
+  autosave(state);
+  (async () => {
+    try { await cloudTrySaveCurrentProfile(); } catch (e) {}
+  })();
+  refresh(state);
+}
+
+function openRecruitModal(){
+  if (state.inBattle) return;
+  const slotIdx = getEmptyAllySlotIndex();
+  const canRecruit = slotIdx >= 0 && state.player.gold >= RECRUIT_COST;
+  const slotsUsed = Math.max(0, Math.min(MAX_ALLY_SLOTS, Array.isArray(state.allies) ? state.allies.filter(Boolean).length : 0));
+  const slotsText = `${slotsUsed}/${MAX_ALLY_SLOTS} slot`;
+
+  modal.open(
+    "Recruit NPC",
+    [
+      { title: "Back", desc: "Kembali.", meta: "", value: "back", className: "subMenuBack" },
+      {
+        title: `Rekrut NPC Lv${RECRUIT_LEVEL}`,
+        desc: "NPC akan membantu menyerang musuh setiap turn.",
+        meta: `Cost ${RECRUIT_COST} gold • ${slotsText}`,
+        value: canRecruit ? "recruit" : undefined,
+        className: canRecruit ? "" : "readonly",
+      },
+    ],
+    (pick) => {
+      if (pick === "recruit") recruitNpc();
+    }
+  );
+}
 
 function explore() {
   if (state.inBattle) return;
@@ -2779,6 +2904,8 @@ function bind() {
   if (btnProfile) btnProfile.onclick = openProfileModal;
   const btnShop = byId("btnShop");
   if (btnShop) btnShop.onclick = () => openShopModal();
+  const btnRecruit = byId("btnRecruit");
+  if (btnRecruit) btnRecruit.onclick = openRecruitModal;
   const playerStatLink = byId("playerStatLink");
   if (playerStatLink) playerStatLink.onclick = openStatsModal;
 
@@ -2840,7 +2967,7 @@ function applyLoaded(payload){
     ? normalizePlayer(state.slots[state.activeSlot])
     : normalizePlayer(newPlayer());
 
-  state.allies = [];
+  state.allies = Array.isArray(state.player.allies) ? state.player.allies : [];
   state.enemy = null;
   state.enemyTargetIndex = 0;
   state.inBattle = false;
@@ -2873,6 +3000,7 @@ function startNewGame(slotIdx){
   state.player = p;
 
   state.allies = [];
+  state.player.allies = state.allies;
   state.enemy = null;
   state.enemyTargetIndex = 0;
   state.inBattle = false;
