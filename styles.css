@@ -179,6 +179,12 @@ body.inBattle .playerCurrency{
 
 .bars{ display:grid; gap:10px; margin-top:10px; }
 .barRow{ display:flex; justify-content:space-between; gap:10px; margin-bottom:6px; }
+.bars .barRow{
+  display:none;
+}
+#xpGroup .barRow{
+  display:flex;
+}
 
 .bar{
   height:12px;
