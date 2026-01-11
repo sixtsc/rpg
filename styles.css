@@ -107,6 +107,9 @@ h1{ font-size:18px; margin:0; font-weight:800; letter-spacing:.2px; }
   display:grid;
   gap:6px;
 }
+.statRow{
+  display:none;
+}
 .enemyCard{
   min-width:200px;
 }
@@ -981,6 +984,14 @@ select.authInput{
   background:rgba(255,255,255,0.03);
   position:relative;
   overflow:hidden;
+}
+.avatarWrap.mini{
+  margin:6px 0 4px;
+}
+.avatarBox.mini{
+  width:72px;
+  height:72px;
+  border-radius:12px;
 }
 @media (max-width:520px){
   .avatarWrap{ margin:8px 0 4px; }

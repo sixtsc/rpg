@@ -56,7 +56,8 @@ function renderAllyRow(state) {
     if (ally) {
       nameEl.textContent = ally.name || `NPC ${slotIndex}`;
       lvlEl.textContent = `Lv${ally.level || 1}`;
-      subEl.textContent = ally.role || "Partner";
+      subEl.textContent = "";
+      subEl.style.display = "none";
       hpText.textContent = `${ally.hp}/${ally.maxHp}`;
       mpText.textContent = `${ally.mp}/${ally.maxMp}`;
       setBar(hpBar, ally.hp, ally.maxHp);
@@ -68,6 +69,7 @@ function renderAllyRow(state) {
       nameEl.textContent = `NPC ${slotIndex}`;
       lvlEl.textContent = "Lv-";
       subEl.textContent = "Slot kosong";
+      subEl.style.display = "block";
       hpText.textContent = "0/0";
       mpText.textContent = "0/0";
       hpBar.style.width = "0%";

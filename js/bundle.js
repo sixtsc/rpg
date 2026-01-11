@@ -732,7 +732,8 @@ function renderAllyRow() {
     if (ally) {
       nameEl.textContent = ally.name || `NPC ${slotIndex}`;
       lvlEl.textContent = `Lv${ally.level || 1}`;
-      subEl.textContent = ally.role || "Partner";
+      subEl.textContent = "";
+      subEl.style.display = "none";
       hpText.textContent = `${ally.hp}/${ally.maxHp}`;
       mpText.textContent = `${ally.mp}/${ally.maxMp}`;
       setBar(hpBar, ally.hp, ally.maxHp);
@@ -744,6 +745,7 @@ function renderAllyRow() {
       nameEl.textContent = `NPC ${slotIndex}`;
       lvlEl.textContent = "Lv-";
       subEl.textContent = "Slot kosong";
+      subEl.style.display = "block";
       hpText.textContent = "0/0";
       mpText.textContent = "0/0";
       hpBar.style.width = "0%";
@@ -764,29 +766,42 @@ function renderEnemyRow() {
     ? normalizeEnemyQueue()
     : (state.enemy ? [state.enemy] : []);
 
-  const activeEnemy = state.enemy;
-  queue.slice(1, 3).forEach((enemy, offset) => {
+  if (!queue.length) return;
+  let activeIndex = clamp(state.enemyTargetIndex || 0, 0, queue.length - 1);
+  if (queue[activeIndex] !== state.enemy) {
+    const foundIndex = queue.indexOf(state.enemy);
+    if (foundIndex >= 0) activeIndex = foundIndex;
+  }
+
+  const maxExtras = 2;
+  let extrasRendered = 0;
+  queue.forEach((enemy, index) => {
+    if (index === activeIndex) return;
+    if (extrasRendered >= maxExtras) return;
     const card = document.createElement("div");
     card.className = "card enemyCard extra";
     const hpPct = enemy.maxHp ? clamp((enemy.hp / enemy.maxHp) * 100, 0, 100) : 0;
-    if (enemy === activeEnemy) card.classList.add("active");
     card.innerHTML = `
       <div class="sectionTitle">
         <div><b>${escapeHtml(enemy.name)}</b> <span class="pill">Lv${enemy.level}</span></div>
+      </div>
+      <div class="avatarWrap mini">
+        <div class="avatarBox mini"></div>
       </div>
       <div class="enemyMiniMeta">
         <div class="bar"><div class="fill hp" style="width:${hpPct}%"></div></div>
         <div class="muted">${enemy.hp}/${enemy.maxHp}</div>
       </div>
     `;
-    const targetIndex = offset + 1;
+    const targetIndex = index;
     card.onclick = () => {
       if (setActiveEnemyByIndex(targetIndex)) {
-        addLog("TARGET", `Target: ${enemy.name}`);
+        addLog("TARGET", `Target: ${state.enemy?.name || enemy.name}`);
         refresh(state);
       }
     };
     row.appendChild(card);
+    extrasRendered += 1;
   });
 }
 
@@ -1208,9 +1223,9 @@ function refresh(state) {
     if (enemyBtns) enemyBtns.style.display = "flex";
     const enemyCard = $("enemyCard");
     if (enemyCard) {
-      enemyCard.classList.toggle("active", !state.enemyQueue || state.enemyTargetIndex === 0);
+      enemyCard.classList.add("active");
       enemyCard.onclick = () => {
-        if (setActiveEnemyByIndex(0)) {
+        if (setActiveEnemyByIndex(state.enemyTargetIndex || 0)) {
           addLog("TARGET", `Target: ${state.enemy?.name || "Musuh"}`);
           refresh(state);
         }
