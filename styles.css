@@ -283,7 +283,7 @@ body.inBattle .grid{
 }
 body.inBattle .battleLayout{
   --battle-card-width: clamp(160px, 40vw, 200px);
-  --battle-card-height: clamp(190px, 52vw, 230px);
+  --battle-card-height: clamp(170px, 46vw, 210px);
   --battle-gap: clamp(8px, 2.5vw, 14px);
   width:min(100%, calc((var(--battle-card-width) * 2) + var(--battle-gap)));
   margin:0 auto;
@@ -316,7 +316,7 @@ body.inBattle #actionCard{
   width:100%;
 }
 body.inBattle .card{
-  padding:10px;
+  padding:8px;
 }
 body.inBattle .allyRow,
 body.inBattle .enemyRow{
@@ -335,7 +335,7 @@ body.inBattle .allyCard,
 body.inBattle .enemyCard{
   display:flex;
   flex-direction:column;
-  gap:6px;
+  gap:4px;
   font-size:13px;
   width:var(--battle-card-width);
   max-width:var(--battle-card-width);
@@ -385,11 +385,14 @@ body.inBattle .allySub{
   white-space:nowrap;
 }
 body.inBattle .bars{
-  gap:6px;
-  margin-top:8px;
+  gap:4px;
+  margin-top:4px;
 }
 body.inBattle .bar{
   height:8px;
+}
+body.inBattle .avatarWrap{
+  margin:6px 0 2px;
 }
 body.inBattle .battleActions{
   gap:8px;
