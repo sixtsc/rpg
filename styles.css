@@ -325,6 +325,7 @@ body.inBattle .enemyCard{
   font-size:13px;
   width:var(--battle-card-width);
   max-width:var(--battle-card-width);
+  min-width:0;
   height:var(--battle-card-height);
   box-sizing:border-box;
   margin:0;
