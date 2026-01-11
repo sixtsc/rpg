@@ -698,7 +698,7 @@ function renderEnemyRow() {
     : (state.enemy ? [state.enemy] : []);
 
   const activeEnemy = state.enemy;
-  queue.slice(1, 3).forEach((enemy, offset) => {
+  queue.slice(1, 4).forEach((enemy, offset) => {
     const card = document.createElement("div");
     card.className = "card enemyCard extra";
     const hpPct = enemy.maxHp ? clamp((enemy.hp / enemy.maxHp) * 100, 0, 100) : 0;
@@ -706,6 +706,9 @@ function renderEnemyRow() {
     card.innerHTML = `
       <div class="sectionTitle">
         <div><b>${escapeHtml(enemy.name)}</b> <span class="pill">Lv${enemy.level}</span></div>
+      </div>
+      <div class="avatarWrap enemyAvatarWrap">
+        <div class="avatarBox enemyAvatarBox"></div>
       </div>
       <div class="enemyMiniMeta">
         <div class="bar"><div class="fill hp" style="width:${hpPct}%"></div></div>
