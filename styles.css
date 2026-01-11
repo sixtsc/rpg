@@ -309,7 +309,7 @@ body.inBattle .enemyRow{
   display:grid;
   grid-auto-rows: var(--battle-card-height);
   align-content:start;
-  gap:14px;
+  gap:12px;
 }
 body.inBattle .allyRow{
   justify-items:start;
@@ -329,6 +329,9 @@ body.inBattle .enemyCard{
   box-sizing:border-box;
   margin:0;
   overflow:visible;
+}
+body.inBattle .enemyCard{
+  justify-self:end;
 }
 body.inBattle .sectionTitle{
   flex-wrap:nowrap;
@@ -379,6 +382,9 @@ body.inBattle .battleActions{
 }
 body.inBattle .battlePrimary{
   gap:8px;
+}
+body.inBattle .enemyCard .barRow{
+  font-size:12px;
 }
 body.inBattle .enemyCard.extra,
 body.inBattle .allyCard.extra{
