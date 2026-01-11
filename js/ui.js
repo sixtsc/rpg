@@ -58,7 +58,7 @@ function renderAllyRow(state) {
       nameEl.textContent = ally.name || `NPC ${slotIndex}`;
       lvlEl.textContent = `Lv${ally.level || 1}`;
       subEl.textContent = "";
-      subEl.style.display = "none";
+      subEl.style.display = "block";
       if (avatarWrap) avatarWrap.style.display = "flex";
       hpText.textContent = `${ally.hp}/${ally.maxHp}`;
       mpText.textContent = `${ally.mp}/${ally.maxMp}`;
@@ -168,6 +168,12 @@ export function refresh(state) {
 
   $("pLvl").textContent = `Lv${p.level}`;
   $("goldPill").textContent = `Gold: ${p.gold}`;
+  const allyCountPill = $("allyCountPill");
+  if (allyCountPill) {
+    const allyCount = Array.isArray(state.allies) ? state.allies.length : 0;
+    allyCountPill.textContent = `${allyCount}/2`;
+    allyCountPill.style.display = state.inBattle ? "none" : "inline-flex";
+  }
 
   // Player bars
   $("hpText").textContent = `${p.hp}/${p.maxHp}`;
