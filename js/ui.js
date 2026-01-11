@@ -36,6 +36,51 @@ export function setBar(el, cur, max) {
   el.style.width = `${clamp(pct, 0, 100)}%`;
 }
 
+function renderAllyRow(state) {
+  const row = $("allyRow");
+  if (!row) return;
+  const allies = Array.isArray(state.allies) ? state.allies : [];
+  [1, 2].forEach((slotIndex, i) => {
+    const ally = allies[i] || null;
+    const nameEl = row.querySelector(`[data-ally-name="${slotIndex}"]`);
+    const lvlEl = row.querySelector(`[data-ally-lvl="${slotIndex}"]`);
+    const subEl = row.querySelector(`[data-ally-sub="${slotIndex}"]`);
+    const hpText = row.querySelector(`[data-ally-hp="${slotIndex}"]`);
+    const mpText = row.querySelector(`[data-ally-mp="${slotIndex}"]`);
+    const hpBar = row.querySelector(`[data-ally-hpbar="${slotIndex}"]`);
+    const mpBar = row.querySelector(`[data-ally-mpbar="${slotIndex}"]`);
+    const card = row.querySelector(`.allyCard.extra[data-ally-slot="${slotIndex}"]`);
+
+    if (!nameEl || !lvlEl || !subEl || !hpText || !mpText || !hpBar || !mpBar || !card) return;
+
+    if (ally) {
+      nameEl.textContent = ally.name || `NPC ${slotIndex}`;
+      lvlEl.textContent = `Lv${ally.level || 1}`;
+      subEl.textContent = "";
+      subEl.style.display = "none";
+      hpText.textContent = `${ally.hp}/${ally.maxHp}`;
+      mpText.textContent = `${ally.mp}/${ally.maxMp}`;
+      setBar(hpBar, ally.hp, ally.maxHp);
+      setBar(mpBar, ally.mp, ally.maxMp);
+      card.classList.remove("empty");
+      card.classList.add("active");
+      card.style.display = "block";
+    } else {
+      nameEl.textContent = `NPC ${slotIndex}`;
+      lvlEl.textContent = "Lv-";
+      subEl.textContent = "Slot kosong";
+      subEl.style.display = "block";
+      hpText.textContent = "0/0";
+      mpText.textContent = "0/0";
+      hpBar.style.width = "0%";
+      mpBar.style.width = "0%";
+      card.classList.add("empty");
+      card.classList.remove("active");
+      card.style.display = "none";
+    }
+  });
+}
+
 export const modal = {
   open(title, choices, onPick) {
     $("modalTitle").textContent = title;
@@ -182,5 +227,6 @@ export function refresh(state) {
 
   const metaEl = $("meta");
   if (metaEl) metaEl.textContent = "";
-}
 
+  renderAllyRow(state);
+}

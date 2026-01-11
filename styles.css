@@ -370,6 +370,12 @@ body.inBattle .allySub{
   text-overflow:ellipsis;
   white-space:nowrap;
 }
+body.inBattle .allyCard .avatarWrap{
+  display:flex;
+}
+body.inTown .allyCard .avatarWrap{
+  display:none;
+}
 body.inBattle .bars{
   gap:6px;
   margin-top:8px;
