@@ -49,6 +49,7 @@ function renderAllyRow(state) {
     const mpText = row.querySelector(`[data-ally-mp="${slotIndex}"]`);
     const hpBar = row.querySelector(`[data-ally-hpbar="${slotIndex}"]`);
     const mpBar = row.querySelector(`[data-ally-mpbar="${slotIndex}"]`);
+    const avatarWrap = row.querySelector(`[data-ally-avatar="${slotIndex}"]`);
     const card = row.querySelector(`.allyCard.extra[data-ally-slot="${slotIndex}"]`);
 
     if (!nameEl || !lvlEl || !subEl || !hpText || !mpText || !hpBar || !mpBar || !card) return;
@@ -58,6 +59,7 @@ function renderAllyRow(state) {
       lvlEl.textContent = `Lv${ally.level || 1}`;
       subEl.textContent = "";
       subEl.style.display = "none";
+      if (avatarWrap) avatarWrap.style.display = "flex";
       hpText.textContent = `${ally.hp}/${ally.maxHp}`;
       mpText.textContent = `${ally.mp}/${ally.maxMp}`;
       setBar(hpBar, ally.hp, ally.maxHp);
@@ -70,6 +72,7 @@ function renderAllyRow(state) {
       lvlEl.textContent = "Lv-";
       subEl.textContent = "Slot kosong";
       subEl.style.display = "block";
+      if (avatarWrap) avatarWrap.style.display = "none";
       hpText.textContent = "0/0";
       mpText.textContent = "0/0";
       hpBar.style.width = "0%";

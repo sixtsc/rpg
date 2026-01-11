@@ -725,6 +725,7 @@ function renderAllyRow() {
     const mpText = row.querySelector(`[data-ally-mp="${slotIndex}"]`);
     const hpBar = row.querySelector(`[data-ally-hpbar="${slotIndex}"]`);
     const mpBar = row.querySelector(`[data-ally-mpbar="${slotIndex}"]`);
+    const avatarWrap = row.querySelector(`[data-ally-avatar="${slotIndex}"]`);
     const card = row.querySelector(`.allyCard.extra[data-ally-slot="${slotIndex}"]`);
 
     if (!nameEl || !lvlEl || !subEl || !hpText || !mpText || !hpBar || !mpBar || !card) return;
@@ -734,6 +735,7 @@ function renderAllyRow() {
       lvlEl.textContent = `Lv${ally.level || 1}`;
       subEl.textContent = "";
       subEl.style.display = "none";
+      if (avatarWrap) avatarWrap.style.display = "flex";
       hpText.textContent = `${ally.hp}/${ally.maxHp}`;
       mpText.textContent = `${ally.mp}/${ally.maxMp}`;
       setBar(hpBar, ally.hp, ally.maxHp);
@@ -746,6 +748,7 @@ function renderAllyRow() {
       lvlEl.textContent = "Lv-";
       subEl.textContent = "Slot kosong";
       subEl.style.display = "block";
+      if (avatarWrap) avatarWrap.style.display = "none";
       hpText.textContent = "0/0";
       mpText.textContent = "0/0";
       hpBar.style.width = "0%";
@@ -773,27 +776,33 @@ function renderEnemyRow() {
     if (foundIndex >= 0) activeIndex = foundIndex;
   }
 
-  const maxExtras = 2;
-  let extrasRendered = 0;
-  queue.forEach((enemy, index) => {
-    if (index === activeIndex) return;
-    if (extrasRendered >= maxExtras) return;
+  const mainCard = $("enemyCard");
+  if (mainCard) {
+    mainCard.dataset.enemyIndex = "0";
+    mainCard.classList.toggle("active", activeIndex === 0);
+  }
+
+  queue.slice(1, 3).forEach((enemy, offset) => {
+    const targetIndex = offset + 1;
     const card = document.createElement("div");
     card.className = "card enemyCard extra";
+    card.dataset.enemyIndex = String(targetIndex);
+    card.classList.toggle("active", targetIndex === activeIndex);
     const hpPct = enemy.maxHp ? clamp((enemy.hp / enemy.maxHp) * 100, 0, 100) : 0;
+    const mpPct = enemy.maxMp ? clamp((enemy.mp / enemy.maxMp) * 100, 0, 100) : 0;
     card.innerHTML = `
+      <div class="damageText"></div>
       <div class="sectionTitle">
         <div><b>${escapeHtml(enemy.name)}</b> <span class="pill">Lv${enemy.level}</span></div>
       </div>
       <div class="avatarWrap mini">
         <div class="avatarBox mini"></div>
       </div>
-      <div class="enemyMiniMeta">
+      <div class="bars enemyBarsCompact">
         <div class="bar"><div class="fill hp" style="width:${hpPct}%"></div></div>
-        <div class="muted">${enemy.hp}/${enemy.maxHp}</div>
+        <div class="bar"><div class="fill mp" style="width:${mpPct}%"></div></div>
       </div>
     `;
-    const targetIndex = index;
     card.onclick = () => {
       if (setActiveEnemyByIndex(targetIndex)) {
         addLog("TARGET", `Target: ${state.enemy?.name || enemy.name}`);
@@ -801,13 +810,18 @@ function renderEnemyRow() {
       }
     };
     row.appendChild(card);
-    extrasRendered += 1;
   });
 }
 
 const damageTimers = { player: null, enemy: null };
 function showDamageText(target, text){
-  const el = $(target === "player" ? "playerDamage" : "enemyDamage");
+  let el = null;
+  if (target === "player") {
+    el = $("playerDamage");
+  } else {
+    const activeCard = document.querySelector(".enemyRow .enemyCard.active .damageText");
+    el = activeCard || $("enemyDamage");
+  }
   if (!el) return;
   el.textContent = text;
   el.classList.remove("show");
@@ -1148,12 +1162,14 @@ function refresh(state) {
   renderSkillSlots();
 
   const inBattle = state.inBattle && state.enemy;
+  const enemyQueue = Array.isArray(state.enemyQueue) && state.enemyQueue.length ? state.enemyQueue : null;
+  const displayEnemy = enemyQueue ? enemyQueue[0] : state.enemy;
 
   document.body.classList.toggle("inBattle", !!inBattle);
   document.body.classList.toggle("inTown", !inBattle);
 
   if (inBattle) {
-    const e = state.enemy;
+    const e = displayEnemy;
 
     $("modePill").textContent = "Battle";
 
@@ -1223,9 +1239,8 @@ function refresh(state) {
     if (enemyBtns) enemyBtns.style.display = "flex";
     const enemyCard = $("enemyCard");
     if (enemyCard) {
-      enemyCard.classList.add("active");
       enemyCard.onclick = () => {
-        if (setActiveEnemyByIndex(state.enemyTargetIndex || 0)) {
+        if (setActiveEnemyByIndex(0)) {
           addLog("TARGET", `Target: ${state.enemy?.name || "Musuh"}`);
           refresh(state);
         }
