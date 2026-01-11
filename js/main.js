@@ -2,12 +2,30 @@ import { newState, newPlayer } from "./state.js";
 import { genEnemy, calcDamage, escapeChance, randInt, clamp } from "./engine.js";
 import { autosave, save, load } from "./storage.js";
 import { addLog, refresh, modal } from "./ui.js";
+import { RECRUIT_TEMPLATES } from "./data.js";
 
 const byId = (id) => document.getElementById(id);
 
 const state = newState();
+const MAX_ALLIES = 2;
 
 /* ----------------------------- Core helpers ----------------------------- */
+
+function ensureAllies() {
+  if (!state.player) return [];
+  if (!Array.isArray(state.player.allies)) state.player.allies = [];
+  state.allies = state.player.allies;
+  return state.allies;
+}
+
+function restoreAllies() {
+  const allies = ensureAllies();
+  allies.forEach((ally) => {
+    if (!ally) return;
+    ally.hp = ally.maxHp;
+    ally.mp = ally.maxMp;
+  });
+}
 
 function setTurn(turn) {
   state.turn = turn; // "town" | "player" | "enemy"
@@ -25,6 +43,7 @@ function endBattle(reason) {
   // Setelah battle selesai (menang/kalah/kabur), pulihkan HP & MP player
   state.player.hp = state.player.maxHp;
   state.player.mp = state.player.maxMp;
+  restoreAllies();
 
   autosave(state);
   refresh(state);
@@ -91,17 +110,23 @@ function enemyTurn() {
   const e = state.enemy;
   if (!e) return;
 
+  const allies = ensureAllies().filter((ally) => ally && ally.hp > 0);
+  const roll = randInt(1, 100);
+  const target = allies.length && roll > 60 ? allies[randInt(0, allies.length - 1)] : p;
+
   const isRage = e.mp >= 5 && Math.random() < 0.25;
 
   if (isRage) {
     e.mp -= 5;
-    const dmg = calcDamage(e.atk, p.def, 8, state.playerDefending);
-    p.hp = clamp(p.hp - dmg, 0, p.maxHp);
-    addLog("ENEMY", `${e.name} memakai Rage Strike! Damage ${dmg}.`);
+    const dmg = calcDamage(e.atk, target.def, 8, target === p && state.playerDefending);
+    target.hp = clamp(target.hp - dmg, 0, target.maxHp);
+    const targetLabel = target === p ? "kamu" : target.name;
+    addLog("ENEMY", `${e.name} memakai Rage Strike ke ${targetLabel}! Damage ${dmg}.`);
   } else {
-    const dmg = calcDamage(e.atk, p.def, 2, state.playerDefending);
-    p.hp = clamp(p.hp - dmg, 0, p.maxHp);
-    addLog("ENEMY", `${e.name} menyerang! Damage ${dmg}.`);
+    const dmg = calcDamage(e.atk, target.def, 2, target === p && state.playerDefending);
+    target.hp = clamp(target.hp - dmg, 0, target.maxHp);
+    const targetLabel = target === p ? "kamu" : target.name;
+    addLog("ENEMY", `${e.name} menyerang ${targetLabel}! Damage ${dmg}.`);
   }
 
   state.playerDefending = false;
@@ -120,6 +145,21 @@ function enemyTurn() {
 function afterPlayerAction() {
   const e = state.enemy;
   if (!e) return;
+
+  if (e.hp <= 0) {
+    winBattle();
+    return;
+  }
+
+  if (state.inBattle) {
+    const allies = ensureAllies();
+    allies.forEach((ally) => {
+      if (!ally || ally.hp <= 0 || !state.enemy) return;
+      const dmg = calcDamage(ally.atk, state.enemy.def, 2, false);
+      state.enemy.hp = clamp(state.enemy.hp - dmg, 0, state.enemy.maxHp);
+      addLog("ALLY", `${ally.name} menyerang! Damage ${dmg}.`);
+    });
+  }
 
   if (e.hp <= 0) {
     winBattle();
@@ -178,6 +218,7 @@ function rest() {
 
   p.hp = clamp(p.hp + Math.floor(p.maxHp * 0.35), 0, p.maxHp);
   p.mp = clamp(p.mp + Math.floor(p.maxMp * 0.4), 0, p.maxMp);
+  restoreAllies();
 
   addLog("TOWN", `Istirahat... HP ${hb}→${p.hp}, MP ${mb}→${p.mp}`);
 
@@ -199,6 +240,119 @@ function attack() {
   e.hp = clamp(e.hp - dmg, 0, e.maxHp);
 
   addLog("YOU", `Attack! Damage ${dmg}.`);
+}
+
+/* ------------------------------ Recruit ------------------------------ */
+
+function recruitCost(template, level) {
+  return template.costBase + (level - 1) * template.costPerLevel;
+}
+
+function buildRecruit(template, level) {
+  const maxHp = template.base.maxHp + (level - 1) * template.growth.maxHp;
+  const maxMp = template.base.maxMp + (level - 1) * template.growth.maxMp;
+  return {
+    id: template.id,
+    name: template.name,
+    role: template.role,
+    level,
+    maxHp,
+    maxMp,
+    hp: maxHp,
+    mp: maxMp,
+    atk: template.base.atk + (level - 1) * template.growth.atk,
+    def: template.base.def + (level - 1) * template.growth.def,
+    spd: template.base.spd + (level - 1) * template.growth.spd,
+  };
+}
+
+function addRecruit(ally) {
+  const allies = ensureAllies();
+  if (allies.length >= MAX_ALLIES) return false;
+  allies.push(ally);
+  return true;
+}
+
+function dismissRecruit(index) {
+  const allies = ensureAllies();
+  if (!allies[index]) return false;
+  allies.splice(index, 1);
+  return true;
+}
+
+function openRecruitModal() {
+  if (state.inBattle) return;
+
+  const p = state.player;
+  const allies = ensureAllies();
+  const level = p.level;
+  const slotsFilled = allies.length;
+  const slotsLeft = Math.max(0, MAX_ALLIES - slotsFilled);
+
+  const header = [{
+    title: `Slot Ally ${slotsFilled}/${MAX_ALLIES}`,
+    desc: slotsLeft ? "Pilih NPC untuk direkrut." : "Slot penuh. Lepas ally dulu.",
+    meta: "",
+  }];
+
+  const recruitChoices = RECRUIT_TEMPLATES.map((template) => {
+    const price = recruitCost(template, level);
+    const canHire = slotsLeft > 0 && p.gold >= price;
+    let meta = `${price} gold`;
+    if (!slotsLeft) meta += " (Slot penuh)";
+    else if (p.gold < price) meta += " (Gold kurang)";
+    return {
+      title: `${template.name} (Lv${level})`,
+      desc: template.desc,
+      meta,
+      value: canHire ? `hire:${template.id}` : undefined,
+    };
+  });
+
+  const dismissChoices = allies.map((ally, idx) => ({
+    title: `Lepas ${ally.name}`,
+    desc: `Kosongkan slot ally (${ally.role || "Ally"}).`,
+    meta: "",
+    value: `dismiss:${idx}`,
+  }));
+
+  modal.open(
+    "Recruit Ally",
+    header.concat(recruitChoices, dismissChoices),
+    (pick) => {
+      if (String(pick).startsWith("hire:")) {
+        const id = String(pick).replace("hire:", "");
+        const template = RECRUIT_TEMPLATES.find((t) => t.id === id);
+        if (!template) return;
+        const price = recruitCost(template, level);
+        if (p.gold < price) {
+          addLog("WARN", "Gold tidak cukup.");
+          refresh(state);
+          return;
+        }
+        if (!addRecruit(buildRecruit(template, level))) {
+          addLog("WARN", "Slot ally penuh.");
+          refresh(state);
+          return;
+        }
+        p.gold -= price;
+        addLog("GOLD", `Rekrut ${template.name} (-${price} gold).`);
+        autosave(state);
+        refresh(state);
+        return;
+      }
+
+      if (String(pick).startsWith("dismiss:")) {
+        const idx = Number(String(pick).replace("dismiss:", ""));
+        const ally = allies[idx];
+        if (ally && dismissRecruit(idx)) {
+          addLog("INFO", `${ally.name} dilepas dari party.`);
+          autosave(state);
+          refresh(state);
+        }
+      }
+    }
+  );
 }
 
 function dodge(){
@@ -447,6 +601,8 @@ function bind() {
   byId("btnExplore").onclick = explore;
   const br=byId("btnRest"); if(br) br.onclick = rest;
   byId("btnInventory").onclick = openInventoryReadOnly;
+  const btnRecruit = byId("btnRecruit");
+  if (btnRecruit) btnRecruit.onclick = openRecruitModal;
   const btnStats = byId("btnStats");
   if (btnStats) btnStats.onclick = openStatsModal;
 
@@ -496,6 +652,7 @@ function bind() {
 function applyLoaded(payload){
   if (payload?.player) {
     state.player = payload.player;
+    ensureAllies();
     state.enemy = null;
     state.inBattle = false;
     state.playerDefending = false;
@@ -512,6 +669,7 @@ function applyLoaded(payload){
 
 function startNewGame(){
   state.player = newPlayer();
+  ensureAllies();
   state.enemy = null;
   state.inBattle = false;
   state.playerDefending = false;

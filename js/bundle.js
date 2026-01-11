@@ -32,6 +32,38 @@ const ITEMS = {
   swiftBoots: { name:"Swift Boots", kind:"gear", slot:"shoes", desc:"Sepatu Lv5 meningkatkan kecepatan.", spd:2 }
 };
 const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton"];
+const RECRUIT_TEMPLATES = [
+  {
+    id: "guardian",
+    name: "Guardian",
+    role: "Tank",
+    desc: "HP tinggi, cocok jadi tameng tim.",
+    base: { maxHp: 70, maxMp: 15, atk: 6, def: 7, spd: 4 },
+    growth: { maxHp: 8, maxMp: 2, atk: 1, def: 2, spd: 1 },
+    costBase: 35,
+    costPerLevel: 7
+  },
+  {
+    id: "ranger",
+    name: "Ranger",
+    role: "Striker",
+    desc: "Serangan cepat dengan damage stabil.",
+    base: { maxHp: 50, maxMp: 20, atk: 8, def: 4, spd: 7 },
+    growth: { maxHp: 6, maxMp: 3, atk: 2, def: 1, spd: 2 },
+    costBase: 30,
+    costPerLevel: 6
+  },
+  {
+    id: "mystic",
+    name: "Mystic",
+    role: "Support",
+    desc: "MP tinggi, membantu lewat serangan sihir.",
+    base: { maxHp: 45, maxMp: 30, atk: 7, def: 3, spd: 5 },
+    growth: { maxHp: 5, maxMp: 5, atk: 2, def: 1, spd: 1 },
+    costBase: 32,
+    costPerLevel: 6
+  }
+];
 const SHOP_GOODS = [
   { name:"Potion", price:12, ref: ITEMS.potion },
   { name:"Ether", price:18, ref: ITEMS.ether },
@@ -68,6 +100,7 @@ const pick = (arr) => arr[Math.floor(Math.random()*arr.length)];
 const MAX_CHAR_SLOTS = 6;
 const STAT_POINTS_PER_LEVEL = 1;
 const MAX_LEVEL = 10;
+const MAX_ALLIES = 2;
 function genEnemy(plv){
   const lvl = clamp(plv + pick([-1,0,0,1]), 1, MAX_LEVEL);
   const name = pick(ENEMY_NAMES);
@@ -194,15 +227,48 @@ function newPlayer(){
     xp:0, xpToLevel:50,
     gold:0,
     gems:0,
+    allies: [],
     skills:[{ ...SKILLS.fireball, cdLeft:0 }],
     skillSlots: ["Fireball", null, null, null, null, null, null, null],
     inv: { "Potion": { ...ITEMS.potion, qty:2 }, "Ether": { ...ITEMS.ether, qty:1 } }
   };
 }
 
+function normalizeAlly(ally){
+  if (!ally) return null;
+  const level = clamp(Number(ally.level) || 1, 1, MAX_LEVEL);
+  const maxHp = Math.max(1, Number(ally.maxHp) || 1);
+  const maxMp = Math.max(0, Number(ally.maxMp) || 0);
+  const hp = clamp(Number(ally.hp) || maxHp, 0, maxHp);
+  const mp = clamp(Number(ally.mp) || maxMp, 0, maxMp);
+  return {
+    ...ally,
+    level,
+    maxHp,
+    maxMp,
+    hp,
+    mp,
+    atk: Number(ally.atk) || 1,
+    def: Number(ally.def) || 0,
+    spd: Number(ally.spd) || 0,
+    critChance: Number(ally.critChance) || 0,
+    critDamage: Number(ally.critDamage) || 0,
+    combustionChance: Number(ally.combustionChance) || 0,
+    evasion: Number(ally.evasion) || 0,
+    blockRate: Number(ally.blockRate) || 0,
+    escapeChance: Number(ally.escapeChance) || 0,
+    manaRegen: Number(ally.manaRegen) || 0,
+    role: ally.role || "Ally",
+    name: ally.name || "Ally"
+  };
+}
+
 
 function normalizePlayer(p){
   if (!p) return p;
+
+  if (!Array.isArray(p.allies)) p.allies = [];
+  p.allies = p.allies.map(normalizeAlly).filter(Boolean);
 
   // Base stats
   if (typeof p.gender !== "string") p.gender = "male";
@@ -334,14 +400,15 @@ function applyEquipmentStats(player){
 
 
 function newState(){
+  const player = normalizePlayer(newPlayer());
   return {
     // Character profiles
     slots: Array.from({ length: MAX_CHAR_SLOTS }, () => null),
     activeSlot: 0,
 
     // Current runtime
-    player: normalizePlayer(newPlayer()),
-    allies: [],
+    player,
+    allies: player.allies,
     enemy: null,
     enemyTargetIndex: 0,
     inBattle: false,
@@ -1192,6 +1259,78 @@ const byId = (id) => document.getElementById(id);
 
 const state = newState();
 
+function ensureAllies(){
+  if (!state.player) return [];
+  if (!Array.isArray(state.player.allies)) state.player.allies = [];
+  state.player.allies = state.player.allies.map(normalizeAlly).filter(Boolean);
+  state.allies = state.player.allies;
+  return state.allies;
+}
+
+function restoreAllies(){
+  const allies = ensureAllies();
+  allies.forEach((ally) => {
+    if (!ally) return;
+    ally.hp = ally.maxHp;
+    ally.mp = ally.maxMp;
+  });
+}
+
+function getAliveAllies(){
+  return ensureAllies().filter((ally) => ally && ally.hp > 0);
+}
+
+function pickEnemyTarget(){
+  const allies = getAliveAllies();
+  if (!allies.length) return { target: state.player, isPlayer: true };
+  const roll = randInt(1, 100);
+  if (roll <= 60) return { target: state.player, isPlayer: true };
+  return { target: pick(allies), isPlayer: false };
+}
+
+function recruitCost(template, level){
+  return template.costBase + (level - 1) * template.costPerLevel;
+}
+
+function buildRecruit(template, level){
+  const maxHp = template.base.maxHp + (level - 1) * template.growth.maxHp;
+  const maxMp = template.base.maxMp + (level - 1) * template.growth.maxMp;
+  return normalizeAlly({
+    id: template.id,
+    name: template.name,
+    role: template.role,
+    level,
+    maxHp,
+    maxMp,
+    hp: maxHp,
+    mp: maxMp,
+    atk: template.base.atk + (level - 1) * template.growth.atk,
+    def: template.base.def + (level - 1) * template.growth.def,
+    spd: template.base.spd + (level - 1) * template.growth.spd,
+    critChance: 5,
+    critDamage: 0,
+    combustionChance: 0,
+    evasion: 4,
+    blockRate: 0,
+    escapeChance: 0,
+    manaRegen: 0
+  });
+}
+
+function addRecruit(ally){
+  const allies = ensureAllies();
+  if (allies.length >= MAX_ALLIES) return false;
+  allies.push(ally);
+  return true;
+}
+
+function dismissRecruit(index){
+  const allies = ensureAllies();
+  if (!allies[index]) return false;
+  allies.splice(index, 1);
+  return true;
+}
+
 function ensureStatuses(entity){
   if (!entity) return [];
   if (!Array.isArray(entity.statuses)) entity.statuses = [];
@@ -1665,6 +1804,7 @@ function finalizeBattle(reason){
 
   state.player.hp = state.player.maxHp;
   state.player.mp = state.player.maxMp;
+  restoreAllies();
 
   if (state.player && Array.isArray(state.player.skills)) {
     state.player.skills.forEach((s) => { if (s) s.cdLeft = 0; });
@@ -1847,25 +1987,51 @@ function enemyTurn() {
       done(0);
       return;
     }
+    const { target, isPlayer } = pickEnemyTarget();
+    if (!target) {
+      done(0);
+      return;
+    }
     const isRage = enemy.mp >= 5 && Math.random() < 0.25;
     if (isRage) enemy.mp -= 5;
-    const res = resolveAttack(enemy, p, isRage ? 8 : 2, { dodgeBonus: state.playerDodging ? 30 : 0 });
+    const res = resolveAttack(
+      enemy,
+      target,
+      isRage ? 8 : 2,
+      { dodgeBonus: (isPlayer && state.playerDodging) ? 30 : 0 }
+    );
     if (res.missed) {
-      showDamageText("player", "MISS");
+      if (isPlayer) showDamageText("player", "MISS");
+      else addLog("ENEMY", `${enemy.name} meleset menyerang ${target.name}.`);
       done(0);
       return;
     }
     const delays = [];
     if (res.dmg > 0) {
-      delays.push(applyDamageAfterDelay(p, res.dmg, "player", 230));
+      if (isPlayer) {
+        delays.push(applyDamageAfterDelay(p, res.dmg, "player", 230));
+      } else {
+        target.hp = clamp(target.hp - res.dmg, 0, target.maxHp);
+      }
     }
     if (res.reflected > 0) {
-      delays.push(applyDamageAfterDelay(enemy, res.reflected, "enemy", 430));
+      if (isPlayer) delays.push(applyDamageAfterDelay(enemy, res.reflected, "enemy", 430));
+      else enemy.hp = clamp(enemy.hp - res.reflected, 0, enemy.maxHp);
     }
-    if (res.crit || res.combustion) playCritShake("player");
-    showDamageText("player", formatDamageText(res, res.dmg));
-    if (res.reflected > 0) {
-      showDamageText("enemy", `-${res.reflected} (REFLECT)`);
+    if (isPlayer && (res.crit || res.combustion)) playCritShake("player");
+    if (isPlayer) {
+      showDamageText("player", formatDamageText(res, res.dmg));
+      if (res.reflected > 0) {
+        showDamageText("enemy", `-${res.reflected} (REFLECT)`);
+      }
+    } else {
+      addLog("ENEMY", `${enemy.name} menyerang ${target.name}! Damage ${res.dmg}.`);
+      if (res.reflected > 0) {
+        addLog("ALLY", `${target.name} memantulkan ${res.reflected} damage.`);
+      }
+    }
+    if (!isPlayer && target.hp <= 0) {
+      addLog("ALLY", `${target.name} tumbang!`);
     }
     const wait = delays.length ? Math.max(...delays, 180) + 40 : 0;
     done(wait);
@@ -1898,6 +2064,49 @@ function enemyTurn() {
   next();
 }
 
+function handleEnemyDefeat(){
+  if (!state.enemy) return true;
+  if (Array.isArray(state.enemyQueue)) {
+    normalizeEnemyQueue();
+    if (state.enemyQueue.length) {
+      setActiveEnemyByIndex(0);
+      addLog("INFO", `Musuh tersisa: ${state.enemyQueue.length}`);
+      setTurn("enemy");
+      refresh(state);
+      setTimeout(() => {
+        enemyTurn();
+        refresh(state);
+      }, 450);
+      return true;
+    }
+  }
+  winBattle();
+  return true;
+}
+
+function alliesAct(){
+  const allies = getAliveAllies();
+  if (!allies.length || !state.enemy) return;
+  allies.forEach((ally) => {
+    if (!state.enemy || ally.hp <= 0) return;
+    const res = resolveAttack(ally, state.enemy, 2);
+    if (res.missed) {
+      addLog("ALLY", `${ally.name} meleset.`);
+      return;
+    }
+    if (res.dmg > 0) {
+      state.enemy.hp = clamp(state.enemy.hp - res.dmg, 0, state.enemy.maxHp);
+    }
+    if (res.reflected > 0) {
+      ally.hp = clamp(ally.hp - res.reflected, 0, ally.maxHp);
+      addLog("ALLY", `${ally.name} terkena pantulan ${res.reflected} damage.`);
+    }
+    addLog("ALLY", `${ally.name} menyerang! Damage ${res.dmg}.`);
+    if (res.crit || res.combustion) playCritShake("enemy");
+    showDamageText("enemy", formatDamageText(res, res.dmg));
+  });
+}
+
 function afterPlayerAction() {
   if (!state.inBattle) return;
   if (state.player && state.player.hp <= 0) {
@@ -1909,21 +2118,14 @@ function afterPlayerAction() {
   if (!e) return;
 
   if (e.hp <= 0) {
-    if (Array.isArray(state.enemyQueue)) {
-      normalizeEnemyQueue();
-      if (state.enemyQueue.length) {
-        setActiveEnemyByIndex(0);
-        addLog("INFO", `Musuh tersisa: ${state.enemyQueue.length}`);
-        setTurn("enemy");
-        refresh(state);
-        setTimeout(() => {
-          enemyTurn();
-          refresh(state);
-        }, 450);
-        return;
-      }
-    }
-    winBattle();
+    handleEnemyDefeat();
+    return;
+  }
+
+  alliesAct();
+
+  if (state.enemy && state.enemy.hp <= 0) {
+    handleEnemyDefeat();
     return;
   }
 
@@ -2018,6 +2220,7 @@ function rest() {
 
   p.hp = clamp(p.hp + Math.floor(p.maxHp * 0.35), 0, p.maxHp);
   p.mp = clamp(p.mp + Math.floor(p.maxMp * 0.4), 0, p.maxMp);
+  restoreAllies();
 
   addLog("TOWN", `Istirahat... HP ${hb}→${p.hp}, MP ${mb}→${p.mp}`);
 
@@ -2036,6 +2239,82 @@ function rest() {
   })();
 
   refresh(state);
+}
+
+function openRecruitModal(){
+  if (state.inBattle) return;
+  const p = state.player;
+  const allies = ensureAllies();
+  const level = p.level;
+  const slotsFilled = allies.length;
+  const slotsLeft = Math.max(0, MAX_ALLIES - slotsFilled);
+
+  const header = [{
+    title: `Slot Ally ${slotsFilled}/${MAX_ALLIES}`,
+    desc: slotsLeft ? "Pilih NPC untuk direkrut." : "Slot penuh. Lepas ally dulu.",
+    meta: ""
+  }];
+
+  const recruitChoices = RECRUIT_TEMPLATES.map((template) => {
+    const price = recruitCost(template, level);
+    const canHire = slotsLeft > 0 && p.gold >= price;
+    let meta = `${price} gold`;
+    if (!slotsLeft) meta += " (Slot penuh)";
+    else if (p.gold < price) meta += " (Gold kurang)";
+    return {
+      title: `${template.name} (Lv${level})`,
+      desc: template.desc,
+      meta,
+      value: canHire ? `hire:${template.id}` : undefined
+    };
+  });
+
+  const dismissChoices = allies.map((ally, idx) => ({
+    title: `Lepas ${ally.name}`,
+    desc: `Kosongkan slot ally (${ally.role || "Ally"}).`,
+    meta: "",
+    value: `dismiss:${idx}`
+  }));
+
+  modal.open("Recruit Ally", header.concat(recruitChoices, dismissChoices), (pick) => {
+    if (String(pick).startsWith("hire:")) {
+      const id = String(pick).replace("hire:", "");
+      const template = RECRUIT_TEMPLATES.find((t) => t.id === id);
+      if (!template) return;
+      const price = recruitCost(template, level);
+      if (p.gold < price) {
+        addLog("WARN", "Gold tidak cukup.");
+        refresh(state);
+        return;
+      }
+      if (!addRecruit(buildRecruit(template, level))) {
+        addLog("WARN", "Slot ally penuh.");
+        refresh(state);
+        return;
+      }
+      p.gold -= price;
+      addLog("GOLD", `Rekrut ${template.name} (-${price} gold).`);
+      autosave(state);
+      (async () => {
+        try { await cloudTrySaveCurrentProfile(); } catch (e) {}
+      })();
+      refresh(state);
+      return;
+    }
+
+    if (String(pick).startsWith("dismiss:")) {
+      const idx = Number(String(pick).replace("dismiss:", ""));
+      const ally = allies[idx];
+      if (ally && dismissRecruit(idx)) {
+        addLog("INFO", `${ally.name} dilepas dari party.`);
+        autosave(state);
+        (async () => {
+          try { await cloudTrySaveCurrentProfile(); } catch (e) {}
+        })();
+        refresh(state);
+      }
+    }
+  });
 }
 
 /* ---------------------------- Battle actions ---------------------------- */
@@ -2705,6 +2984,7 @@ function openTownMenu(){
                   state.player = state.slots[state.activeSlot]
                     ? normalizePlayer(state.slots[state.activeSlot])
                     : normalizePlayer(newPlayer());
+                  ensureAllies();
 
                   state.enemy = null;
                   state.inBattle = false;
@@ -2768,6 +3048,8 @@ function bind() {
   byId("btnExplore").onclick = explore;
   const br=byId("btnRest"); if(br) br.onclick = rest;
   byId("btnInventory").onclick = openInventoryReadOnly;
+  const btnRecruit = byId("btnRecruit");
+  if (btnRecruit) btnRecruit.onclick = openRecruitModal;
   const btnEnemyStats = byId("btnEnemyStats");
   if (btnEnemyStats) btnEnemyStats.onclick = openEnemyStatsModal;
   // MENU (Save/Load/New Game)
@@ -2839,8 +3121,9 @@ function applyLoaded(payload){
   state.player = state.slots[state.activeSlot]
     ? normalizePlayer(state.slots[state.activeSlot])
     : normalizePlayer(newPlayer());
+  ensureAllies();
 
-  state.allies = [];
+  ensureAllies();
   state.enemy = null;
   state.enemyTargetIndex = 0;
   state.inBattle = false;
@@ -2871,8 +3154,9 @@ function startNewGame(slotIdx){
   state.slots[idx] = p;
   state.activeSlot = idx;
   state.player = p;
+  ensureAllies();
 
-  state.allies = [];
+  ensureAllies();
   state.enemy = null;
   state.enemyTargetIndex = 0;
   state.inBattle = false;
@@ -3075,6 +3359,7 @@ function deleteCharacter(slotIdx){
     state.player = state.slots[state.activeSlot]
       ? normalizePlayer(state.slots[state.activeSlot])
       : normalizePlayer(newPlayer());
+    ensureAllies();
 
     state.enemy = null;
     state.inBattle = false;
@@ -3116,6 +3401,7 @@ function handleCreateCharacter(){
   state.slots[pendingCreateSlot] = p;
   state.activeSlot = pendingCreateSlot;
   state.player = p;
+  ensureAllies();
 
   // Reset runtime state
   state.enemy = null;
@@ -3145,6 +3431,7 @@ function enterTownWithSlot(slotIdx){
 
   state.activeSlot = idx;
   state.player = normalizePlayer(slot);
+  ensureAllies();
 
   state.enemy = null;
   state.inBattle = false;
@@ -3217,6 +3504,7 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
   state.player = state.slots[state.activeSlot]
     ? normalizePlayer(state.slots[state.activeSlot])
     : normalizePlayer(newPlayer());
+  ensureAllies();
 
   state.enemy = null;
   state.inBattle = false;

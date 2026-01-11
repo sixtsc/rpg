@@ -9,14 +9,17 @@ export function newPlayer(){
     atk:10, def:4, spd:7,
     xp:0, xpToLevel:50,
     gold:0,
+    allies: [],
     skills:[SKILLS.fireball],
     inv: { "Potion": { ...ITEMS.potion, qty:2 }, "Ether": { ...ITEMS.ether, qty:1 } }
   };
 }
 
 export function newState(){
+  const player = newPlayer();
   return {
-    player: newPlayer(),
+    player,
+    allies: player.allies,
     enemy: null,
     inBattle: false,
     playerDefending: false,
@@ -24,4 +27,3 @@ export function newState(){
     battleTurn: 0 // "town" | "player" | "enemy"
   };
 }
-
