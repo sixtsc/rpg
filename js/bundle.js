@@ -774,23 +774,26 @@ function renderEnemyRow() {
     ? normalizeEnemyQueue()
     : (state.enemy ? [state.enemy] : []);
 
-  const activeEnemy = state.enemy;
-  queue.slice(1, 3).forEach((enemy, offset) => {
+  const extraEnemies = queue
+    .map((enemy, idx) => ({ enemy, idx }))
+    .filter(({ idx }) => idx !== state.enemyTargetIndex)
+    .slice(0, 2);
+
+  extraEnemies.forEach(({ enemy, idx }) => {
     const card = document.createElement("div");
     card.className = "card enemyCard extra";
     const hpPct = enemy.maxHp ? clamp((enemy.hp / enemy.maxHp) * 100, 0, 100) : 0;
-    const targetIndex = offset + 1;
-    if (state.enemyTargetIndex === targetIndex || enemy === activeEnemy) {
-      card.classList.add("active");
-    }
-    card.dataset.targetIndex = String(targetIndex);
+    const targetIndex = idx;
+    card.dataset.targetIndex = String(idx);
     card.innerHTML = `
       <div class="sectionTitle">
         <div><b>${escapeHtml(enemy.name)}</b> <span class="pill">Lv${enemy.level}</span></div>
       </div>
+      <div class="avatarWrap">
+        <div class="avatarBox"></div>
+      </div>
       <div class="enemyMiniMeta">
         <div class="bar"><div class="fill hp" style="width:${hpPct}%"></div></div>
-        <div class="muted">${enemy.hp}/${enemy.maxHp}</div>
       </div>
     `;
     card.onclick = () => {

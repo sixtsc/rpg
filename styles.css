@@ -373,6 +373,9 @@ body.inBattle .allySub{
 body.inBattle .allyCard .avatarWrap{
   display:flex;
 }
+body.inBattle .enemyCard.extra .avatarWrap{
+  display:flex;
+}
 body.inTown .allyCard .avatarWrap{
   display:none;
 }
@@ -399,6 +402,15 @@ body.inBattle .allyCard.extra{
 }
 body.inBattle .enemyMiniMeta .muted{
   font-size:10px;
+}
+
+#hpText,
+#mpText,
+#eHpText,
+#eMpText,
+.allyHpText,
+.allyMpText{
+  display:none;
 }
 
 @media (max-width:820px){
