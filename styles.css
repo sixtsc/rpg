@@ -404,6 +404,15 @@ body.inBattle .enemyMiniMeta .muted{
   font-size:10px;
 }
 
+#allyRow .barRow span,
+#enemyRow .barRow span,
+#playerCard .barRow span{
+  display:none;
+}
+#xpGroup .barRow span{
+  display:inline;
+}
+
 #hpText,
 #mpText,
 #eHpText,
