@@ -288,7 +288,18 @@
 </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js" defer></script>
-  <script type="module" src="./js/main.js?v=v37"></script>
+  <script type="module">
+    const updateStatus = (message) => {
+      const el = document.getElementById("menuSub");
+      if (el) el.textContent = message;
+    };
+
+    import("./js/main.js")
+      .catch((err) => {
+        console.error("Gagal memuat modul game.", err);
+        updateStatus("Game gagal dimuat. Pastikan dibuka lewat server lokal (bukan file://) atau refresh.");
+      });
+  </script>
 </body>
 
 </html>
