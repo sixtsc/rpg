@@ -287,28 +287,8 @@
       <div class="modalBody" id="modalBody"></div>
 </div>
   </div>
-  <!-- Scripts (bundled, non-module) -->
-  <script>
-    // Cache-buster version (update when repackaging)
-    window.__APP_VER__ = "v18";
-    window.__BUNDLE_LOADED__ = false;
-  </script>
-
-  <script src="./js/bundle.js?v=v37" defer></script>
-
-  <script>
-    // If bundle didn't run, show hint in-menu (no DevTools needed)
-    setTimeout(function(){
-      if(!window.__BUNDLE_LOADED__){
-        var el=document.getElementById('menuSub');
-        if(el) el.textContent='JS belum jalan (bundle.js tidak dieksekusi). Coba refresh + matikan cache.';
-      } else {
-        // Optional: show loaded status
-        var el2=document.getElementById('menuSub');
-        if(el2 && el2.textContent.trim()==='Pilih opsi:') el2.textContent='Pilih opsi:';
-      }
-    }, 1200);
-  </script>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js" defer></script>
+  <script type="module" src="./js/main.js?v=v37"></script>
 </body>
 
 </html>
