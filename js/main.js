@@ -691,6 +691,43 @@ function showMenu(show){
 (function boot() {
   bind();
 
+  // Auth / Cloud login overlay
+  const authLogin = byId("authLogin");
+  const authRegister = byId("authRegister");
+  const authOffline = byId("authOffline");
+  const authMsg = byId("authMsg");
+
+  if (authLogin || authRegister || authOffline) {
+    showMenu(true);
+
+    const setAuthMsg = (message) => {
+      if (authMsg) authMsg.textContent = message;
+    };
+
+    if (authLogin) {
+      authLogin.onclick = () => {
+        setAuthMsg("Login cloud belum tersedia di mode modular. Silakan gunakan Main Offline.");
+      };
+    }
+
+    if (authRegister) {
+      authRegister.onclick = () => {
+        setAuthMsg("Registrasi cloud belum tersedia di mode modular. Silakan gunakan Main Offline.");
+      };
+    }
+
+    if (authOffline) {
+      authOffline.onclick = () => {
+        showMenu(false);
+        const payload = load();
+        if (!applyLoaded(payload)) startNewGame();
+      };
+    }
+
+    refresh(state);
+    return;
+  }
+
   // Main menu buttons (overlay)
   const menuNew = byId("menuNew");
   const menuLoad = byId("menuLoad");
