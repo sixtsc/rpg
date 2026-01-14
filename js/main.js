@@ -725,6 +725,7 @@ function showMenu(show){
   }
 
   // Fallback: kalau overlay tidak ada, tetap coba autoload seperti sebelumnya.
+  showMenu(false);
   const payload = load();
   if (!applyLoaded(payload)) addLog("INFO", "Selamat datang! Klik Explore untuk bertarung.");
 
