@@ -34,6 +34,8 @@ import {
   playCritShake,
   playDodgeFade,
   playSlash,
+  showDamageText,
+  formatDamageText,
   showBattleResultOverlay,
   escapeHtml,
 } from "./ui.js";

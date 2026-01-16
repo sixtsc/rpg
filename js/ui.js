@@ -208,7 +208,7 @@ function renderEnemyRow() {
 }
 
 const damageTimers = { player: null, enemy: null };
-function showDamageText(target, text) {
+export function showDamageText(target, text) {
   const el = $(target === "player" ? "playerDamage" : "enemyDamage");
   if (!el) return;
   el.textContent = text;
@@ -221,7 +221,7 @@ function showDamageText(target, text) {
   }, 1400);
 }
 
-function formatDamageText(res, dmg) {
+export function formatDamageText(res, dmg) {
   if (!res || res.missed) return "MISS";
   const tags = [];
   if (res.crit) tags.push("CRIT");
