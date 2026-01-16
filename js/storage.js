@@ -151,6 +151,10 @@ export async function ensureCloudUser() {
   return cloudUserCache;
 }
 
+export function resetCloudUserCache() {
+  cloudUserCache = null;
+}
+
 export async function cloudTrySaveCurrentProfile(state) {
   const me = await ensureCloudUser();
   if (!me) return { ok: false, skipped: true, reason: "unauth" };

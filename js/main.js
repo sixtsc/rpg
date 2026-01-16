@@ -24,6 +24,7 @@ import {
   cloudSavePayload,
   cloudLoadPayload,
   ensureCloudUser,
+  resetCloudUserCache,
   cloudLogout,
   apiJson,
 } from "./storage.js";
@@ -2357,7 +2358,7 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
     }
 
     // refresh cached user after cookie is set
-    cloudUserCache = null;
+    resetCloudUserCache();
     await ensureCloudUser();
 
     await syncCloudOrLocalAndShowCharacterMenu();
