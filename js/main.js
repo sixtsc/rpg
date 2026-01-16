@@ -38,6 +38,8 @@ import {
   formatDamageText,
   showBattleResultOverlay,
   escapeHtml,
+  normalizeEnemyQueue,
+  setActiveEnemyByIndex,
 } from "./ui.js";
 
 window.__APP_BOOTED__ = true;

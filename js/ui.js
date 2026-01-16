@@ -110,14 +110,14 @@ function skillIconHtml(skill) {
   return `<span class="skillIconWrap"><img class="skillIcon" src="${escapeHtml(skill.icon)}" alt="" /></span>`;
 }
 
-function normalizeEnemyQueue() {
+export function normalizeEnemyQueue() {
   const state = getState();
   if (!Array.isArray(state?.enemyQueue)) return [];
   state.enemyQueue = state.enemyQueue.filter((enemy) => enemy && enemy.hp > 0);
   return state.enemyQueue;
 }
 
-function setActiveEnemyByIndex(index) {
+export function setActiveEnemyByIndex(index) {
   const state = getState();
   const queue = normalizeEnemyQueue();
   if (!queue.length) return false;
@@ -266,7 +266,7 @@ function renderSkillSlots() {
   });
 }
 
-function useSkillAtIndex(idx) {
+export function useSkillAtIndex(idx) {
   const state = getState();
   const api = getApi();
   const p = state?.player;
