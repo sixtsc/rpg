@@ -61,19 +61,19 @@ export function normalizeProfilePayload(payload) {
   return emptyProfilePayload();
 }
 
-function getProfilePayloadFromState(state) {
+function getProfilePayloadFromState(state = window.__GAME_STATE__) {
   const out = emptyProfilePayload();
   out.activeSlot = clamp(
-    (typeof state.activeSlot === "number" ? state.activeSlot : 0),
+    (typeof state?.activeSlot === "number" ? state.activeSlot : 0),
     0,
     MAX_CHAR_SLOTS - 1
   );
   out.slots = Array.from({ length: MAX_CHAR_SLOTS }, (_, i) => {
-    const slot = state.slots && state.slots[i];
+    const slot = state?.slots && state.slots[i];
     return slot ? normalizePlayer(slot) : null;
   });
 
-  if (state.player) out.slots[out.activeSlot] = normalizePlayer(state.player);
+  if (state?.player) out.slots[out.activeSlot] = normalizePlayer(state.player);
 
   out.t = Date.now();
   return out;

@@ -217,21 +217,29 @@
           <div class="card actionCard" id="actionCard" style="display:none;">
               <div class="sectionTitle">
                 <div><b>ACTION</b></div>
-                <div class="rightPills">
-                  <div class="pill muted" id="turnCount">Turn: 0</div>
-                  <div class="pill muted" id="battleHint">Explore untuk cari musuh</div>
-                  <div class="pill muted" id="actionHint">—</div>
-                </div>
+              <div class="rightPills">
+                <div class="pill muted" id="turnCount">Turn: 0</div>
+                <div class="pill muted" id="actionHint">—</div>
               </div>
+            </div>
 
             <!-- Battle buttons -->
             <div class="battleActions" id="battleBtns" style="display:none;">
               <div class="battlePrimary">
                 <button class="primary" id="btnAttack">Attack</button>
-                <button id="btnSkill">Skill</button>
+                <button id="btnCharge">Charge</button>
                 <button id="btnItem">Item</button>
                 <button id="btnDefend">Dodge</button>
-                <button class="pill muted" id="btnStatsBattle" type="button">Stats</button>
+                <div id="skillSlots" class="skillGrid">
+                  <button class="skillSlot" data-slot="0">-</button>
+                  <button class="skillSlot" data-slot="1">-</button>
+                  <button class="skillSlot" data-slot="2">-</button>
+                  <button class="skillSlot" data-slot="3">-</button>
+                  <button class="skillSlot" data-slot="4">-</button>
+                  <button class="skillSlot" data-slot="5">-</button>
+                  <button class="skillSlot" data-slot="6">-</button>
+                  <button class="skillSlot" data-slot="7">-</button>
+                </div>
                 <button class="warn" id="btnRun">Run</button>
               </div>
             </div>
@@ -241,22 +249,12 @@
               <div class="battlePrimary">
                 <button class="primary" id="btnExplore">Adventure</button>
                 <button id="btnInventory">Inventory</button>
-                <button id="btnStats" type="button">Stats</button>
                 <button id="btnRecruit">Recruit</button>
                 <button id="btnProfile">Profile</button>
                 <button id="btnShop">Shop</button>
                 <button class="good" id="btnMenu">Menu</button>
               </div>
             </div>
-          </div>
-          <div class="card logCard" id="logCard">
-            <div class="sectionTitle">
-              <div><b>LOG</b></div>
-              <div class="rightPills">
-                <div class="pill muted" id="logHint">Town</div>
-              </div>
-            </div>
-            <div id="log" class="logList" role="log" aria-live="polite"></div>
           </div>
         </div>
       </div>
