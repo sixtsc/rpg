@@ -238,10 +238,6 @@ function formatItemStats(item){
   return stats.length ? stats.join(" | ") : "";
 }
 
-function getShopItem(name){
-  return SHOP_GOODS.find((g) => g.name === name);
-}
-
 function getMarketGoods(){
   const category = state.shopMarketCategory || "consumable";
   const equipCategory = state.shopEquipCategory || "weapon";
