@@ -1000,6 +1000,41 @@ select.authInput{
 /* Give a bit more separation between ACTION and LOG */
 .actionCard{ margin-bottom:10px; }
 
+/* Log panel */
+.logCard{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.logList{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  max-height:220px;
+  overflow:auto;
+  padding-right:4px;
+}
+.entry{
+  font-size:12px;
+  line-height:1.35;
+  background:rgba(255,255,255,0.03);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:6px 8px;
+}
+.entry .tag{
+  font-weight:700;
+  color:#9cc8ff;
+  margin-right:6px;
+}
+.entry .time{
+  color:var(--muted);
+  font-size:11px;
+  margin-left:6px;
+}
+.entry.log-xp .tag{ color:#86efac; }
+.entry.log-gold .tag{ color:#fcd34d; }
+
 
 /* Enemy stats icon button */
 .iconPill{

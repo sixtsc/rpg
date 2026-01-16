@@ -1,29 +1,33 @@
 import { clamp } from "./engine.js";
 
 const $ = (id) => document.getElementById(id);
-let toastTimer;
 
-function setText(id, value) {
+const setText = (id, value) => {
   const el = $(id);
   if (el) el.textContent = value;
-}
+};
 
-function setDisplay(id, value) {
+const setDisplay = (id, value) => {
   const el = $(id);
   if (el) el.style.display = value;
+};
+
+export function playCritShake(target) {
+  const el = $(target === "player" ? "pAvatarBox" : "eAvatarBox");
+  if (!el) return;
+  el.classList.remove("critShake");
+  void el.offsetWidth;
+  el.classList.add("critShake");
+  setTimeout(() => el.classList.remove("critShake"), 450);
 }
 
-function showToast(message, tone) {
-  const toast = $("toast");
-  if (!toast) return;
-  toast.textContent = message;
-  toast.classList.remove("good", "warn", "danger");
-  if (tone) toast.classList.add(tone);
-  toast.classList.add("show");
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => {
-    toast.classList.remove("show");
-  }, 2200);
+export function playDodgeFade(target) {
+  const el = $(target === "player" ? "pAvatarBox" : "eAvatarBox");
+  if (!el) return;
+  el.classList.remove("dodgeFade");
+  void el.offsetWidth;
+  el.classList.add("dodgeFade");
+  setTimeout(() => el.classList.remove("dodgeFade"), 450);
 }
 
 export function timeStr() {
@@ -42,15 +46,10 @@ export function escapeHtml(s) {
 
 export function addLog(tag, msg) {
   const logEl = $("log");
-  if (!logEl) {
-    const tone = tag === "LOSE" ? "danger" : tag === "WIN" ? "good" : undefined;
-    showToast(`${tag ? `[${tag}] ` : ""}${msg}`, tone);
-    return;
-  }
+  if (!logEl) return;
   const div = document.createElement("div");
   div.className = "entry";
 
-  // Color helpers (tag-based)
   const t = String(tag || "").toUpperCase();
   if (t === "XP" || t === "EXP") div.classList.add("log-xp");
   if (t === "GOLD") div.classList.add("log-gold");
@@ -62,8 +61,44 @@ export function addLog(tag, msg) {
 
 export function setBar(el, cur, max) {
   if (!el) return;
-  const pct = max <= 0 ? 0 : (cur / max) * 100;
-  el.style.width = `${clamp(pct, 0, 100)}%`;
+  const pctRaw = max <= 0 ? 0 : (cur / max) * 100;
+  const pct = clamp(pctRaw, 0, 100);
+
+  el.style.width = `${pct}%`;
+
+  if (el.classList && el.classList.contains("xp")) return;
+
+  const bar = el && el.parentElement;
+  if (!bar || !bar.classList || !bar.classList.contains("bar")) return;
+
+  let loss = bar.querySelector(".loss");
+  if (!loss) {
+    loss = document.createElement("div");
+    loss.className = "loss";
+    bar.insertBefore(loss, el);
+  }
+
+  const prev = bar.dataset.prevPct ? parseFloat(bar.dataset.prevPct) : pct;
+
+  if (pct < prev - 0.01) {
+    loss.style.transition = "none";
+    loss.style.width = `${prev}%`;
+    loss.style.opacity = "0.9";
+
+    requestAnimationFrame(() => {
+      loss.style.transition = "width 420ms ease-out, opacity 650ms ease-out";
+      loss.style.width = `${pct}%`;
+      setTimeout(() => {
+        loss.style.opacity = "0";
+      }, 420);
+    });
+  } else {
+    loss.style.transition = "none";
+    loss.style.width = `${pct}%`;
+    loss.style.opacity = "0";
+  }
+
+  bar.dataset.prevPct = `${pct}`;
 }
 
 function renderAllyRow(state) {
@@ -117,38 +152,70 @@ export const modal = {
     if (!body) return;
     body.innerHTML = "";
 
+    body.classList.remove("statsGrid");
+    if (String(title).toLowerCase().includes("stats")) body.classList.add("statsGrid");
+
     choices.forEach((c) => {
       const row = document.createElement("div");
       row.className = "choice";
 
-      // Optional styling
       if (c.className) row.classList.add(...String(c.className).split(/\s+/).filter(Boolean));
       if (c.style) row.style.cssText += String(c.style);
-      row.innerHTML = `
-        <div>
-          <b>${escapeHtml(c.title)}</b>
-          <div class="desc">${escapeHtml(c.desc || "")}</div>
-        </div>
-        <div class="right muted">${escapeHtml(c.meta || "")}</div>
+
+      const left = document.createElement("div");
+      left.innerHTML = `
+        <b>${escapeHtml(c.title)}</b>
+        <div class="desc">${escapeHtml(c.desc || "")}</div>
       `;
-      // Only clickable if value is provided
-      if (c.value !== undefined) {
+
+      const right = document.createElement("div");
+      right.className = "right muted";
+
+      if (Array.isArray(c.buttons) && c.buttons.length) {
+        right.classList.add("btnGroup");
+        right.innerHTML = c.buttons.map((b) => {
+          const dis = b.disabled ? "disabled" : "";
+          const cls = ["miniBtn", b.className || ""].join(" ").trim();
+          return `<button type="button" class="${escapeHtml(cls)}" data-v="${escapeHtml(String(b.value))}" ${dis}>${escapeHtml(b.text)}</button>`;
+        }).join("");
+      } else {
+        right.textContent = c.meta || "";
+      }
+
+      row.appendChild(left);
+      row.appendChild(right);
+
+      if (c.value !== undefined && !(Array.isArray(c.buttons) && c.buttons.length)) {
         row.onclick = () => {
-          modal.close();
+          if (!c.keepOpen) modal.close();
           onPick(c.value);
         };
       } else {
         row.classList.add("readonly");
       }
+
+      if (Array.isArray(c.buttons) && c.buttons.length) {
+        right.querySelectorAll("button").forEach((btn) => {
+          btn.onclick = (e) => {
+            e.stopPropagation();
+            if (btn.disabled) return;
+            const v = btn.getAttribute("data-v");
+            if (!c.keepOpen) modal.close();
+            onPick(v);
+          };
+        });
+      }
+
       body.appendChild(row);
     });
 
     setDisplay("modalBackdrop", "flex");
     const backdrop = $("modalBackdrop");
-    if (!backdrop) return;
-    backdrop.onclick = (e) => {
-      if (e.target.id === "modalBackdrop") modal.close();
-    };
+    if (backdrop) {
+      backdrop.onclick = (e) => {
+        if (e.target.id === "modalBackdrop") modal.close();
+      };
+    }
   },
 
   close() {
@@ -158,41 +225,38 @@ export const modal = {
   bind() {
     const closeBtn = $("modalClose");
     if (closeBtn) closeBtn.onclick = () => modal.close();
-    const c = $("modalCancel"); if (c) c.onclick = () => modal.close();
+    const c = $("modalCancel");
+    if (c) c.onclick = () => modal.close();
   },
 };
 
-// TURN INDICATOR: state.turn = "player" | "enemy" | "town"
 export function refresh(state) {
   const p = state.player;
   const inBattle = state.inBattle && state.enemy;
 
-  document.body.classList.toggle("inBattle", inBattle);
+  document.body.classList.toggle("inBattle", !!inBattle);
   document.body.classList.toggle("inTown", !inBattle);
 
-  // Stats button (battle) — simple label only, XP shown di dalam stats modal
   const btnStatsBattle = $("btnStatsBattle");
   if (btnStatsBattle) {
     btnStatsBattle.textContent = "Stats";
   }
-
-  // Town stats button — simple label only
   const btnStatsTown = $("btnStats");
   if (btnStatsTown) {
     btnStatsTown.textContent = "Stats";
   }
 
-  // Log hint / Turn indicator
   const logHint = $("logHint");
   if (logHint) {
     if (state.inBattle && state.enemy) {
-      logHint.textContent = state.turn === "enemy" ? "Turn: Musuh" : "Turn: Kamu";
+      logHint.style.display = "none";
+      logHint.textContent = "";
     } else {
+      logHint.style.display = "inline-flex";
       logHint.textContent = "Town";
     }
   }
 
-  // Player title + name
   const pNameTitle = $("pNameTitle");
   if (pNameTitle) pNameTitle.textContent = p.name;
 
@@ -200,9 +264,13 @@ export function refresh(state) {
   if (pSub) { pSub.textContent = ""; pSub.style.display = "none"; }
 
   setText("pLvl", `Lv${p.level}`);
-  setText("goldPill", `Gold: ${p.gold}`);
+  const goldPill = $("goldPill");
+  if (goldPill) {
+    goldPill.textContent = `Gold: ${p.gold}`;
+    goldPill.style.display = "none";
+  }
+  setText("goldValue", String(p.gold ?? 0));
 
-  // Player bars
   setText("hpText", `${p.hp}/${p.maxHp}`);
   setText("mpText", `${p.mp}/${p.maxMp}`);
   setText("xpText", `${p.xp}/${p.xpToLevel}`);
@@ -211,21 +279,29 @@ export function refresh(state) {
   setBar($("mpBar"), p.mp, p.maxMp);
   setBar($("xpBar"), p.xp, p.xpToLevel);
 
-  const turnLabel = inBattle && state.enemy
-    ? (state.turn === "enemy" ? "Turn: Musuh" : "Turn: Kamu")
-    : "Town";
-
-  setText("actionHint", turnLabel);
-  setText("battleHint", inBattle ? `Turn: ${Math.max(1, state.battleTurn || 0)}` : "Explore untuk cari musuh");
-  setText("turnCount", `Turn: ${Math.max(1, state.battleTurn || 0)}`);
-  setDisplay("actionCard", "block");
-
   if (inBattle) {
     const e = state.enemy;
 
     setText("modePill", "Battle");
 
-    // Enemy title + name
+    const battleHintEl = $("battleHint");
+    if (battleHintEl) {
+      battleHintEl.style.display = "none";
+      battleHintEl.textContent = "";
+    }
+
+    const turnCountEl = $("turnCount");
+    if (turnCountEl) {
+      turnCountEl.style.display = "inline-flex";
+      turnCountEl.textContent = `Turn: ${Math.max(1, state.battleTurn || 0)}`;
+    }
+
+    const actionHint = $("actionHint");
+    if (actionHint) {
+      actionHint.style.display = "inline-flex";
+      actionHint.textContent = (state.turn === "player" ? "Giliran: Kamu" : "Giliran: Musuh");
+    }
+
     const eNameTitle = $("eNameTitle");
     if (eNameTitle) eNameTitle.textContent = e.name;
 
@@ -234,21 +310,71 @@ export function refresh(state) {
 
     setText("eLvl", `Lv${e.level}`);
 
-    // Enemy bars
     setDisplay("enemyBars", "grid");
     setText("eHpText", `${e.hp}/${e.maxHp}`);
     setText("eMpText", `${e.mp}/${e.maxMp}`);
     setBar($("eHpBar"), e.hp, e.maxHp);
     setBar($("eMpBar"), e.mp, e.maxMp);
 
-    // Buttons visibility
     setDisplay("townBtns", "none");
     setDisplay("battleBtns", "flex");
+
+    const btnSkill = $("btnSkill");
+    if (btnSkill) {
+      btnSkill.textContent = "Skill";
+      btnSkill.disabled = (state.turn !== "player");
+    }
+
+    setDisplay("actionCard", "block");
+
+    const pAv = $("pAvatarWrap");
+    if (pAv) pAv.style.display = "flex";
+    const eAv = $("eAvatarWrap");
+    if (eAv) eAv.style.display = "flex";
+
+    if (state._animateEnemyIn) {
+      const playerCard = $("playerCard");
+      const enemyCard = $("enemyCard");
+
+      const pop = (el) => {
+        if (!el) return;
+        el.classList.remove("popIn");
+        void el.offsetWidth;
+        el.classList.add("popIn");
+        el.addEventListener("animationend", () => el.classList.remove("popIn"), { once: true });
+      };
+
+      pop(playerCard);
+      pop(enemyCard);
+
+      state._animateEnemyIn = false;
+    }
+
+    const xpGroup = $("xpGroup");
+    if (xpGroup) xpGroup.style.display = "none";
 
     const enemyBtns = $("enemyBtns");
     if (enemyBtns) enemyBtns.style.display = "flex";
   } else {
     setText("modePill", "Town");
+
+    const battleHintEl = $("battleHint");
+    if (battleHintEl) {
+      battleHintEl.style.display = "inline-flex";
+      battleHintEl.textContent = "Explore untuk cari musuh";
+    }
+
+    const turnCountEl = $("turnCount");
+    if (turnCountEl) {
+      turnCountEl.style.display = "inline-flex";
+      turnCountEl.textContent = `Gold: ${p.gold}`;
+    }
+
+    const actionHint = $("actionHint");
+    if (actionHint) {
+      actionHint.textContent = "";
+      actionHint.style.display = "none";
+    }
 
     const eNameTitle = $("eNameTitle");
     if (eNameTitle) eNameTitle.textContent = "-";
@@ -261,6 +387,17 @@ export function refresh(state) {
 
     setDisplay("townBtns", "flex");
     setDisplay("battleBtns", "none");
+    const btnSkill = $("btnSkill");
+    if (btnSkill) { btnSkill.disabled = false; btnSkill.textContent = "Skill"; }
+
+    setDisplay("actionCard", "block");
+
+    const pAv = $("pAvatarWrap");
+    if (pAv) pAv.style.display = "none";
+    const eAv = $("eAvatarWrap");
+    if (eAv) eAv.style.display = "none";
+    const xpGroup = $("xpGroup");
+    if (xpGroup) xpGroup.style.display = "block";
 
     const enemyBtns = $("enemyBtns");
     if (enemyBtns) enemyBtns.style.display = "none";
