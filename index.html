@@ -289,10 +289,16 @@
   </div>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js" defer></script>
   <script>
+    window.__APP_BOOTED__ = false;
     function showBootError(message) {
       const el = document.getElementById("authMsg") || document.getElementById("authSub");
       if (el) el.textContent = message;
     }
+    setTimeout(() => {
+      if (!window.__APP_BOOTED__) {
+        showBootError("Game belum jalan. Pastikan dibuka lewat server lokal (bukan file://) atau refresh.");
+      }
+    }, 1200);
   </script>
   <script
     type="module"

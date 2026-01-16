@@ -4,6 +4,8 @@ import { autosave, save, load } from "./storage.js";
 import { addLog, refresh, modal } from "./ui.js";
 import { RECRUIT_TEMPLATES } from "./data.js";
 
+window.__APP_BOOTED__ = true;
+
 const byId = (id) => document.getElementById(id);
 
 const state = newState();
