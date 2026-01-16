@@ -604,51 +604,49 @@ function bind() {
   modal.bind();
 
   // Town
-  byId("btnExplore").onclick = explore;
-  const br=byId("btnRest"); if(br) br.onclick = rest;
-  byId("btnInventory").onclick = openInventoryReadOnly;
-  const btnRecruit = byId("btnRecruit");
-  if (btnRecruit) btnRecruit.onclick = openRecruitModal;
-  const btnStats = byId("btnStats");
-  if (btnStats) btnStats.onclick = openStatsModal;
+  const onClick = (id, handler) => {
+    const el = byId(id);
+    if (el) el.onclick = handler;
+  };
 
-  const btnStatsBattle = byId("btnStatsBattle");
-  if (btnStatsBattle) btnStatsBattle.onclick = openStatsModal;
-
-  const btnEnemyStats = byId("btnEnemyStats");
-  if (btnEnemyStats) btnEnemyStats.onclick = openEnemyStatsModal;
+  onClick("btnExplore", explore);
+  onClick("btnRest", rest);
+  onClick("btnInventory", openInventoryReadOnly);
+  onClick("btnRecruit", openRecruitModal);
+  onClick("btnStats", openStatsModal);
+  onClick("btnStatsBattle", openStatsModal);
+  onClick("btnEnemyStats", openEnemyStatsModal);
   // MENU (Save/Load/New Game)
-  const btnMenu = byId("btnMenu");
-  if (btnMenu) btnMenu.onclick = openTownMenu;
+  onClick("btnMenu", openTownMenu);
 
   // Battle
-  byId("btnAttack").onclick = () => {
+  onClick("btnAttack", () => {
     if (!state.inBattle || state.turn !== "player") return;
     attack();
     afterPlayerAction();
-  };
+  });
 
-  byId("btnDefend").onclick = () => {
+  onClick("btnDefend", () => {
     if (!state.inBattle || state.turn !== "player") return;
     dodge();
     afterPlayerAction();
-  };
+  });
 
-  byId("btnRun").onclick = () => {
+  onClick("btnRun", () => {
     if (!state.inBattle || state.turn !== "player") return;
     const ok = runAway();
     if (!ok) afterPlayerAction();
-  };
+  });
 
-  byId("btnSkill").onclick = () => {
+  onClick("btnSkill", () => {
     if (!state.inBattle || state.turn !== "player") return;
     openSkillModal();
-  };
+  });
 
-  byId("btnItem").onclick = () => {
+  onClick("btnItem", () => {
     if (!state.inBattle || state.turn !== "player") return;
     openItemModal();
-  };
+  });
 }
 
 /* --------------------------------- Boot -------------------------------- */
