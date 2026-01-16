@@ -165,6 +165,10 @@ export const modal = {
 // TURN INDICATOR: state.turn = "player" | "enemy" | "town"
 export function refresh(state) {
   const p = state.player;
+  const inBattle = state.inBattle && state.enemy;
+
+  document.body.classList.toggle("inBattle", inBattle);
+  document.body.classList.toggle("inTown", !inBattle);
 
   // Stats button (battle) — simple label only, XP shown di dalam stats modal
   const btnStatsBattle = $("btnStatsBattle");
@@ -207,7 +211,6 @@ export function refresh(state) {
   setBar($("mpBar"), p.mp, p.maxMp);
   setBar($("xpBar"), p.xp, p.xpToLevel);
 
-  const inBattle = state.inBattle && state.enemy;
   const turnLabel = inBattle && state.enemy
     ? (state.turn === "enemy" ? "Turn: Musuh" : "Turn: Kamu")
     : "Town";
@@ -215,6 +218,7 @@ export function refresh(state) {
   setText("actionHint", turnLabel);
   setText("battleHint", inBattle ? `Turn: ${Math.max(1, state.battleTurn || 0)}` : "Explore untuk cari musuh");
   setText("turnCount", `Turn: ${Math.max(1, state.battleTurn || 0)}`);
+  setDisplay("actionCard", "block");
 
   if (inBattle) {
     const e = state.enemy;
