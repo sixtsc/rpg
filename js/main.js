@@ -8,6 +8,10 @@ const byId = (id) => document.getElementById(id);
 
 const state = newState();
 const MAX_ALLIES = 2;
+const clearLog = () => {
+  const logEl = byId("log");
+  if (logEl) logEl.innerHTML = "";
+};
 
 /* ----------------------------- Core helpers ----------------------------- */
 
@@ -581,7 +585,7 @@ function openTownMenu(){
         setTurn("town");
   state.battleTurn = 0;
 
-        byId("log").innerHTML = "";
+        clearLog();
         addLog("INFO", "Game baru dimulai.");
 
         autosave(state);
@@ -659,7 +663,7 @@ function applyLoaded(payload){
   state.playerDodging = false;
     setTurn("town");
   state.battleTurn = 0;
-    byId("log").innerHTML = "";
+    clearLog();
     addLog("LOAD", "Progress dimuat.");
     refresh(state);
     return true;
@@ -676,7 +680,7 @@ function startNewGame(){
   state.playerDodging = false;
   setTurn("town");
   state.battleTurn = 0;
-  byId("log").innerHTML = "";
+  clearLog();
   addLog("INFO", "Game baru dimulai.");
   autosave(state);
   refresh(state);

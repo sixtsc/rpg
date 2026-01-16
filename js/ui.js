@@ -1,6 +1,30 @@
 import { clamp } from "./engine.js";
 
 const $ = (id) => document.getElementById(id);
+let toastTimer;
+
+function setText(id, value) {
+  const el = $(id);
+  if (el) el.textContent = value;
+}
+
+function setDisplay(id, value) {
+  const el = $(id);
+  if (el) el.style.display = value;
+}
+
+function showToast(message, tone) {
+  const toast = $("toast");
+  if (!toast) return;
+  toast.textContent = message;
+  toast.classList.remove("good", "warn", "danger");
+  if (tone) toast.classList.add(tone);
+  toast.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toast.classList.remove("show");
+  }, 2200);
+}
 
 export function timeStr() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -18,6 +42,11 @@ export function escapeHtml(s) {
 
 export function addLog(tag, msg) {
   const logEl = $("log");
+  if (!logEl) {
+    const tone = tag === "LOSE" ? "danger" : tag === "WIN" ? "good" : undefined;
+    showToast(`${tag ? `[${tag}] ` : ""}${msg}`, tone);
+    return;
+  }
   const div = document.createElement("div");
   div.className = "entry";
 
@@ -32,6 +61,7 @@ export function addLog(tag, msg) {
 }
 
 export function setBar(el, cur, max) {
+  if (!el) return;
   const pct = max <= 0 ? 0 : (cur / max) * 100;
   el.style.width = `${clamp(pct, 0, 100)}%`;
 }
@@ -81,9 +111,10 @@ function renderAllyRow(state) {
 
 export const modal = {
   open(title, choices, onPick) {
-    $("modalTitle").textContent = title;
+    setText("modalTitle", title);
 
     const body = $("modalBody");
+    if (!body) return;
     body.innerHTML = "";
 
     choices.forEach((c) => {
@@ -112,18 +143,21 @@ export const modal = {
       body.appendChild(row);
     });
 
-    $("modalBackdrop").style.display = "flex";
-    $("modalBackdrop").onclick = (e) => {
+    setDisplay("modalBackdrop", "flex");
+    const backdrop = $("modalBackdrop");
+    if (!backdrop) return;
+    backdrop.onclick = (e) => {
       if (e.target.id === "modalBackdrop") modal.close();
     };
   },
 
   close() {
-    $("modalBackdrop").style.display = "none";
+    setDisplay("modalBackdrop", "none");
   },
 
   bind() {
-    $("modalClose").onclick = () => modal.close();
+    const closeBtn = $("modalClose");
+    if (closeBtn) closeBtn.onclick = () => modal.close();
     const c = $("modalCancel"); if (c) c.onclick = () => modal.close();
   },
 };
@@ -161,25 +195,31 @@ export function refresh(state) {
   const pSub = $("pSub");
   if (pSub) { pSub.textContent = ""; pSub.style.display = "none"; }
 
-  $("pLvl").textContent = `Lv${p.level}`;
-  $("goldPill").textContent = `Gold: ${p.gold}`;
+  setText("pLvl", `Lv${p.level}`);
+  setText("goldPill", `Gold: ${p.gold}`);
 
   // Player bars
-  $("hpText").textContent = `${p.hp}/${p.maxHp}`;
-  $("mpText").textContent = `${p.mp}/${p.maxMp}`;
-  $("xpText").textContent = `${p.xp}/${p.xpToLevel}`;
+  setText("hpText", `${p.hp}/${p.maxHp}`);
+  setText("mpText", `${p.mp}/${p.maxMp}`);
+  setText("xpText", `${p.xp}/${p.xpToLevel}`);
 
   setBar($("hpBar"), p.hp, p.maxHp);
   setBar($("mpBar"), p.mp, p.maxMp);
   setBar($("xpBar"), p.xp, p.xpToLevel);
 
   const inBattle = state.inBattle && state.enemy;
+  const turnLabel = inBattle && state.enemy
+    ? (state.turn === "enemy" ? "Turn: Musuh" : "Turn: Kamu")
+    : "Town";
+
+  setText("actionHint", turnLabel);
+  setText("battleHint", inBattle ? `Turn: ${Math.max(1, state.battleTurn || 0)}` : "Explore untuk cari musuh");
+  setText("turnCount", `Turn: ${Math.max(1, state.battleTurn || 0)}`);
 
   if (inBattle) {
     const e = state.enemy;
 
-    $("modePill").textContent = "Battle";
-    $("battleHint").textContent = `Turn: ${Math.max(1, state.battleTurn || 0)}`;
+    setText("modePill", "Battle");
 
     // Enemy title + name
     const eNameTitle = $("eNameTitle");
@@ -188,24 +228,23 @@ export function refresh(state) {
     const eSub = $("eSub");
     if (eSub) { eSub.textContent = ""; eSub.style.display = "none"; }
 
-    $("eLvl").textContent = `Lv${e.level}`;
+    setText("eLvl", `Lv${e.level}`);
 
     // Enemy bars
-    $("enemyBars").style.display = "grid";
-    $("eHpText").textContent = `${e.hp}/${e.maxHp}`;
-    $("eMpText").textContent = `${e.mp}/${e.maxMp}`;
+    setDisplay("enemyBars", "grid");
+    setText("eHpText", `${e.hp}/${e.maxHp}`);
+    setText("eMpText", `${e.mp}/${e.maxMp}`);
     setBar($("eHpBar"), e.hp, e.maxHp);
     setBar($("eMpBar"), e.mp, e.maxMp);
 
     // Buttons visibility
-    $("townBtns").style.display = "none";
-    $("battleBtns").style.display = "flex";
+    setDisplay("townBtns", "none");
+    setDisplay("battleBtns", "flex");
 
     const enemyBtns = $("enemyBtns");
     if (enemyBtns) enemyBtns.style.display = "flex";
   } else {
-    $("modePill").textContent = "Town";
-    $("battleHint").textContent = "Explore untuk cari musuh";
+    setText("modePill", "Town");
 
     const eNameTitle = $("eNameTitle");
     if (eNameTitle) eNameTitle.textContent = "-";
@@ -213,11 +252,11 @@ export function refresh(state) {
     const eSub = $("eSub");
     if (eSub) { eSub.textContent = ""; eSub.style.display = "none"; }
 
-    $("eLvl").textContent = "-";
-    $("enemyBars").style.display = "none";
+    setText("eLvl", "-");
+    setDisplay("enemyBars", "none");
 
-    $("townBtns").style.display = "flex";
-    $("battleBtns").style.display = "none";
+    setDisplay("townBtns", "flex");
+    setDisplay("battleBtns", "none");
 
     const enemyBtns = $("enemyBtns");
     if (enemyBtns) enemyBtns.style.display = "none";
