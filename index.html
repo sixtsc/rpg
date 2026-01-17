@@ -215,8 +215,8 @@
 
         <div class="battleActionWrap">
           <div class="card actionCard" id="actionCard" style="display:none;">
-            <div class="sectionTitle">
-              <div><b>ACTION</b></div>
+              <div class="sectionTitle">
+                <div><b>ACTION</b></div>
               <div class="rightPills">
                 <div class="pill muted" id="turnCount">Turn: 0</div>
                 <div class="pill muted" id="actionHint">—</div>
@@ -287,28 +287,25 @@
       <div class="modalBody" id="modalBody"></div>
 </div>
   </div>
-  <!-- Scripts (bundled, non-module) -->
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js" defer></script>
   <script>
-    // Cache-buster version (update when repackaging)
-    window.__APP_VER__ = "v18";
-    window.__BUNDLE_LOADED__ = false;
-  </script>
-
-  <script src="./js/bundle.js?v=v37" defer></script>
-
-  <script>
-    // If bundle didn't run, show hint in-menu (no DevTools needed)
-    setTimeout(function(){
-      if(!window.__BUNDLE_LOADED__){
-        var el=document.getElementById('menuSub');
-        if(el) el.textContent='JS belum jalan (bundle.js tidak dieksekusi). Coba refresh + matikan cache.';
-      } else {
-        // Optional: show loaded status
-        var el2=document.getElementById('menuSub');
-        if(el2 && el2.textContent.trim()==='Pilih opsi:') el2.textContent='Pilih opsi:';
+    window.__APP_BOOTED__ = false;
+    function showBootError(message) {
+      const el = document.getElementById("authMsg") || document.getElementById("authSub");
+      if (el) el.textContent = message;
+    }
+    setTimeout(() => {
+      if (!window.__APP_BOOTED__) {
+        showBootError("Game belum jalan. Pastikan dibuka lewat server lokal (bukan file://) atau refresh.");
       }
     }, 1200);
   </script>
+  <script
+    type="module"
+    src="./js/main.js?v=v37"
+    onerror="showBootError('Game gagal dimuat. Pastikan dibuka lewat server lokal (bukan file://) atau refresh.')"
+  ></script>
+  <script nomodule src="./js/bundle.js?v=v37"></script>
 </body>
 
 </html>
