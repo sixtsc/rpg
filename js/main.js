@@ -1920,7 +1920,6 @@ function applyLoaded(payload){
     : normalizePlayer(newPlayer());
   ensureAllies();
 
-  ensureAllies();
   state.enemy = null;
   state.enemyTargetIndex = 0;
   state.inBattle = false;
@@ -1953,7 +1952,6 @@ function startNewGame(slotIdx){
   state.player = p;
   ensureAllies();
 
-  ensureAllies();
   state.enemy = null;
   state.enemyTargetIndex = 0;
   state.inBattle = false;
