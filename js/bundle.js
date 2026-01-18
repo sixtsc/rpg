@@ -270,6 +270,7 @@ function normalizeAlly(ally){
     blockRate: Number(ally.blockRate) || 0,
     escapeChance: Number(ally.escapeChance) || 0,
     manaRegen: Number(ally.manaRegen) || 0,
+    statuses: Array.isArray(ally.statuses) ? ally.statuses : [],
     role: ally.role || "Ally",
     name: ally.name || "Ally"
   };
@@ -635,6 +636,38 @@ function playSlash(target, delay = 0) {
   };
   if (delay > 0) setTimeout(spawn, delay);
   else spawn();
+}
+
+function getAllyAvatarBox(ally){
+  if (!ally || !Array.isArray(state.allies)) return null;
+  const idx = state.allies.indexOf(ally);
+  if (idx < 0) return null;
+  const slotIndex = idx + 1;
+  return document.querySelector(`.allyCard.extra[data-ally-slot="${slotIndex}"] .allyAvatarBox`);
+}
+
+function playAllySlash(ally, delay = 0){
+  const el = getAllyAvatarBox(ally);
+  if (!el) return;
+  const spawn = () => {
+    const prev = el.querySelector(".slashHit");
+    if (prev) prev.remove();
+    const slash = document.createElement("div");
+    slash.className = "slashHit";
+    el.appendChild(slash);
+    slash.addEventListener("animationend", () => slash.remove(), { once: true });
+  };
+  if (delay > 0) setTimeout(spawn, delay);
+  else spawn();
+}
+
+function playAllyDodgeFade(ally){
+  const el = getAllyAvatarBox(ally);
+  if (!el) return;
+  el.classList.remove("dodgeFade");
+  void el.offsetWidth;
+  el.classList.add("dodgeFade");
+  setTimeout(() => el.classList.remove("dodgeFade"), 450);
 }
 
 function timeStr() {
@@ -2073,7 +2106,10 @@ function enemyTurn() {
     );
     if (res.missed) {
       if (isPlayer) showDamageText("player", "MISS");
-      else addLog("ENEMY", `${enemy.name} meleset menyerang ${target.name}.`);
+      else {
+        playAllyDodgeFade(target);
+        addLog("ENEMY", `${enemy.name} meleset menyerang ${target.name}.`);
+      }
       done(0);
       return;
     }
@@ -2083,6 +2119,7 @@ function enemyTurn() {
         delays.push(applyDamageAfterDelay(p, res.dmg, "player", 230));
       } else {
         target.hp = clamp(target.hp - res.dmg, 0, target.maxHp);
+        playAllySlash(target, 120);
       }
     }
     if (res.reflected > 0) {
@@ -2156,14 +2193,22 @@ function handleEnemyDefeat(){
 }
 
 function alliesAct(done){
-  const allies = getAliveAllies();
+  const allies = getAliveAllies()
+    .slice()
+    .sort((a, b) => (Number(b.spd) || 0) - (Number(a.spd) || 0));
   if (!allies.length || !state.enemy) {
     if (done) done();
     return;
   }
-  const delayStep = 320;
+  const maxSpd = Math.max(...allies.map((ally) => Number(ally.spd) || 0), 0);
+  const baseDelay = 260;
+  const orderGap = 220;
+  let lastDelay = 0;
   allies.forEach((ally, index) => {
-    const delay = index * delayStep;
+    const spd = Number(ally.spd) || 0;
+    const speedLag = Math.max(0, maxSpd - spd) * 20;
+    const delay = baseDelay + (index * orderGap) + speedLag;
+    lastDelay = Math.max(lastDelay, delay);
     setTimeout(() => {
       if (!state.enemy || ally.hp <= 0) return;
       const res = resolveAttack(ally, state.enemy, 2);
@@ -2174,6 +2219,7 @@ function alliesAct(done){
       }
       if (res.dmg > 0) {
         state.enemy.hp = clamp(state.enemy.hp - res.dmg, 0, state.enemy.maxHp);
+        playSlash("enemy", 60);
       }
       if (res.reflected > 0) {
         ally.hp = clamp(ally.hp - res.reflected, 0, ally.maxHp);
@@ -2185,7 +2231,7 @@ function alliesAct(done){
       refresh(state);
     }, delay);
   });
-  if (done) setTimeout(done, allies.length * delayStep);
+  if (done) setTimeout(done, lastDelay + 240);
 }
 
 function afterPlayerAction() {
