@@ -981,10 +981,30 @@ select.authInput{
   background:rgba(255,255,255,0.03);
   position:relative;
   overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:44px;
+  color:#e9f2ff;
+  text-shadow:0 3px 10px rgba(0,0,0,0.55);
+}
+.allyCard.down{
+  opacity:0.55;
+  filter:grayscale(0.45);
+}
+.allyCard.down .avatarBox{
+  filter:grayscale(0.65);
+}
+.allyCard.allyDown{
+  animation: allyDown 320ms ease-out;
+}
+@keyframes allyDown{
+  from{ transform: scale(1); opacity:1; }
+  to{ transform: scale(0.985); opacity:0.55; }
 }
 @media (max-width:520px){
   .avatarWrap{ margin:8px 0 4px; }
-  .avatarBox{ width:74px; height:74px; border-radius:12px; }
+  .avatarBox{ width:74px; height:74px; border-radius:12px; font-size:32px; }
 }
 
 

@@ -32,6 +32,18 @@ const ITEMS = {
   swiftBoots: { name:"Swift Boots", kind:"gear", slot:"shoes", desc:"Sepatu Lv5 meningkatkan kecepatan.", spd:2 }
 };
 const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton"];
+const ENEMY_AVATARS = {
+  Slime: { icon: "🟢", bg: "linear-gradient(135deg, #5de28d, #1a6b3c)" },
+  Goblin: { icon: "👺", bg: "linear-gradient(135deg, #7de86a, #2f6b1f)" },
+  Bandit: { icon: "🗡️", bg: "linear-gradient(135deg, #f1b06b, #6b3a1a)" },
+  Wolf: { icon: "🐺", bg: "linear-gradient(135deg, #9bb7ff, #2a3f7a)" },
+  Skeleton: { icon: "💀", bg: "linear-gradient(135deg, #f1f1f1, #7a7a7a)" }
+};
+const ALLY_AVATARS = {
+  Guardian: { icon: "🛡️", bg: "linear-gradient(135deg, #7ad5ff, #1f4b78)" },
+  Ranger: { icon: "🏹", bg: "linear-gradient(135deg, #8be77b, #2c6b2a)" },
+  Mystic: { icon: "🔮", bg: "linear-gradient(135deg, #c59bff, #4c2a7a)" }
+};
 const RECRUIT_TEMPLATES = [
   {
     id: "guardian",
@@ -239,8 +251,10 @@ function normalizeAlly(ally){
   const level = clamp(Number(ally.level) || 1, 1, MAX_LEVEL);
   const maxHp = Math.max(1, Number(ally.maxHp) || 1);
   const maxMp = Math.max(0, Number(ally.maxMp) || 0);
-  const hp = clamp(Number(ally.hp) || maxHp, 0, maxHp);
-  const mp = clamp(Number(ally.mp) || maxMp, 0, maxMp);
+  const hpRaw = Number(ally.hp);
+  const mpRaw = Number(ally.mp);
+  const hp = clamp(Number.isFinite(hpRaw) ? hpRaw : maxHp, 0, maxHp);
+  const mp = clamp(Number.isFinite(mpRaw) ? mpRaw : maxMp, 0, maxMp);
   return {
     ...ally,
     level,
@@ -258,6 +272,7 @@ function normalizeAlly(ally){
     blockRate: Number(ally.blockRate) || 0,
     escapeChance: Number(ally.escapeChance) || 0,
     manaRegen: Number(ally.manaRegen) || 0,
+    statuses: Array.isArray(ally.statuses) ? ally.statuses : [],
     role: ally.role || "Ally",
     name: ally.name || "Ally"
   };
@@ -625,6 +640,81 @@ function playSlash(target, delay = 0) {
   else spawn();
 }
 
+function getEnemyAvatarBoxByIndex(index){
+  if (index === 0) return $("eAvatarBox");
+  return document.querySelector(`.enemyCard.extra[data-enemy-index="${index}"] .enemyAvatarBox`);
+}
+
+function playEnemySlash(enemyIndex, delay = 0){
+  const el = getEnemyAvatarBoxByIndex(enemyIndex);
+  if (!el) return;
+  const spawn = () => {
+    const prev = el.querySelector(".slashHit");
+    if (prev) prev.remove();
+    const slash = document.createElement("div");
+    slash.className = "slashHit";
+    el.appendChild(slash);
+    slash.addEventListener("animationend", () => slash.remove(), { once: true });
+  };
+  if (delay > 0) setTimeout(spawn, delay);
+  else spawn();
+}
+
+function playEnemyDodgeFade(enemyIndex){
+  const el = getEnemyAvatarBoxByIndex(enemyIndex);
+  if (!el) return;
+  el.classList.remove("dodgeFade");
+  void el.offsetWidth;
+  el.classList.add("dodgeFade");
+  setTimeout(() => el.classList.remove("dodgeFade"), 450);
+}
+
+function playEnemyCritShake(enemyIndex){
+  const el = getEnemyAvatarBoxByIndex(enemyIndex);
+  if (!el) return;
+  el.classList.remove("critShake");
+  void el.offsetWidth;
+  el.classList.add("critShake");
+  setTimeout(() => el.classList.remove("critShake"), 450);
+}
+
+function getAllyAvatarBox(ally){
+  if (!ally) return null;
+  if (ally.id) {
+    const byId = document.querySelector(`.allyAvatarBox[data-ally-id="${ally.id}"]`);
+    if (byId) return byId;
+  }
+  if (!Array.isArray(state.allies)) return null;
+  const idx = state.allies.indexOf(ally);
+  if (idx < 0) return null;
+  const slotIndex = idx + 1;
+  return document.querySelector(`.allyCard.extra[data-ally-slot="${slotIndex}"] .allyAvatarBox`);
+}
+
+function playAllySlash(ally, delay = 0){
+  const el = getAllyAvatarBox(ally);
+  if (!el) return;
+  const spawn = () => {
+    const prev = el.querySelector(".slashHit");
+    if (prev) prev.remove();
+    const slash = document.createElement("div");
+    slash.className = "slashHit";
+    el.appendChild(slash);
+    slash.addEventListener("animationend", () => slash.remove(), { once: true });
+  };
+  if (delay > 0) setTimeout(spawn, delay);
+  else spawn();
+}
+
+function playAllyDodgeFade(ally){
+  const el = getAllyAvatarBox(ally);
+  if (!el) return;
+  el.classList.remove("dodgeFade");
+  void el.offsetWidth;
+  el.classList.add("dodgeFade");
+  setTimeout(() => el.classList.remove("dodgeFade"), 450);
+}
+
 function timeStr() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
@@ -703,12 +793,32 @@ function normalizeEnemyQueue(){
   return state.enemyQueue;
 }
 
+function getEnemyQueue(){
+  if (Array.isArray(state.enemyQueue) && state.enemyQueue.length) return normalizeEnemyQueue();
+  return state.enemy ? [state.enemy] : [];
+}
+
+function getPrimaryEnemy(){
+  const queue = getEnemyQueue();
+  return queue[0] || null;
+}
+
+function getTargetEnemy(){
+  const queue = getEnemyQueue();
+  if (!queue.length) return null;
+  const idx = clamp(state.enemyTargetIndex || 0, 0, queue.length - 1);
+  return queue[idx];
+}
+
+function getEnemyIndex(enemy){
+  const queue = getEnemyQueue();
+  return queue.indexOf(enemy);
+}
+
 function setActiveEnemyByIndex(index){
-  const queue = normalizeEnemyQueue();
+  const queue = getEnemyQueue();
   if (!queue.length) return false;
-  const idx = clamp(index, 0, queue.length - 1);
-  state.enemy = queue[idx];
-  state.enemyTargetIndex = idx;
+  state.enemyTargetIndex = clamp(index, 0, queue.length - 1);
   return true;
 }
 
@@ -728,11 +838,25 @@ function renderAllyRow() {
     const card = row.querySelector(`.allyCard.extra[data-ally-slot="${slotIndex}"]`);
 
     if (!nameEl || !lvlEl || !subEl || !hpText || !mpText || !hpBar || !mpBar || !card) return;
+    let avatarBox = card.querySelector(".allyAvatarBox");
+    if (!avatarBox) {
+      const wrap = document.createElement("div");
+      wrap.className = "avatarWrap allyAvatarWrap";
+      wrap.innerHTML = `<div class="avatarBox allyAvatarBox"></div>`;
+      const insertAfter = card.querySelector(".nameSub");
+      if (insertAfter && insertAfter.parentNode) {
+        insertAfter.parentNode.insertBefore(wrap, insertAfter.nextSibling);
+      } else {
+        card.appendChild(wrap);
+      }
+      avatarBox = wrap.querySelector(".allyAvatarBox");
+    }
 
     if (ally) {
       nameEl.textContent = ally.name || `NPC ${slotIndex}`;
       lvlEl.textContent = `Lv${ally.level || 1}`;
-      subEl.textContent = ally.role || "Partner";
+      subEl.textContent = "";
+      subEl.style.display = "none";
       hpText.textContent = `${ally.hp}/${ally.maxHp}`;
       mpText.textContent = `${ally.mp}/${ally.maxMp}`;
       setBar(hpBar, ally.hp, ally.maxHp);
@@ -740,19 +864,77 @@ function renderAllyRow() {
       card.classList.remove("empty");
       card.classList.add("active");
       card.style.display = "block";
+      const wasAlive = card.dataset.allyAlive === "true";
+      const isAlive = ally.hp > 0;
+      card.classList.toggle("down", !isAlive);
+      if (wasAlive && !isAlive) {
+        card.classList.remove("allyDown");
+        void card.offsetWidth;
+        card.classList.add("allyDown");
+      }
+      if (isAlive) card.classList.remove("allyDown");
+      card.dataset.allyAlive = isAlive ? "true" : "false";
+      if (ally.id) {
+        card.dataset.allyId = ally.id;
+        avatarBox.dataset.allyId = ally.id;
+      } else {
+        delete card.dataset.allyId;
+        delete avatarBox.dataset.allyId;
+      }
+      applyAllyAvatar(avatarBox, ally);
     } else {
       nameEl.textContent = `NPC ${slotIndex}`;
       lvlEl.textContent = "Lv-";
       subEl.textContent = "Slot kosong";
+      subEl.style.display = "block";
       hpText.textContent = "0/0";
       mpText.textContent = "0/0";
       hpBar.style.width = "0%";
       mpBar.style.width = "0%";
       card.classList.add("empty");
       card.classList.remove("active");
+      card.classList.remove("down", "allyDown");
+      delete card.dataset.allyAlive;
       card.style.display = "none";
+      delete card.dataset.allyId;
+      delete avatarBox.dataset.allyId;
+      applyAllyAvatar(avatarBox, null);
     }
   });
+}
+
+function applyEnemyAvatar(box, enemy) {
+  if (!box) return;
+  if (!enemy) {
+    box.textContent = "";
+    box.style.background = "rgba(255,255,255,0.03)";
+    box.removeAttribute("title");
+    return;
+  }
+  const config = ENEMY_AVATARS[enemy.name] || {};
+  const fallback = enemy.name ? enemy.name.slice(0, 1).toUpperCase() : "?";
+  box.textContent = config.icon || fallback;
+  box.style.background = config.bg || "linear-gradient(135deg, #4b5c6e, #202934)";
+  box.setAttribute("title", enemy.name);
+}
+
+function applyAllyAvatar(box, ally) {
+  if (!box) return;
+  if (!ally) {
+    box.textContent = "";
+    box.style.background = "rgba(255,255,255,0.03)";
+    box.removeAttribute("title");
+    return;
+  }
+  const config = ALLY_AVATARS[ally.name] || ALLY_AVATARS[ally.role] || {};
+  const fallback = ally.name ? ally.name.slice(0, 1).toUpperCase() : "?";
+  box.textContent = config.icon || fallback;
+  box.style.background = config.bg || "linear-gradient(135deg, #4b5c6e, #202934)";
+  box.setAttribute("title", ally.name);
+}
+
+function allyAvatarIcon(name){
+  return (ALLY_AVATARS[name] && ALLY_AVATARS[name].icon) ? ALLY_AVATARS[name].icon : "🙂";
 }
 
 function renderEnemyRow() {
@@ -760,26 +942,34 @@ function renderEnemyRow() {
   if (!row) return;
   row.querySelectorAll(".enemyCard.extra").forEach((el) => el.remove());
 
-  const queue = Array.isArray(state.enemyQueue) && state.enemyQueue.length
-    ? normalizeEnemyQueue()
-    : (state.enemy ? [state.enemy] : []);
+  const queue = getEnemyQueue();
 
-  const activeEnemy = state.enemy;
+  const activeEnemy = getTargetEnemy();
   queue.slice(1, 3).forEach((enemy, offset) => {
+    const enemyIndex = offset + 1;
     const card = document.createElement("div");
     card.className = "card enemyCard extra";
     const hpPct = enemy.maxHp ? clamp((enemy.hp / enemy.maxHp) * 100, 0, 100) : 0;
+    const mpPct = enemy.maxMp ? clamp((enemy.mp / enemy.maxMp) * 100, 0, 100) : 0;
     if (enemy === activeEnemy) card.classList.add("active");
     card.innerHTML = `
+      <div class="damageText enemyDamage"></div>
       <div class="sectionTitle">
         <div><b>${escapeHtml(enemy.name)}</b> <span class="pill">Lv${enemy.level}</span></div>
+      </div>
+      <div class="avatarWrap">
+        <div class="avatarBox enemyAvatarBox"></div>
       </div>
       <div class="enemyMiniMeta">
         <div class="bar"><div class="fill hp" style="width:${hpPct}%"></div></div>
         <div class="muted">${enemy.hp}/${enemy.maxHp}</div>
+        <div class="bar"><div class="fill mp" style="width:${mpPct}%"></div></div>
+        <div class="muted">${enemy.mp}/${enemy.maxMp}</div>
       </div>
     `;
-    const targetIndex = offset + 1;
+    card.dataset.enemyIndex = `${enemyIndex}`;
+    applyEnemyAvatar(card.querySelector(".enemyAvatarBox"), enemy);
+    const targetIndex = enemyIndex;
     card.onclick = () => {
       if (setActiveEnemyByIndex(targetIndex)) {
         addLog("TARGET", `Target: ${enemy.name}`);
@@ -800,6 +990,25 @@ function showDamageText(target, text){
   el.classList.add("show");
   if (damageTimers[target]) clearTimeout(damageTimers[target]);
   damageTimers[target] = setTimeout(() => {
+    el.classList.remove("show");
+  }, 1400);
+}
+
+function showEnemyDamageText(text, enemyIndex){
+  const idx = Number.isFinite(enemyIndex) ? enemyIndex : (state.enemyTargetIndex || 0);
+  let el = null;
+  if (idx === 0) {
+    el = $("enemyDamage");
+  } else {
+    el = document.querySelector(`.enemyCard.extra[data-enemy-index="${idx}"] .enemyDamage`);
+  }
+  if (!el) return;
+  el.textContent = text;
+  el.classList.remove("show");
+  void el.offsetWidth;
+  el.classList.add("show");
+  if (damageTimers.enemy) clearTimeout(damageTimers.enemy);
+  damageTimers.enemy = setTimeout(() => {
     el.classList.remove("show");
   }, 1400);
 }
@@ -850,7 +1059,7 @@ function renderSkillSlots(){
 
 function useSkillAtIndex(idx){
   const p = state.player;
-  const e = state.enemy;
+  const e = getTargetEnemy();
   if (!p || !e || !Array.isArray(p.skills)) return;
   const slotName = p.skillSlots ? p.skillSlots[idx] : null;
   const s = slotName ? getSkillByName(p, slotName) : null;
@@ -872,20 +1081,21 @@ function useSkillAtIndex(idx){
 
   addLog("SKILL", s.name);
   const res = resolveAttack(p, e, s.power);
+  const targetIndex = getEnemyIndex(e);
   if (res.missed) {
-    playDodgeFade("enemy");
-    showDamageText("enemy", "MISS");
+    playEnemyDodgeFade(targetIndex);
+    showEnemyDamageText("MISS", targetIndex);
   } else {
     if (res.dmg > 0) {
       e.hp = clamp(e.hp - res.dmg, 0, e.maxHp);
-      playSlash("enemy", 80);
+      playEnemySlash(targetIndex, 80);
     }
     if (res.reflected > 0) {
       p.hp = clamp(p.hp - res.reflected, 0, p.maxHp);
       playSlash("player", 150);
     }
-    if (res.crit || res.combustion) playCritShake("enemy");
-    showDamageText("enemy", formatDamageText(res, res.dmg));
+    if (res.crit || res.combustion) playEnemyCritShake(targetIndex);
+    showEnemyDamageText(formatDamageText(res, res.dmg), targetIndex);
     if (res.reflected > 0) {
       showDamageText("player", `-${res.reflected} (REFLECT)`);
     }
@@ -1138,7 +1348,7 @@ function refresh(state) {
   document.body.classList.toggle("inTown", !inBattle);
 
   if (inBattle) {
-    const e = state.enemy;
+    const e = getPrimaryEnemy();
 
     $("modePill").textContent = "Battle";
 
@@ -1146,23 +1356,33 @@ function refresh(state) {
 
     // Enemy title + name
     const eNameTitle = $("eNameTitle");
-    if (eNameTitle) eNameTitle.textContent = e.name;
+    if (eNameTitle) eNameTitle.textContent = e ? e.name : "-";
 
     const eSub = $("eSub");
     if (eSub) {
-      const label = statusLabel(e);
+      const label = e ? statusLabel(e) : "";
       eSub.textContent = label;
       eSub.style.display = label ? "block" : "none";
     }
 
-    $("eLvl").textContent = `Lv${e.level}`;
+    if (e) {
+      $("eLvl").textContent = `Lv${e.level}`;
+      const eAvatarBox = $("eAvatarBox");
+      if (eAvatarBox) applyEnemyAvatar(eAvatarBox, e);
+    } else {
+      $("eLvl").textContent = "-";
+    }
 
     // Enemy bars
-    $("enemyBars").style.display = "grid";
-    $("eHpText").textContent = `${e.hp}/${e.maxHp}`;
-    $("eMpText").textContent = `${e.mp}/${e.maxMp}`;
-    setBar($("eHpBar"), e.hp, e.maxHp);
-    setBar($("eMpBar"), e.mp, e.maxMp);
+    if (e) {
+      $("enemyBars").style.display = "grid";
+      $("eHpText").textContent = `${e.hp}/${e.maxHp}`;
+      $("eMpText").textContent = `${e.mp}/${e.maxMp}`;
+      setBar($("eHpBar"), e.hp, e.maxHp);
+      setBar($("eMpBar"), e.mp, e.maxMp);
+    } else {
+      $("enemyBars").style.display = "none";
+    }
 
     // Buttons visibility
     $("townBtns").style.display = "none";
@@ -1208,10 +1428,10 @@ function refresh(state) {
     if (enemyBtns) enemyBtns.style.display = "flex";
     const enemyCard = $("enemyCard");
     if (enemyCard) {
-      enemyCard.classList.toggle("active", !state.enemyQueue || state.enemyTargetIndex === 0);
+      enemyCard.classList.toggle("active", state.enemyTargetIndex === 0);
       enemyCard.onclick = () => {
         if (setActiveEnemyByIndex(0)) {
-          addLog("TARGET", `Target: ${state.enemy?.name || "Musuh"}`);
+          addLog("TARGET", `Target: ${getTargetEnemy()?.name || "Musuh"}`);
           refresh(state);
         }
       };
@@ -1228,6 +1448,10 @@ function refresh(state) {
 
     $("eLvl").textContent = "-";
     $("enemyBars").style.display = "none";
+    const eAv = $("eAvatarWrap");
+    if (eAv) eAv.style.display = "none";
+    const eAvatarBox = $("eAvatarBox");
+    if (eAvatarBox) applyEnemyAvatar(eAvatarBox, null);
 
     $("townBtns").style.display = "flex";
     $("battleBtns").style.display = "none";
@@ -1236,8 +1460,6 @@ function refresh(state) {
 
     const pAv = $("pAvatarWrap");
     if (pAv) pAv.style.display = "none";
-    const eAv = $("eAvatarWrap");
-    if (eAv) eAv.style.display = "none";
     const xpGroup = $("xpGroup");
     if (xpGroup) xpGroup.style.display = "block";
 
@@ -1398,7 +1620,13 @@ function applyDamageAfterDelay(target, dmg, slashTarget, delay = 200){
   if (!target || dmg <= 0) return 0;
   setTimeout(() => {
     target.hp = clamp((target.hp || 0) - dmg, 0, target.maxHp || 0);
-    if (slashTarget) playSlash(slashTarget);
+    if (slashTarget === "player" || slashTarget === "enemy") {
+      playSlash(slashTarget);
+    } else if (slashTarget && typeof slashTarget.enemyIndex === "number") {
+      playEnemySlash(slashTarget.enemyIndex);
+    } else if (slashTarget && slashTarget.ally) {
+      playAllySlash(slashTarget.ally);
+    }
     refresh(state);
   }, delay);
   return delay;
@@ -2002,7 +2230,10 @@ function enemyTurn() {
     );
     if (res.missed) {
       if (isPlayer) showDamageText("player", "MISS");
-      else addLog("ENEMY", `${enemy.name} meleset menyerang ${target.name}.`);
+      else {
+        playAllyDodgeFade(target);
+        addLog("ENEMY", `${enemy.name} meleset menyerang ${target.name}.`);
+      }
       done(0);
       return;
     }
@@ -2012,17 +2243,21 @@ function enemyTurn() {
         delays.push(applyDamageAfterDelay(p, res.dmg, "player", 230));
       } else {
         target.hp = clamp(target.hp - res.dmg, 0, target.maxHp);
+        playAllySlash(target, 120);
       }
     }
     if (res.reflected > 0) {
-      if (isPlayer) delays.push(applyDamageAfterDelay(enemy, res.reflected, "enemy", 430));
-      else enemy.hp = clamp(enemy.hp - res.reflected, 0, enemy.maxHp);
+      if (isPlayer) {
+        delays.push(applyDamageAfterDelay(enemy, res.reflected, { enemyIndex: getEnemyIndex(enemy) }, 430));
+      } else {
+        enemy.hp = clamp(enemy.hp - res.reflected, 0, enemy.maxHp);
+      }
     }
     if (isPlayer && (res.crit || res.combustion)) playCritShake("player");
     if (isPlayer) {
       showDamageText("player", formatDamageText(res, res.dmg));
       if (res.reflected > 0) {
-        showDamageText("enemy", `-${res.reflected} (REFLECT)`);
+        showEnemyDamageText(`-${res.reflected} (REFLECT)`, getEnemyIndex(enemy));
       }
     } else {
       addLog("ENEMY", `${enemy.name} menyerang ${target.name}! Damage ${res.dmg}.`);
@@ -2065,11 +2300,16 @@ function enemyTurn() {
 }
 
 function handleEnemyDefeat(){
-  if (!state.enemy) return true;
+  const queue = getEnemyQueue();
+  if (!queue.length) {
+    winBattle();
+    return true;
+  }
   if (Array.isArray(state.enemyQueue)) {
     normalizeEnemyQueue();
     if (state.enemyQueue.length) {
-      setActiveEnemyByIndex(0);
+      state.enemy = state.enemyQueue[0];
+      state.enemyTargetIndex = clamp(state.enemyTargetIndex || 0, 0, state.enemyQueue.length - 1);
       addLog("INFO", `Musuh tersisa: ${state.enemyQueue.length}`);
       setTurn("enemy");
       refresh(state);
@@ -2084,27 +2324,48 @@ function handleEnemyDefeat(){
   return true;
 }
 
-function alliesAct(){
-  const allies = getAliveAllies();
-  if (!allies.length || !state.enemy) return;
-  allies.forEach((ally) => {
-    if (!state.enemy || ally.hp <= 0) return;
-    const res = resolveAttack(ally, state.enemy, 2);
-    if (res.missed) {
-      addLog("ALLY", `${ally.name} meleset.`);
-      return;
-    }
-    if (res.dmg > 0) {
-      state.enemy.hp = clamp(state.enemy.hp - res.dmg, 0, state.enemy.maxHp);
-    }
-    if (res.reflected > 0) {
-      ally.hp = clamp(ally.hp - res.reflected, 0, ally.maxHp);
-      addLog("ALLY", `${ally.name} terkena pantulan ${res.reflected} damage.`);
-    }
-    addLog("ALLY", `${ally.name} menyerang! Damage ${res.dmg}.`);
-    if (res.crit || res.combustion) playCritShake("enemy");
-    showDamageText("enemy", formatDamageText(res, res.dmg));
+function alliesAct(done){
+  const allies = getAliveAllies()
+    .slice()
+    .sort((a, b) => (Number(b.spd) || 0) - (Number(a.spd) || 0));
+  const target = getTargetEnemy();
+  if (!allies.length || !target) {
+    if (done) done();
+    return;
+  }
+  const targetIndex = getEnemyIndex(target);
+  const maxSpd = Math.max(...allies.map((ally) => Number(ally.spd) || 0), 0);
+  const baseDelay = 260;
+  const orderGap = 220;
+  let lastDelay = 0;
+  allies.forEach((ally, index) => {
+    const spd = Number(ally.spd) || 0;
+    const speedLag = Math.max(0, maxSpd - spd) * 20;
+    const delay = baseDelay + (index * orderGap) + speedLag;
+    lastDelay = Math.max(lastDelay, delay);
+    setTimeout(() => {
+      if (!getTargetEnemy() || ally.hp <= 0) return;
+      const res = resolveAttack(ally, target, 2);
+      if (res.missed) {
+        addLog("ALLY", `${ally.name} meleset.`);
+        refresh(state);
+        return;
+      }
+      if (res.dmg > 0) {
+        target.hp = clamp(target.hp - res.dmg, 0, target.maxHp);
+        playEnemySlash(targetIndex, 60);
+      }
+      if (res.reflected > 0) {
+        ally.hp = clamp(ally.hp - res.reflected, 0, ally.maxHp);
+        addLog("ALLY", `${ally.name} terkena pantulan ${res.reflected} damage.`);
+      }
+      addLog("ALLY", `${ally.name} menyerang! Damage ${res.dmg}.`);
+      if (res.crit || res.combustion) playEnemyCritShake(targetIndex);
+      showEnemyDamageText(formatDamageText(res, res.dmg), targetIndex);
+      refresh(state);
+    }, delay);
   });
+  if (done) setTimeout(done, lastDelay + 240);
 }
 
 function afterPlayerAction() {
@@ -2114,7 +2375,7 @@ function afterPlayerAction() {
     return;
   }
 
-  const e = state.enemy;
+  const e = getTargetEnemy();
   if (!e) return;
 
   if (e.hp <= 0) {
@@ -2122,24 +2383,26 @@ function afterPlayerAction() {
     return;
   }
 
-  alliesAct();
+  alliesAct(() => {
+    if (!state.inBattle) return;
+    const target = getTargetEnemy();
+    if (target && target.hp <= 0) {
+      handleEnemyDefeat();
+      return;
+    }
 
-  if (state.enemy && state.enemy.hp <= 0) {
-    handleEnemyDefeat();
-    return;
-  }
+    tickStatuses(state.player);
 
-  tickStatuses(state.player);
-
-  // Lock ke giliran musuh dulu supaya player tidak bisa spam tombol
-  setTurn("enemy");
-  refresh(state);
-
-  // Small delay sebelum enemy acts, biar terasa lebih seperti RPG turn-based
-  setTimeout(() => {
-    enemyTurn();
+    // Lock ke giliran musuh dulu supaya player tidak bisa spam tombol
+    setTurn("enemy");
     refresh(state);
-  }, 450);
+
+    // Small delay sebelum enemy acts, biar terasa lebih seperti RPG turn-based
+    setTimeout(() => {
+      enemyTurn();
+      refresh(state);
+    }, 450);
+  });
 }
 
 /* ----------------------------- Town actions ----------------------------- */
@@ -2261,8 +2524,9 @@ function openRecruitModal(){
     let meta = `${price} gold`;
     if (!slotsLeft) meta += " (Slot penuh)";
     else if (p.gold < price) meta += " (Gold kurang)";
+    const icon = allyAvatarIcon(template.name);
     return {
-      title: `${template.name} (Lv${level})`,
+      title: `${icon} ${template.name} (Lv${level})`,
       desc: template.desc,
       meta,
       value: canHire ? `hire:${template.id}` : undefined
@@ -2270,7 +2534,7 @@ function openRecruitModal(){
   });
 
   const dismissChoices = allies.map((ally, idx) => ({
-    title: `Lepas ${ally.name}`,
+    title: `${allyAvatarIcon(ally.name)} Lepas ${ally.name}`,
     desc: `Kosongkan slot ally (${ally.role || "Ally"}).`,
     meta: "",
     value: `dismiss:${idx}`
@@ -2323,27 +2587,28 @@ function attack() {
   setTurn("player");
 
   const p = state.player;
-  const e = state.enemy;
+  const e = getTargetEnemy();
+  if (!e) return;
+  const targetIndex = getEnemyIndex(e);
 
   const res = resolveAttack(p, e, 3);
   if (res.missed) {
-    playDodgeFade("enemy");
-    playDodgeFade("enemy");
-    showDamageText("enemy", "MISS");
+    playEnemyDodgeFade(targetIndex);
+    showEnemyDamageText("MISS", targetIndex);
     return;
   }
 
   if (res.dmg > 0) {
     e.hp = clamp(e.hp - res.dmg, 0, e.maxHp);
-    playSlash("enemy", 80);
+    playEnemySlash(targetIndex, 80);
   }
   if (res.reflected > 0) {
     p.hp = clamp(p.hp - res.reflected, 0, p.maxHp);
     playSlash("player", 150);
   }
 
-  if (res.crit || res.combustion) playCritShake("enemy");
-  showDamageText("enemy", formatDamageText(res, res.dmg));
+  if (res.crit || res.combustion) playEnemyCritShake(targetIndex);
+  showEnemyDamageText(formatDamageText(res, res.dmg), targetIndex);
   if (res.reflected > 0) {
     showDamageText("player", `-${res.reflected} (REFLECT)`);
   }
@@ -2374,7 +2639,8 @@ function runAway() {
   setTurn("player");
 
   const p = state.player;
-  const e = state.enemy;
+  const e = getTargetEnemy();
+  if (!e) return false;
 
   const chance = escapeChance(p, e);
   const roll = randInt(1, 100);
@@ -2420,7 +2686,7 @@ function useItem(name) {
 
 function openSkillModal() {
   const p = state.player;
-  if (!p || !state.enemy) return;
+  if (!p || !getTargetEnemy()) return;
 
   const choices = p.skills.map((s, i) => {
     const cdLeft = s.cdLeft || 0;
@@ -2454,21 +2720,24 @@ function openSkillModal() {
 
     p.mp -= s.mpCost;
 
-    const res = resolveAttack(p, state.enemy, s.power);
+    const target = getTargetEnemy();
+    if (!target) return;
+    const targetIndex = getEnemyIndex(target);
+    const res = resolveAttack(p, target, s.power);
     if (res.missed) {
-      playDodgeFade("enemy");
-      showDamageText("enemy", "MISS");
+      playEnemyDodgeFade(targetIndex);
+      showEnemyDamageText("MISS", targetIndex);
     } else {
       if (res.dmg > 0) {
-        state.enemy.hp = clamp(state.enemy.hp - res.dmg, 0, state.enemy.maxHp);
-        playSlash("enemy", 80);
+        target.hp = clamp(target.hp - res.dmg, 0, target.maxHp);
+        playEnemySlash(targetIndex, 80);
       }
       if (res.reflected > 0) {
         p.hp = clamp(p.hp - res.reflected, 0, p.maxHp);
         playSlash("player", 150);
       }
-      if (res.crit || res.combustion) playCritShake("enemy");
-      showDamageText("enemy", formatDamageText(res, res.dmg));
+      if (res.crit || res.combustion) playEnemyCritShake(targetIndex);
+      showEnemyDamageText(formatDamageText(res, res.dmg), targetIndex);
       if (res.reflected > 0) {
         showDamageText("player", `-${res.reflected} (REFLECT)`);
       }
