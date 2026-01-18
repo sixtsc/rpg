@@ -639,7 +639,12 @@ function playSlash(target, delay = 0) {
 }
 
 function getAllyAvatarBox(ally){
-  if (!ally || !Array.isArray(state.allies)) return null;
+  if (!ally) return null;
+  if (ally.id) {
+    const byId = document.querySelector(`.allyAvatarBox[data-ally-id="${ally.id}"]`);
+    if (byId) return byId;
+  }
+  if (!Array.isArray(state.allies)) return null;
   const idx = state.allies.indexOf(ally);
   if (idx < 0) return null;
   const slotIndex = idx + 1;
@@ -799,6 +804,13 @@ function renderAllyRow() {
       card.classList.remove("empty");
       card.classList.add("active");
       card.style.display = "block";
+      if (ally.id) {
+        card.dataset.allyId = ally.id;
+        avatarBox.dataset.allyId = ally.id;
+      } else {
+        delete card.dataset.allyId;
+        delete avatarBox.dataset.allyId;
+      }
       applyAllyAvatar(avatarBox, ally);
     } else {
       nameEl.textContent = `NPC ${slotIndex}`;
@@ -812,6 +824,8 @@ function renderAllyRow() {
       card.classList.add("empty");
       card.classList.remove("active");
       card.style.display = "none";
+      delete card.dataset.allyId;
+      delete avatarBox.dataset.allyId;
       applyAllyAvatar(avatarBox, null);
     }
   });
