@@ -32,6 +32,13 @@ const ITEMS = {
   swiftBoots: { name:"Swift Boots", kind:"gear", slot:"shoes", desc:"Sepatu Lv5 meningkatkan kecepatan.", spd:2 }
 };
 const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton"];
+const ENEMY_AVATARS = {
+  Slime: { icon: "🟢", bg: "linear-gradient(135deg, #5de28d, #1a6b3c)" },
+  Goblin: { icon: "👺", bg: "linear-gradient(135deg, #7de86a, #2f6b1f)" },
+  Bandit: { icon: "🗡️", bg: "linear-gradient(135deg, #f1b06b, #6b3a1a)" },
+  Wolf: { icon: "🐺", bg: "linear-gradient(135deg, #9bb7ff, #2a3f7a)" },
+  Skeleton: { icon: "💀", bg: "linear-gradient(135deg, #f1f1f1, #7a7a7a)" }
+};
 const RECRUIT_TEMPLATES = [
   {
     id: "guardian",
@@ -755,6 +762,21 @@ function renderAllyRow() {
   });
 }
 
+function applyEnemyAvatar(box, enemy) {
+  if (!box) return;
+  if (!enemy) {
+    box.textContent = "";
+    box.style.background = "rgba(255,255,255,0.03)";
+    box.removeAttribute("title");
+    return;
+  }
+  const config = ENEMY_AVATARS[enemy.name] || {};
+  const fallback = enemy.name ? enemy.name.slice(0, 1).toUpperCase() : "?";
+  box.textContent = config.icon || fallback;
+  box.style.background = config.bg || "linear-gradient(135deg, #4b5c6e, #202934)";
+  box.setAttribute("title", enemy.name);
+}
+
 function renderEnemyRow() {
   const row = $("enemyRow");
   if (!row) return;
@@ -774,11 +796,15 @@ function renderEnemyRow() {
       <div class="sectionTitle">
         <div><b>${escapeHtml(enemy.name)}</b> <span class="pill">Lv${enemy.level}</span></div>
       </div>
+      <div class="avatarWrap">
+        <div class="avatarBox enemyAvatarBox"></div>
+      </div>
       <div class="enemyMiniMeta">
         <div class="bar"><div class="fill hp" style="width:${hpPct}%"></div></div>
         <div class="muted">${enemy.hp}/${enemy.maxHp}</div>
       </div>
     `;
+    applyEnemyAvatar(card.querySelector(".enemyAvatarBox"), enemy);
     const targetIndex = offset + 1;
     card.onclick = () => {
       if (setActiveEnemyByIndex(targetIndex)) {
@@ -1156,6 +1182,8 @@ function refresh(state) {
     }
 
     $("eLvl").textContent = `Lv${e.level}`;
+    const eAvatarBox = $("eAvatarBox");
+    if (eAvatarBox) applyEnemyAvatar(eAvatarBox, e);
 
     // Enemy bars
     $("enemyBars").style.display = "grid";
@@ -1228,6 +1256,10 @@ function refresh(state) {
 
     $("eLvl").textContent = "-";
     $("enemyBars").style.display = "none";
+    const eAv = $("eAvatarWrap");
+    if (eAv) eAv.style.display = "none";
+    const eAvatarBox = $("eAvatarBox");
+    if (eAvatarBox) applyEnemyAvatar(eAvatarBox, null);
 
     $("townBtns").style.display = "flex";
     $("battleBtns").style.display = "none";
@@ -1236,8 +1268,6 @@ function refresh(state) {
 
     const pAv = $("pAvatarWrap");
     if (pAv) pAv.style.display = "none";
-    const eAv = $("eAvatarWrap");
-    if (eAv) eAv.style.display = "none";
     const xpGroup = $("xpGroup");
     if (xpGroup) xpGroup.style.display = "block";
 
