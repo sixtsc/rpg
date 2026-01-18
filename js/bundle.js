@@ -251,8 +251,10 @@ function normalizeAlly(ally){
   const level = clamp(Number(ally.level) || 1, 1, MAX_LEVEL);
   const maxHp = Math.max(1, Number(ally.maxHp) || 1);
   const maxMp = Math.max(0, Number(ally.maxMp) || 0);
-  const hp = clamp(Number(ally.hp) || maxHp, 0, maxHp);
-  const mp = clamp(Number(ally.mp) || maxMp, 0, maxMp);
+  const hpRaw = Number(ally.hp);
+  const mpRaw = Number(ally.mp);
+  const hp = clamp(Number.isFinite(hpRaw) ? hpRaw : maxHp, 0, maxHp);
+  const mp = clamp(Number.isFinite(mpRaw) ? mpRaw : maxMp, 0, maxMp);
   return {
     ...ally,
     level,
