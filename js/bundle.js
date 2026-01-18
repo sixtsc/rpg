@@ -864,6 +864,16 @@ function renderAllyRow() {
       card.classList.remove("empty");
       card.classList.add("active");
       card.style.display = "block";
+      const wasAlive = card.dataset.allyAlive === "true";
+      const isAlive = ally.hp > 0;
+      card.classList.toggle("down", !isAlive);
+      if (wasAlive && !isAlive) {
+        card.classList.remove("allyDown");
+        void card.offsetWidth;
+        card.classList.add("allyDown");
+      }
+      if (isAlive) card.classList.remove("allyDown");
+      card.dataset.allyAlive = isAlive ? "true" : "false";
       if (ally.id) {
         card.dataset.allyId = ally.id;
         avatarBox.dataset.allyId = ally.id;
@@ -883,6 +893,8 @@ function renderAllyRow() {
       mpBar.style.width = "0%";
       card.classList.add("empty");
       card.classList.remove("active");
+      card.classList.remove("down", "allyDown");
+      delete card.dataset.allyAlive;
       card.style.display = "none";
       delete card.dataset.allyId;
       delete avatarBox.dataset.allyId;
@@ -938,6 +950,7 @@ function renderEnemyRow() {
     const card = document.createElement("div");
     card.className = "card enemyCard extra";
     const hpPct = enemy.maxHp ? clamp((enemy.hp / enemy.maxHp) * 100, 0, 100) : 0;
+    const mpPct = enemy.maxMp ? clamp((enemy.mp / enemy.maxMp) * 100, 0, 100) : 0;
     if (enemy === activeEnemy) card.classList.add("active");
     card.innerHTML = `
       <div class="damageText enemyDamage"></div>
@@ -950,6 +963,8 @@ function renderEnemyRow() {
       <div class="enemyMiniMeta">
         <div class="bar"><div class="fill hp" style="width:${hpPct}%"></div></div>
         <div class="muted">${enemy.hp}/${enemy.maxHp}</div>
+        <div class="bar"><div class="fill mp" style="width:${mpPct}%"></div></div>
+        <div class="muted">${enemy.mp}/${enemy.maxMp}</div>
       </div>
     `;
     card.dataset.enemyIndex = `${enemyIndex}`;
