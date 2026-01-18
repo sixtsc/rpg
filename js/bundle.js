@@ -39,6 +39,11 @@ const ENEMY_AVATARS = {
   Wolf: { icon: "🐺", bg: "linear-gradient(135deg, #9bb7ff, #2a3f7a)" },
   Skeleton: { icon: "💀", bg: "linear-gradient(135deg, #f1f1f1, #7a7a7a)" }
 };
+const ALLY_AVATARS = {
+  Guardian: { icon: "🛡️", bg: "linear-gradient(135deg, #7ad5ff, #1f4b78)" },
+  Ranger: { icon: "🏹", bg: "linear-gradient(135deg, #8be77b, #2c6b2a)" },
+  Mystic: { icon: "🔮", bg: "linear-gradient(135deg, #c59bff, #4c2a7a)" }
+};
 const RECRUIT_TEMPLATES = [
   {
     id: "guardian",
@@ -735,11 +740,25 @@ function renderAllyRow() {
     const card = row.querySelector(`.allyCard.extra[data-ally-slot="${slotIndex}"]`);
 
     if (!nameEl || !lvlEl || !subEl || !hpText || !mpText || !hpBar || !mpBar || !card) return;
+    let avatarBox = card.querySelector(".allyAvatarBox");
+    if (!avatarBox) {
+      const wrap = document.createElement("div");
+      wrap.className = "avatarWrap allyAvatarWrap";
+      wrap.innerHTML = `<div class="avatarBox allyAvatarBox"></div>`;
+      const insertAfter = card.querySelector(".nameSub");
+      if (insertAfter && insertAfter.parentNode) {
+        insertAfter.parentNode.insertBefore(wrap, insertAfter.nextSibling);
+      } else {
+        card.appendChild(wrap);
+      }
+      avatarBox = wrap.querySelector(".allyAvatarBox");
+    }
 
     if (ally) {
       nameEl.textContent = ally.name || `NPC ${slotIndex}`;
       lvlEl.textContent = `Lv${ally.level || 1}`;
-      subEl.textContent = ally.role || "Partner";
+      subEl.textContent = "";
+      subEl.style.display = "none";
       hpText.textContent = `${ally.hp}/${ally.maxHp}`;
       mpText.textContent = `${ally.mp}/${ally.maxMp}`;
       setBar(hpBar, ally.hp, ally.maxHp);
@@ -747,10 +766,12 @@ function renderAllyRow() {
       card.classList.remove("empty");
       card.classList.add("active");
       card.style.display = "block";
+      applyAllyAvatar(avatarBox, ally);
     } else {
       nameEl.textContent = `NPC ${slotIndex}`;
       lvlEl.textContent = "Lv-";
       subEl.textContent = "Slot kosong";
+      subEl.style.display = "block";
       hpText.textContent = "0/0";
       mpText.textContent = "0/0";
       hpBar.style.width = "0%";
@@ -758,6 +779,7 @@ function renderAllyRow() {
       card.classList.add("empty");
       card.classList.remove("active");
       card.style.display = "none";
+      applyAllyAvatar(avatarBox, null);
     }
   });
 }
@@ -775,6 +797,25 @@ function applyEnemyAvatar(box, enemy) {
   box.textContent = config.icon || fallback;
   box.style.background = config.bg || "linear-gradient(135deg, #4b5c6e, #202934)";
   box.setAttribute("title", enemy.name);
+}
+
+function applyAllyAvatar(box, ally) {
+  if (!box) return;
+  if (!ally) {
+    box.textContent = "";
+    box.style.background = "rgba(255,255,255,0.03)";
+    box.removeAttribute("title");
+    return;
+  }
+  const config = ALLY_AVATARS[ally.name] || ALLY_AVATARS[ally.role] || {};
+  const fallback = ally.name ? ally.name.slice(0, 1).toUpperCase() : "?";
+  box.textContent = config.icon || fallback;
+  box.style.background = config.bg || "linear-gradient(135deg, #4b5c6e, #202934)";
+  box.setAttribute("title", ally.name);
+}
+
+function allyAvatarIcon(name){
+  return (ALLY_AVATARS[name] && ALLY_AVATARS[name].icon) ? ALLY_AVATARS[name].icon : "🙂";
 }
 
 function renderEnemyRow() {
@@ -2114,27 +2155,37 @@ function handleEnemyDefeat(){
   return true;
 }
 
-function alliesAct(){
+function alliesAct(done){
   const allies = getAliveAllies();
-  if (!allies.length || !state.enemy) return;
-  allies.forEach((ally) => {
-    if (!state.enemy || ally.hp <= 0) return;
-    const res = resolveAttack(ally, state.enemy, 2);
-    if (res.missed) {
-      addLog("ALLY", `${ally.name} meleset.`);
-      return;
-    }
-    if (res.dmg > 0) {
-      state.enemy.hp = clamp(state.enemy.hp - res.dmg, 0, state.enemy.maxHp);
-    }
-    if (res.reflected > 0) {
-      ally.hp = clamp(ally.hp - res.reflected, 0, ally.maxHp);
-      addLog("ALLY", `${ally.name} terkena pantulan ${res.reflected} damage.`);
-    }
-    addLog("ALLY", `${ally.name} menyerang! Damage ${res.dmg}.`);
-    if (res.crit || res.combustion) playCritShake("enemy");
-    showDamageText("enemy", formatDamageText(res, res.dmg));
+  if (!allies.length || !state.enemy) {
+    if (done) done();
+    return;
+  }
+  const delayStep = 320;
+  allies.forEach((ally, index) => {
+    const delay = index * delayStep;
+    setTimeout(() => {
+      if (!state.enemy || ally.hp <= 0) return;
+      const res = resolveAttack(ally, state.enemy, 2);
+      if (res.missed) {
+        addLog("ALLY", `${ally.name} meleset.`);
+        refresh(state);
+        return;
+      }
+      if (res.dmg > 0) {
+        state.enemy.hp = clamp(state.enemy.hp - res.dmg, 0, state.enemy.maxHp);
+      }
+      if (res.reflected > 0) {
+        ally.hp = clamp(ally.hp - res.reflected, 0, ally.maxHp);
+        addLog("ALLY", `${ally.name} terkena pantulan ${res.reflected} damage.`);
+      }
+      addLog("ALLY", `${ally.name} menyerang! Damage ${res.dmg}.`);
+      if (res.crit || res.combustion) playCritShake("enemy");
+      showDamageText("enemy", formatDamageText(res, res.dmg));
+      refresh(state);
+    }, delay);
   });
+  if (done) setTimeout(done, allies.length * delayStep);
 }
 
 function afterPlayerAction() {
@@ -2152,24 +2203,25 @@ function afterPlayerAction() {
     return;
   }
 
-  alliesAct();
+  alliesAct(() => {
+    if (!state.inBattle) return;
+    if (state.enemy && state.enemy.hp <= 0) {
+      handleEnemyDefeat();
+      return;
+    }
 
-  if (state.enemy && state.enemy.hp <= 0) {
-    handleEnemyDefeat();
-    return;
-  }
+    tickStatuses(state.player);
 
-  tickStatuses(state.player);
-
-  // Lock ke giliran musuh dulu supaya player tidak bisa spam tombol
-  setTurn("enemy");
-  refresh(state);
-
-  // Small delay sebelum enemy acts, biar terasa lebih seperti RPG turn-based
-  setTimeout(() => {
-    enemyTurn();
+    // Lock ke giliran musuh dulu supaya player tidak bisa spam tombol
+    setTurn("enemy");
     refresh(state);
-  }, 450);
+
+    // Small delay sebelum enemy acts, biar terasa lebih seperti RPG turn-based
+    setTimeout(() => {
+      enemyTurn();
+      refresh(state);
+    }, 450);
+  });
 }
 
 /* ----------------------------- Town actions ----------------------------- */
@@ -2291,8 +2343,9 @@ function openRecruitModal(){
     let meta = `${price} gold`;
     if (!slotsLeft) meta += " (Slot penuh)";
     else if (p.gold < price) meta += " (Gold kurang)";
+    const icon = allyAvatarIcon(template.name);
     return {
-      title: `${template.name} (Lv${level})`,
+      title: `${icon} ${template.name} (Lv${level})`,
       desc: template.desc,
       meta,
       value: canHire ? `hire:${template.id}` : undefined
@@ -2300,7 +2353,7 @@ function openRecruitModal(){
   });
 
   const dismissChoices = allies.map((ally, idx) => ({
-    title: `Lepas ${ally.name}`,
+    title: `${allyAvatarIcon(ally.name)} Lepas ${ally.name}`,
     desc: `Kosongkan slot ally (${ally.role || "Ally"}).`,
     meta: "",
     value: `dismiss:${idx}`
