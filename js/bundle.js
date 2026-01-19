@@ -922,30 +922,48 @@ function renderAllyRow() {
 function applyEnemyAvatar(box, enemy) {
   if (!box) return;
   if (!enemy) {
-    box.textContent = "";
+    const iconEl = box.querySelector(".avatarIcon");
+    if (iconEl) iconEl.textContent = "";
     box.style.background = "rgba(255,255,255,0.03)";
     box.removeAttribute("title");
     return;
   }
   const config = ENEMY_AVATARS[enemy.name] || {};
   const fallback = enemy.name ? enemy.name.slice(0, 1).toUpperCase() : "?";
-  box.textContent = config.icon || fallback;
-  box.style.background = config.bg || "linear-gradient(135deg, #4b5c6e, #202934)";
+  const icon = config.icon || fallback;
+  let iconEl = box.querySelector(".avatarIcon");
+  if (!iconEl) {
+    iconEl = document.createElement("span");
+    iconEl.className = "avatarIcon";
+    box.appendChild(iconEl);
+  }
+  if (iconEl.textContent !== icon) iconEl.textContent = icon;
+  const bg = config.bg || "linear-gradient(135deg, #4b5c6e, #202934)";
+  if (box.style.background !== bg) box.style.background = bg;
   box.setAttribute("title", enemy.name);
 }
 
 function applyAllyAvatar(box, ally) {
   if (!box) return;
   if (!ally) {
-    box.textContent = "";
+    const iconEl = box.querySelector(".avatarIcon");
+    if (iconEl) iconEl.textContent = "";
     box.style.background = "rgba(255,255,255,0.03)";
     box.removeAttribute("title");
     return;
   }
   const config = ALLY_AVATARS[ally.name] || ALLY_AVATARS[ally.role] || {};
   const fallback = ally.name ? ally.name.slice(0, 1).toUpperCase() : "?";
-  box.textContent = config.icon || fallback;
-  box.style.background = config.bg || "linear-gradient(135deg, #4b5c6e, #202934)";
+  const icon = config.icon || fallback;
+  let iconEl = box.querySelector(".avatarIcon");
+  if (!iconEl) {
+    iconEl = document.createElement("span");
+    iconEl.className = "avatarIcon";
+    box.appendChild(iconEl);
+  }
+  if (iconEl.textContent !== icon) iconEl.textContent = icon;
+  const bg = config.bg || "linear-gradient(135deg, #4b5c6e, #202934)";
+  if (box.style.background !== bg) box.style.background = bg;
   box.setAttribute("title", ally.name);
 }
 
