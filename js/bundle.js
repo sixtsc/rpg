@@ -1018,12 +1018,25 @@ function renderEnemyRow() {
     const mpText = card.querySelector(".enemyMpText");
     const hpFill = card.querySelector(".enemyHpFill");
     const mpFill = card.querySelector(".enemyMpFill");
+    const prevHp = (typeof enemy._prevHp === "number") ? enemy._prevHp : enemy.hp;
 
     if (nameEl) nameEl.textContent = enemy.name || "-";
     if (lvlEl) lvlEl.textContent = `Lv${enemy.level || 1}`;
     if (hpText) hpText.textContent = `${enemy.hp}/${enemy.maxHp}`;
     if (mpText) mpText.textContent = `${enemy.mp}/${enemy.maxMp}`;
-    if (hpFill) setBar(hpFill, enemy.hp, enemy.maxHp);
+    if (hpFill) {
+      setBar(hpFill, enemy.hp, enemy.maxHp);
+      const hpBar = hpFill.parentElement;
+      if (hpBar && enemy.hp < prevHp) {
+        if (hpBar._hpPulseTimer) clearTimeout(hpBar._hpPulseTimer);
+        hpBar.classList.remove("hpPulse");
+        void hpBar.offsetWidth;
+        hpBar.classList.add("hpPulse");
+        hpBar._hpPulseTimer = setTimeout(() => {
+          hpBar.classList.remove("hpPulse");
+        }, 360);
+      }
+    }
     if (mpFill) setBar(mpFill, enemy.mp, enemy.maxMp);
 
     card.classList.toggle("active", enemy === activeEnemy);
@@ -1033,6 +1046,7 @@ function renderEnemyRow() {
     if (wasAlive && !isAlive) card.classList.add("enemyDown");
     if (isAlive) card.classList.remove("enemyDown");
     enemy._alive = isAlive;
+    enemy._prevHp = enemy.hp;
 
     applyEnemyAvatar(card.querySelector(".enemyAvatarBox"), enemy);
 
