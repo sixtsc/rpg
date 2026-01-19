@@ -2376,12 +2376,10 @@ function alliesAct(done){
   const allies = getAliveAllies()
     .slice()
     .sort((a, b) => (Number(b.spd) || 0) - (Number(a.spd) || 0));
-  const target = getTargetEnemy();
-  if (!allies.length || !target) {
+  if (!allies.length || !getTargetEnemy()) {
     if (done) done();
     return;
   }
-  const targetIndex = getEnemyIndex(target);
   const maxSpd = Math.max(...allies.map((ally) => Number(ally.spd) || 0), 0);
   const baseDelay = 260;
   const orderGap = 220;
@@ -2392,15 +2390,18 @@ function alliesAct(done){
     const delay = baseDelay + (index * orderGap) + speedLag;
     lastDelay = Math.max(lastDelay, delay);
     setTimeout(() => {
-      if (!getTargetEnemy() || ally.hp <= 0) return;
-      const res = resolveAttack(ally, target, 2);
+      const currentTarget = getTargetEnemy();
+      if (!currentTarget || ally.hp <= 0) return;
+      const targetIndex = getEnemyIndex(currentTarget);
+      if (targetIndex < 0) return;
+      const res = resolveAttack(ally, currentTarget, 2);
       if (res.missed) {
         addLog("ALLY", `${ally.name} meleset.`);
         refresh(state);
         return;
       }
       if (res.dmg > 0) {
-        target.hp = clamp(target.hp - res.dmg, 0, target.maxHp);
+        currentTarget.hp = clamp(currentTarget.hp - res.dmg, 0, currentTarget.maxHp);
         playEnemySlash(targetIndex, 60);
       }
       if (res.reflected > 0) {
@@ -2423,9 +2424,6 @@ function afterPlayerAction() {
     return;
   }
 
-  const e = getTargetEnemy();
-  if (!e) return;
-
   const defeated = getDefeatedEnemies();
   if (defeated.length) {
     defeated.forEach((enemy) => { enemy._defeated = true; });
@@ -2433,6 +2431,9 @@ function afterPlayerAction() {
     handleEnemyDefeat();
     return;
   }
+
+  const e = getTargetEnemy();
+  if (!e) return;
 
   alliesAct(() => {
     if (!state.inBattle) return;
