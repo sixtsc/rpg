@@ -394,6 +394,13 @@ body.inBattle .allyCard.extra{
 body.inBattle .enemyMiniMeta .muted{
   font-size:10px;
 }
+body.inBattle .enemyMiniMeta .barRow{
+  font-size:10px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:6px;
+}
 
 @media (max-width:820px){
   body.inBattle .allyRow,
