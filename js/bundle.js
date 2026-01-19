@@ -789,8 +789,16 @@ function skillIconHtml(skill){
 
 function normalizeEnemyQueue(){
   if (!Array.isArray(state.enemyQueue)) return [];
-  state.enemyQueue = state.enemyQueue.filter((enemy) => enemy && enemy.hp > 0);
+  state.enemyQueue = state.enemyQueue.filter((enemy) => enemy);
   return state.enemyQueue;
+}
+
+function getAliveEnemyQueue(){
+  return getEnemyQueue().filter((enemy) => enemy && enemy.hp > 0);
+}
+
+function getDefeatedEnemies(){
+  return getEnemyQueue().filter((enemy) => enemy && enemy.hp <= 0 && !enemy._defeated);
 }
 
 function getEnemyQueue(){
@@ -806,7 +814,13 @@ function getPrimaryEnemy(){
 function getTargetEnemy(){
   const queue = getEnemyQueue();
   if (!queue.length) return null;
-  const idx = clamp(state.enemyTargetIndex || 0, 0, queue.length - 1);
+  let idx = clamp(state.enemyTargetIndex || 0, 0, queue.length - 1);
+  if (!queue[idx] || queue[idx].hp <= 0) {
+    const aliveIndex = queue.findIndex((enemy) => enemy && enemy.hp > 0);
+    if (aliveIndex === -1) return null;
+    idx = aliveIndex;
+    state.enemyTargetIndex = idx;
+  }
   return queue[idx];
 }
 
@@ -818,6 +832,8 @@ function getEnemyIndex(enemy){
 function setActiveEnemyByIndex(index){
   const queue = getEnemyQueue();
   if (!queue.length) return false;
+  const target = queue[index];
+  if (!target || target.hp <= 0) return false;
   state.enemyTargetIndex = clamp(index, 0, queue.length - 1);
   return true;
 }
@@ -952,6 +968,12 @@ function renderEnemyRow() {
     const hpPct = enemy.maxHp ? clamp((enemy.hp / enemy.maxHp) * 100, 0, 100) : 0;
     const mpPct = enemy.maxMp ? clamp((enemy.mp / enemy.maxMp) * 100, 0, 100) : 0;
     if (enemy === activeEnemy) card.classList.add("active");
+    const wasAlive = enemy._alive === true;
+    const isAlive = enemy.hp > 0;
+    card.classList.toggle("down", !isAlive);
+    if (wasAlive && !isAlive) card.classList.add("enemyDown");
+    if (isAlive) card.classList.remove("enemyDown");
+    enemy._alive = isAlive;
     card.innerHTML = `
       <div class="damageText enemyDamage"></div>
       <div class="sectionTitle">
@@ -969,13 +991,15 @@ function renderEnemyRow() {
     `;
     card.dataset.enemyIndex = `${enemyIndex}`;
     applyEnemyAvatar(card.querySelector(".enemyAvatarBox"), enemy);
-    const targetIndex = enemyIndex;
-    card.onclick = () => {
-      if (setActiveEnemyByIndex(targetIndex)) {
-        addLog("TARGET", `Target: ${enemy.name}`);
-        refresh(state);
-      }
-    };
+    if (isAlive) {
+      const targetIndex = enemyIndex;
+      card.onclick = () => {
+        if (setActiveEnemyByIndex(targetIndex)) {
+          addLog("TARGET", `Target: ${enemy.name}`);
+          refresh(state);
+        }
+      };
+    }
     row.appendChild(card);
   });
 }
@@ -1428,6 +1452,20 @@ function refresh(state) {
     if (enemyBtns) enemyBtns.style.display = "flex";
     const enemyCard = $("enemyCard");
     if (enemyCard) {
+      const wasAlive = enemyCard.dataset.enemyAlive === "true";
+      const isAlive = e ? e.hp > 0 : false;
+      enemyCard.classList.toggle("down", !isAlive && !!e);
+      if (wasAlive && !isAlive) {
+        enemyCard.classList.remove("enemyDown");
+        void enemyCard.offsetWidth;
+        enemyCard.classList.add("enemyDown");
+      }
+      if (isAlive) enemyCard.classList.remove("enemyDown");
+      if (e) {
+        enemyCard.dataset.enemyAlive = isAlive ? "true" : "false";
+      } else {
+        delete enemyCard.dataset.enemyAlive;
+      }
       enemyCard.classList.toggle("active", state.enemyTargetIndex === 0);
       enemyCard.onclick = () => {
         if (setActiveEnemyByIndex(0)) {
@@ -1468,6 +1506,8 @@ function refresh(state) {
     const enemyCard = $("enemyCard");
     if (enemyCard) {
       enemyCard.classList.remove("active");
+      enemyCard.classList.remove("down", "enemyDown");
+      delete enemyCard.dataset.enemyAlive;
       enemyCard.onclick = null;
     }
   }
@@ -2183,8 +2223,8 @@ function enemyTurn() {
 
   const p = state.player;
   const enemies = Array.isArray(state.enemyQueue) && state.enemyQueue.length
-    ? normalizeEnemyQueue()
-    : (state.enemy ? [state.enemy] : []);
+    ? getAliveEnemyQueue()
+    : (state.enemy && state.enemy.hp > 0 ? [state.enemy] : []);
 
   const endTurnAfter = (waitMs = 0) => {
     setTimeout(() => {
@@ -2197,8 +2237,9 @@ function enemyTurn() {
       }
 
       if (Array.isArray(state.enemyQueue)) {
-        normalizeEnemyQueue();
-        if (!state.enemyQueue.length) {
+        const aliveEnemies = getAliveEnemyQueue();
+        if (!aliveEnemies.length) {
+          state.enemyQueue = [];
           winBattle();
           return;
         }
@@ -2301,16 +2342,23 @@ function enemyTurn() {
 
 function handleEnemyDefeat(){
   const queue = getEnemyQueue();
-  if (!queue.length) {
+  const aliveEnemies = getAliveEnemyQueue();
+  if (!aliveEnemies.length) {
+    if (Array.isArray(state.enemyQueue)) state.enemyQueue = [];
     winBattle();
     return true;
   }
   if (Array.isArray(state.enemyQueue)) {
     normalizeEnemyQueue();
-    if (state.enemyQueue.length) {
-      state.enemy = state.enemyQueue[0];
-      state.enemyTargetIndex = clamp(state.enemyTargetIndex || 0, 0, state.enemyQueue.length - 1);
-      addLog("INFO", `Musuh tersisa: ${state.enemyQueue.length}`);
+    if (aliveEnemies.length) {
+      state.enemy = aliveEnemies[0];
+      const nextIndex = queue.indexOf(state.enemy);
+      state.enemyTargetIndex = clamp(
+        Number.isFinite(nextIndex) ? nextIndex : (state.enemyTargetIndex || 0),
+        0,
+        queue.length - 1
+      );
+      addLog("INFO", `Musuh tersisa: ${aliveEnemies.length}`);
       setTurn("enemy");
       refresh(state);
       setTimeout(() => {
@@ -2378,7 +2426,10 @@ function afterPlayerAction() {
   const e = getTargetEnemy();
   if (!e) return;
 
-  if (e.hp <= 0) {
+  const defeated = getDefeatedEnemies();
+  if (defeated.length) {
+    defeated.forEach((enemy) => { enemy._defeated = true; });
+    refresh(state);
     handleEnemyDefeat();
     return;
   }
@@ -2386,7 +2437,10 @@ function afterPlayerAction() {
   alliesAct(() => {
     if (!state.inBattle) return;
     const target = getTargetEnemy();
-    if (target && target.hp <= 0) {
+    const defeated = getDefeatedEnemies();
+    if (defeated.length || (target && target.hp <= 0)) {
+      defeated.forEach((enemy) => { enemy._defeated = true; });
+      refresh(state);
       handleEnemyDefeat();
       return;
     }
