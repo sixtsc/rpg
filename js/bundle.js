@@ -961,10 +961,14 @@ function renderEnemyRow() {
         <div class="avatarBox enemyAvatarBox"></div>
       </div>
       <div class="enemyMiniMeta">
+        <div class="barRow">
+          <span class="muted">HP</span><span class="muted">${enemy.hp}/${enemy.maxHp}</span>
+        </div>
         <div class="bar"><div class="fill hp" style="width:${hpPct}%"></div></div>
-        <div class="muted">${enemy.hp}/${enemy.maxHp}</div>
+        <div class="barRow">
+          <span class="muted">MP</span><span class="muted">${enemy.mp}/${enemy.maxMp}</span>
+        </div>
         <div class="bar"><div class="fill mp" style="width:${mpPct}%"></div></div>
-        <div class="muted">${enemy.mp}/${enemy.maxMp}</div>
       </div>
     `;
     card.dataset.enemyIndex = `${enemyIndex}`;
