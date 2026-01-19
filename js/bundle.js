@@ -1023,8 +1023,8 @@ function renderEnemyRow() {
     if (lvlEl) lvlEl.textContent = `Lv${enemy.level || 1}`;
     if (hpText) hpText.textContent = `${enemy.hp}/${enemy.maxHp}`;
     if (mpText) mpText.textContent = `${enemy.mp}/${enemy.maxMp}`;
-    if (hpFill) hpFill.style.width = `${hpPct}%`;
-    if (mpFill) mpFill.style.width = `${mpPct}%`;
+    if (hpFill) setBar(hpFill, enemy.hp, enemy.maxHp);
+    if (mpFill) setBar(mpFill, enemy.mp, enemy.maxMp);
 
     card.classList.toggle("active", enemy === activeEnemy);
     const wasAlive = enemy._alive === true;
