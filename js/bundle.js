@@ -956,41 +956,68 @@ function allyAvatarIcon(name){
 function renderEnemyRow() {
   const row = $("enemyRow");
   if (!row) return;
-  row.querySelectorAll(".enemyCard.extra").forEach((el) => el.remove());
 
   const queue = getEnemyQueue();
-
   const activeEnemy = getTargetEnemy();
-  queue.slice(1, 3).forEach((enemy, offset) => {
+  const visibleEnemies = queue.slice(1, 3);
+  const activeIndices = new Set();
+
+  visibleEnemies.forEach((enemy, offset) => {
     const enemyIndex = offset + 1;
-    const card = document.createElement("div");
-    card.className = "card enemyCard extra";
+    activeIndices.add(String(enemyIndex));
+
+    let card = row.querySelector(`.enemyCard.extra[data-enemy-index="${enemyIndex}"]`);
+    if (!card) {
+      card = document.createElement("div");
+      card.className = "card enemyCard extra";
+      card.dataset.enemyIndex = `${enemyIndex}`;
+      card.innerHTML = `
+        <div class="damageText enemyDamage"></div>
+        <div class="sectionTitle">
+          <div><b class="enemyName"></b> <span class="pill enemyLevel"></span></div>
+        </div>
+        <div class="avatarWrap">
+          <div class="avatarBox enemyAvatarBox"></div>
+        </div>
+        <div class="enemyMiniMeta">
+          <div class="bar"><div class="fill hp enemyHpFill"></div></div>
+          <div class="muted enemyHpText"></div>
+          <div class="bar"><div class="fill mp enemyMpFill"></div></div>
+          <div class="muted enemyMpText"></div>
+        </div>
+      `;
+      row.appendChild(card);
+    } else {
+      row.appendChild(card);
+    }
+
     const hpPct = enemy.maxHp ? clamp((enemy.hp / enemy.maxHp) * 100, 0, 100) : 0;
     const mpPct = enemy.maxMp ? clamp((enemy.mp / enemy.maxMp) * 100, 0, 100) : 0;
-    if (enemy === activeEnemy) card.classList.add("active");
+
+    const nameEl = card.querySelector(".enemyName");
+    const lvlEl = card.querySelector(".enemyLevel");
+    const hpText = card.querySelector(".enemyHpText");
+    const mpText = card.querySelector(".enemyMpText");
+    const hpFill = card.querySelector(".enemyHpFill");
+    const mpFill = card.querySelector(".enemyMpFill");
+
+    if (nameEl) nameEl.textContent = enemy.name || "-";
+    if (lvlEl) lvlEl.textContent = `Lv${enemy.level || 1}`;
+    if (hpText) hpText.textContent = `${enemy.hp}/${enemy.maxHp}`;
+    if (mpText) mpText.textContent = `${enemy.mp}/${enemy.maxMp}`;
+    if (hpFill) hpFill.style.width = `${hpPct}%`;
+    if (mpFill) mpFill.style.width = `${mpPct}%`;
+
+    card.classList.toggle("active", enemy === activeEnemy);
     const wasAlive = enemy._alive === true;
     const isAlive = enemy.hp > 0;
     card.classList.toggle("down", !isAlive);
     if (wasAlive && !isAlive) card.classList.add("enemyDown");
     if (isAlive) card.classList.remove("enemyDown");
     enemy._alive = isAlive;
-    card.innerHTML = `
-      <div class="damageText enemyDamage"></div>
-      <div class="sectionTitle">
-        <div><b>${escapeHtml(enemy.name)}</b> <span class="pill">Lv${enemy.level}</span></div>
-      </div>
-      <div class="avatarWrap">
-        <div class="avatarBox enemyAvatarBox"></div>
-      </div>
-      <div class="enemyMiniMeta">
-        <div class="bar"><div class="fill hp" style="width:${hpPct}%"></div></div>
-        <div class="muted">${enemy.hp}/${enemy.maxHp}</div>
-        <div class="bar"><div class="fill mp" style="width:${mpPct}%"></div></div>
-        <div class="muted">${enemy.mp}/${enemy.maxMp}</div>
-      </div>
-    `;
-    card.dataset.enemyIndex = `${enemyIndex}`;
+
     applyEnemyAvatar(card.querySelector(".enemyAvatarBox"), enemy);
+
     if (isAlive) {
       const targetIndex = enemyIndex;
       card.onclick = () => {
@@ -999,12 +1026,19 @@ function renderEnemyRow() {
           refresh(state);
         }
       };
+    } else {
+      card.onclick = null;
     }
-    row.appendChild(card);
+  });
+
+  row.querySelectorAll(".enemyCard.extra").forEach((card) => {
+    if (!activeIndices.has(card.dataset.enemyIndex)) {
+      card.remove();
+    }
   });
 }
 
-const damageTimers = { player: null, enemy: null };
+const damageTimers = { player: null, enemy: null, ally: {} };
 function showDamageText(target, text){
   const el = $(target === "player" ? "playerDamage" : "enemyDamage");
   if (!el) return;
@@ -1033,6 +1067,23 @@ function showEnemyDamageText(text, enemyIndex){
   el.classList.add("show");
   if (damageTimers.enemy) clearTimeout(damageTimers.enemy);
   damageTimers.enemy = setTimeout(() => {
+    el.classList.remove("show");
+  }, 1400);
+}
+
+function showAllyDamageText(text, ally){
+  if (!ally || !Array.isArray(state.allies)) return;
+  const idx = state.allies.indexOf(ally);
+  if (idx < 0) return;
+  const slotIndex = idx + 1;
+  const el = document.querySelector(`.allyCard.extra[data-ally-slot="${slotIndex}"] .allyDamage`);
+  if (!el) return;
+  el.textContent = text;
+  el.classList.remove("show");
+  void el.offsetWidth;
+  el.classList.add("show");
+  if (damageTimers.ally[slotIndex]) clearTimeout(damageTimers.ally[slotIndex]);
+  damageTimers.ally[slotIndex] = setTimeout(() => {
     el.classList.remove("show");
   }, 1400);
 }
@@ -2273,6 +2324,7 @@ function enemyTurn() {
       if (isPlayer) showDamageText("player", "MISS");
       else {
         playAllyDodgeFade(target);
+        showAllyDamageText("MISS", target);
         addLog("ENEMY", `${enemy.name} meleset menyerang ${target.name}.`);
       }
       done(0);
@@ -2302,6 +2354,7 @@ function enemyTurn() {
       }
     } else {
       addLog("ENEMY", `${enemy.name} menyerang ${target.name}! Damage ${res.dmg}.`);
+      showAllyDamageText(formatDamageText(res, res.dmg), target);
       if (res.reflected > 0) {
         addLog("ALLY", `${target.name} memantulkan ${res.reflected} damage.`);
       }
