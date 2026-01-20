@@ -339,6 +339,12 @@ function normalizePlayer(p){
     p.equipmentBonus.spd = Number(p.equipmentBonus.spd || 0);
   }
   if (!Array.isArray(p.skills)) p.skills = [];
+  p.skills = p.skills.map((skill) => {
+    if (!skill || !skill.name) return skill;
+    const template = Object.values(SKILLS).find((entry) => entry && entry.name === skill.name);
+    if (!template) return skill;
+    return { ...template, ...skill, icon: skill.icon || template.icon };
+  });
   if (!Array.isArray(p.skillSlots)) {
     const slots = Array.from({ length: 8 }, (_, i) => {
       const skill = p.skills[i];

@@ -1,5 +1,11 @@
 export const SKILLS = {
-  fireball: { name:"Fireball", mpCost:6, power:10, desc:"Serangan api (damage tinggi)." }
+  fireball: {
+    name:"Fireball",
+    icon:"./assets/skills/fireball.svg",
+    mpCost:6,
+    power:10,
+    desc:"Serangan api (damage tinggi)."
+  }
 };
 
 export const ITEMS = {
