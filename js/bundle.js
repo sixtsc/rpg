@@ -1966,6 +1966,27 @@ function learnSkill(skillKey){
   return { ok:true };
 }
 
+function setMarketPageVisible(show){
+  const page = byId("marketPage");
+  const wrap = document.querySelector(".wrap");
+  if (!page || !wrap) return;
+  if (show) {
+    page.classList.remove("hidden");
+    page.setAttribute("aria-hidden", "false");
+    wrap.classList.add("hidden");
+  } else {
+    page.classList.add("hidden");
+    page.setAttribute("aria-hidden", "true");
+    wrap.classList.remove("hidden");
+  }
+}
+
+function openMarketPage(){
+  if (state.inBattle) return;
+  modal.close();
+  setMarketPageVisible(true);
+}
+
 function openShopModal(mode = "menu"){
   if (state.inBattle) return;
   if (mode === "menu"){
@@ -1975,7 +1996,10 @@ function openShopModal(mode = "menu"){
         { title: "Market", desc: "Beli / jual item.", meta: "", value: "market" },
         { title: "Learn Skill", desc: "Pelajari skill baru.", meta: "", value: "learn" },
       ],
-      (pick) => openShopModal(String(pick || "menu"))
+      (pick) => {
+        if (pick === "market") return openMarketPage();
+        openShopModal(String(pick || "menu"));
+      }
     );
     return;
   }
@@ -3623,6 +3647,8 @@ function bind() {
   if (btnProfile) btnProfile.onclick = openProfileModal;
   const btnShop = byId("btnShop");
   if (btnShop) btnShop.onclick = () => openShopModal();
+  const marketBack = byId("marketBack");
+  if (marketBack) marketBack.onclick = () => setMarketPageVisible(false);
   const playerStatLink = byId("playerStatLink");
   if (playerStatLink) playerStatLink.onclick = openStatsModal;
 
