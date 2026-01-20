@@ -1361,6 +1361,7 @@ const modal = {
     // Layout: make Stats modals show 2-3 columns
     const modalEl = document.querySelector(".modal");
     body.classList.remove("statsGrid");
+    body.classList.remove("statModal");
     body.classList.remove("marketGrid");
     body.classList.remove("equipmentGrid");
     body.classList.remove("marketSubCompact");
@@ -1368,6 +1369,7 @@ const modal = {
     if (modalEl) modalEl.classList.remove("confirmPopup");
     const lowerTitle = String(title).toLowerCase();
     if (String(title).toLowerCase().includes("stats")) body.classList.add("statsGrid");
+    if (lowerTitle.includes("stat")) body.classList.add("statModal");
     if (lowerTitle.includes("market") || lowerTitle.includes("inventory")) body.classList.add("marketGrid");
     if (String(title).toLowerCase().includes("equipment")) body.classList.add("equipmentGrid");
     if (choices.some((c) => String(c.className || "").includes("marketSub"))) {
