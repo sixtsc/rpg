@@ -579,10 +579,11 @@ body.inBattle .enemyMiniMeta .muted{
 .modalBody.statsGrid .right{ display:none; }
 .modalBody.statsGrid .desc{ display:none; }
 .modalBody.statsGrid .skillIconWrap{
-  border:none;
-  background:transparent;
-  padding:0;
-  border-radius:0;
+  border:none !important;
+  background:transparent !important;
+  padding:0 !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
 }
 
 .choice{
