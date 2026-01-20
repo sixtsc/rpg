@@ -1380,6 +1380,7 @@ const modal = {
       if (c.style) row.style.cssText += String(c.style);
 
       const left = document.createElement("div");
+      left.className = "left";
       const iconHtml = c.icon ? `<span class="skillIconWrap"><img class="skillIcon" src="${escapeHtml(c.icon)}" alt="" /></span>` : "";
       const descHtml = c.descHtml ? String(c.descHtml) : escapeHtml(c.desc || "");
       left.innerHTML = `
@@ -1930,7 +1931,7 @@ function openMarketConfirm(mode, name){
     [
       { title: "Detail", descHtml, meta: "", value: undefined, className: "confirmDetails" },
       {
-        title: actionLabel,
+        title: "",
         desc: "",
         meta: "",
         value: undefined,
