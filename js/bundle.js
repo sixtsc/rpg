@@ -471,6 +471,15 @@ function safeGet(key){
     return null;
   }
 }
+function safeRemove(key){
+  try{
+    localStorage.removeItem(key);
+    return true;
+  }catch(err){
+    console.error("[SAVE] localStorage.removeItem gagal:", err);
+    return false;
+  }
+}
 function emptyProfilePayload(){
   return {
     v: 2,
@@ -529,6 +538,22 @@ function getProfilePayloadFromState(){
 
   out.t = Date.now();
   return out;
+}
+
+function resetToEmptyProfile(){
+  const profile = emptyProfilePayload();
+  state.slots = profile.slots;
+  state.activeSlot = profile.activeSlot;
+  state.player = normalizePlayer(newPlayer());
+  ensureAllies();
+
+  state.enemy = null;
+  state.inBattle = false;
+  state.playerDefending = false;
+  state.playerDodging = false;
+  setTurn("town");
+  state.battleTurn = 0;
+  refresh(state);
 }
 
 function autosave(state){
@@ -3582,6 +3607,8 @@ function openTownMenu(){
       if (pick === "logout") {
         (async () => {
           try { await cloudLogout(); } catch(e) {}
+          safeRemove(SAVE_KEY);
+          resetToEmptyProfile();
           // Hide any character overlays and show auth overlay
           showCharCreate(false);
           showCharMenu(false);
