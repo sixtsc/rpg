@@ -1055,7 +1055,10 @@ select.authInput{
 }
 
 /* Give a bit more separation between ACTION and LOG */
-.actionCard{ margin-bottom:10px; }
+.actionCard{
+  margin-top:12px;
+  margin-bottom:10px;
+}
 
 
 /* Enemy stats icon button */
