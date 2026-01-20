@@ -1900,7 +1900,7 @@ function openMarketConfirm(mode, name){
   const statsHtml = stats.map((s) => `<div class="confirmStatRow"><span>${escapeHtml(s.label)}:</span><b>${escapeHtml(String(s.value))}</b></div>`).join("");
   const descHtml = `
     <div class="confirmDetailCard">
-      <div class="confirmThumb">🗡️</div>
+      <div class="confirmThumb">📦</div>
       <div class="confirmStats">
         ${statsHtml}
       </div>
@@ -2045,8 +2045,8 @@ function renderMarketTabs(){
   categoryTabs.innerHTML = "";
   equipTabs.innerHTML = "";
   const categories = [
-    { key:"consumable", label:"Consumable", icon:"🧪", desc:"Potion & item sekali pakai." },
     { key:"equipment", label:"Equipment", icon:"🛡️", desc:"Senjata & armor." },
+    { key:"consumable", label:"Consumable", icon:"🧪", desc:"Potion & item sekali pakai." },
   ];
   const equipCategories = [
     { key:"weapon", label:"Weapon", icon:"🗡️", desc:"Slot: Hand" },

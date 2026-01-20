@@ -881,14 +881,15 @@ body.inBattle .enemyMiniMeta .muted{
 
 /* Confirm popup (market buy/sell) */
 .modal.confirmPopup{
-  width:min(620px, 92vw);
+  width:min(540px, 92vw);
   border-radius:20px;
   background:#2a2a2a;
 }
 .modalBody.confirmPopup{
   grid-template-columns:1fr;
   gap:12px;
-  padding:16px;
+  padding:12px;
+  overflow:hidden;
 }
 .modalBody.confirmPopup .choice{
   align-items:flex-start;
@@ -901,35 +902,34 @@ body.inBattle .enemyMiniMeta .muted{
 }
 .confirmDetailCard{
   display:flex;
-  gap:18px;
-  padding:16px;
+  gap:12px;
+  padding:12px;
   border-radius:16px;
   background:#333;
   align-items:flex-start;
 }
 .confirmThumb{
-  width:88px;
-  height:88px;
+  width:72px;
+  height:72px;
   border-radius:16px;
   background:#3b3b3b;
   border:1px solid rgba(255,255,255,0.12);
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:36px;
-  box-shadow:0 6px 0 rgba(58,142,255,0.6);
+  font-size:28px;
 }
 .confirmStats{
   display:flex;
   flex-direction:column;
-  gap:8px;
-  font-size:16px;
+  gap:6px;
+  font-size:14px;
 }
 .confirmStatRow{
   display:flex;
   justify-content:space-between;
-  gap:18px;
-  min-width:220px;
+  gap:12px;
+  min-width:180px;
 }
 .confirmStatRow span{
   color:rgba(255,255,255,0.6);
@@ -940,7 +940,7 @@ body.inBattle .enemyMiniMeta .muted{
 .confirmDesc{
   margin-top:12px;
   color:rgba(255,255,255,0.65);
-  font-size:14px;
+  font-size:12px;
 }
 .modalBody.confirmPopup .choice.confirmActions{
   border:none;
@@ -954,16 +954,16 @@ body.inBattle .enemyMiniMeta .muted{
   gap:12px;
 }
 .modalBody.confirmPopup .choice.confirmActions .titleRow b{
-  font-size:16px;
+  font-size:14px;
 }
 .modalBody.confirmPopup .choice.confirmActions .miniBtn{
-  font-size:15px;
-  padding:12px 18px;
-  border-radius:14px;
-  min-width:130px;
+  font-size:13px;
+  padding:10px 16px;
+  border-radius:12px;
+  min-width:110px;
 }
 .modalBody.confirmPopup .choice.confirmActions .miniBtn.wide{
-  min-width:160px;
+  min-width:130px;
 }
 
 .xbtn{
