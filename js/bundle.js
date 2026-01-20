@@ -3180,12 +3180,13 @@ function openProfileStatModal(){
   const p = state.player || {};
   const pts = p.statPoints || 0;
 
-  const mk = (key, label, desc) => {
+  const mk = (key, label, desc, icon) => {
     const v = p[key] || 0;
     return {
       title: `${label} : ${v}`,
       desc,
       meta: "",
+      icon,
       buttons: [
         { text: "−", value: `${key}:-1`, disabled: v <= 0 },
         { text: "+", value: `${key}:+1`, disabled: pts <= 0 },
@@ -3199,11 +3200,11 @@ function openProfileStatModal(){
     [
       { title: "Back", desc: "Kembali ke Profile.", meta: "", value: "back", className: "subMenuBack" },
       { title: `Stat Points : ${pts}`, desc: "Dapatkan dari level up. Gunakan tombol + untuk menambah stat.", meta: "" },
-      mk("str", "STR", "Meningkatkan ATK dan Combustion Chance"),
-      mk("dex", "DEX", "Meningkatkan Evasion, Accuracy, dan SPD"),
-      mk("int", "INT", "Meningkatkan MP, Mana Regen, dan Escape Chance"),
-      mk("vit", "VIT", "Meningkatkan HP, DEF, dan Block Rate"),
-      mk("foc", "FOC", "Meningkatkan Critical Chance dan Critical Damage"),
+      mk("str", "Fire", "Meningkatkan ATK dan Combustion Chance", "./assets/icons/fire.svg"),
+      mk("dex", "Wind", "Meningkatkan Evasion, Accuracy, dan SPD", "./assets/icons/wind.svg"),
+      mk("int", "Water", "Meningkatkan MP, Mana Regen, dan Escape Chance", "./assets/icons/water.svg"),
+      mk("vit", "Earth", "Meningkatkan HP, DEF, dan Block Rate", "./assets/icons/earth.svg"),
+      mk("foc", "Lightning", "Meningkatkan Critical Chance dan Critical Damage", "./assets/icons/lightning.svg"),
     ],
     (pick) => {
       if (pick === "back") return openProfileModal();
@@ -4119,7 +4120,6 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
   const passEl = byId("authPass");
   const btnLogin = byId("authLogin");
   const btnRegister = byId("authRegister");
-  const btnOffline = byId("authOffline");
 
   // Always show auth overlay first
   showMenu(true);
@@ -4181,13 +4181,6 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
 
   if (btnLogin) btnLogin.onclick = () => doLogin();
   if (btnRegister) btnRegister.onclick = () => doRegister();
-
-  if (btnOffline) btnOffline.onclick = () => {
-    showAuth(false);
-    const payload = load();
-    applyLoaded(payload);
-    openCharacterMenu("Mode offline. Pilih karakter / buat baru.");
-  };
 
   // Enter key triggers login
   if (passEl){
