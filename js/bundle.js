@@ -471,6 +471,15 @@ function safeGet(key){
     return null;
   }
 }
+function safeRemove(key){
+  try{
+    localStorage.removeItem(key);
+    return true;
+  }catch(err){
+    console.error("[SAVE] localStorage.removeItem gagal:", err);
+    return false;
+  }
+}
 function emptyProfilePayload(){
   return {
     v: 2,
@@ -529,6 +538,22 @@ function getProfilePayloadFromState(){
 
   out.t = Date.now();
   return out;
+}
+
+function resetToEmptyProfile(){
+  const profile = emptyProfilePayload();
+  state.slots = profile.slots;
+  state.activeSlot = profile.activeSlot;
+  state.player = normalizePlayer(newPlayer());
+  ensureAllies();
+
+  state.enemy = null;
+  state.inBattle = false;
+  state.playerDefending = false;
+  state.playerDodging = false;
+  setTurn("town");
+  state.battleTurn = 0;
+  refresh(state);
 }
 
 function autosave(state){
@@ -1336,6 +1361,7 @@ const modal = {
     // Layout: make Stats modals show 2-3 columns
     const modalEl = document.querySelector(".modal");
     body.classList.remove("statsGrid");
+    body.classList.remove("statModal");
     body.classList.remove("marketGrid");
     body.classList.remove("equipmentGrid");
     body.classList.remove("marketSubCompact");
@@ -1343,6 +1369,7 @@ const modal = {
     if (modalEl) modalEl.classList.remove("confirmPopup");
     const lowerTitle = String(title).toLowerCase();
     if (String(title).toLowerCase().includes("stats")) body.classList.add("statsGrid");
+    if (lowerTitle.includes("stat")) body.classList.add("statModal");
     if (lowerTitle.includes("market") || lowerTitle.includes("inventory")) body.classList.add("marketGrid");
     if (String(title).toLowerCase().includes("equipment")) body.classList.add("equipmentGrid");
     if (choices.some((c) => String(c.className || "").includes("marketSub"))) {
@@ -3155,12 +3182,13 @@ function openProfileStatModal(){
   const p = state.player || {};
   const pts = p.statPoints || 0;
 
-  const mk = (key, label, desc) => {
+  const mk = (key, label, desc, icon) => {
     const v = p[key] || 0;
     return {
       title: `${label} : ${v}`,
       desc,
       meta: "",
+      icon,
       buttons: [
         { text: "−", value: `${key}:-1`, disabled: v <= 0 },
         { text: "+", value: `${key}:+1`, disabled: pts <= 0 },
@@ -3174,11 +3202,11 @@ function openProfileStatModal(){
     [
       { title: "Back", desc: "Kembali ke Profile.", meta: "", value: "back", className: "subMenuBack" },
       { title: `Stat Points : ${pts}`, desc: "Dapatkan dari level up. Gunakan tombol + untuk menambah stat.", meta: "" },
-      mk("str", "STR", "Meningkatkan ATK dan Combustion Chance"),
-      mk("dex", "DEX", "Meningkatkan Evasion, Accuracy, dan SPD"),
-      mk("int", "INT", "Meningkatkan MP, Mana Regen, dan Escape Chance"),
-      mk("vit", "VIT", "Meningkatkan HP, DEF, dan Block Rate"),
-      mk("foc", "FOC", "Meningkatkan Critical Chance dan Critical Damage"),
+      mk("str", "Fire", "Meningkatkan ATK dan Combustion Chance", "./assets/icons/fire.svg"),
+      mk("dex", "Wind", "Meningkatkan Evasion, Accuracy, dan SPD", "./assets/icons/wind.svg"),
+      mk("int", "Water", "Meningkatkan MP, Mana Regen, dan Escape Chance", "./assets/icons/water.svg"),
+      mk("vit", "Earth", "Meningkatkan HP, DEF, dan Block Rate", "./assets/icons/earth.svg"),
+      mk("foc", "Lightning", "Meningkatkan Critical Chance dan Critical Damage", "./assets/icons/lightning.svg"),
     ],
     (pick) => {
       if (pick === "back") return openProfileModal();
@@ -3582,6 +3610,8 @@ function openTownMenu(){
       if (pick === "logout") {
         (async () => {
           try { await cloudLogout(); } catch(e) {}
+          safeRemove(SAVE_KEY);
+          resetToEmptyProfile();
           // Hide any character overlays and show auth overlay
           showCharCreate(false);
           showCharMenu(false);
@@ -4092,7 +4122,6 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
   const passEl = byId("authPass");
   const btnLogin = byId("authLogin");
   const btnRegister = byId("authRegister");
-  const btnOffline = byId("authOffline");
 
   // Always show auth overlay first
   showMenu(true);
@@ -4154,13 +4183,6 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
 
   if (btnLogin) btnLogin.onclick = () => doLogin();
   if (btnRegister) btnRegister.onclick = () => doRegister();
-
-  if (btnOffline) btnOffline.onclick = () => {
-    showAuth(false);
-    const payload = load();
-    applyLoaded(payload);
-    openCharacterMenu("Mode offline. Pilih karakter / buat baru.");
-  };
 
   // Enter key triggers login
   if (passEl){
