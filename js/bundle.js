@@ -757,6 +757,24 @@ function addLog(tag, msg) {
   showToast(msg, tag);
 }
 
+function pulseGold(){
+  const el = $("goldValue") || $("goldPill");
+  if (!el) return;
+  el.classList.remove("goldPulse");
+  void el.offsetWidth;
+  el.classList.add("goldPulse");
+  setTimeout(() => el.classList.remove("goldPulse"), 600);
+}
+
+function pulseMarketGrid(){
+  const grid = $("marketItemsGrid");
+  if (!grid) return;
+  grid.classList.remove("marketPulse");
+  void grid.offsetWidth;
+  grid.classList.add("marketPulse");
+  setTimeout(() => grid.classList.remove("marketPulse"), 450);
+}
+
 function showBattleResultOverlay(summary, onClose) {
   const backdrop = $("battleResultBackdrop");
   if (!backdrop) return;
@@ -1913,7 +1931,7 @@ function openMarketConfirm(mode, name){
       { title: "Detail", descHtml, meta: "", value: undefined, className: "confirmDetails" },
       {
         title: actionLabel,
-        desc: isBuy ? `Beli dengan ${priceValue} gold?` : `Jual dan dapat ${priceValue} gold?`,
+        desc: "",
         meta: "",
         value: undefined,
         className: "confirmActions",
@@ -1927,7 +1945,7 @@ function openMarketConfirm(mode, name){
       if (pick === "back") return openShopModal(mode);
       if (!String(pick || "").startsWith("confirm:")) return;
       const ok = isBuy ? buyItem(name) : sellItem(name);
-      if (!ok) addLog("WARN", isBuy ? "Gold tidak cukup atau item tidak tersedia." : "Item tidak bisa dijual.");
+      if (!ok) showToast(isBuy ? "Gold tidak cukup atau item tidak tersedia." : "Item tidak bisa dijual.", "warn");
       openShopModal(mode);
     }
   );
@@ -1944,6 +1962,9 @@ function buyItem(name){
   else inv[name] = { ...g.ref, qty:1 };
   autosave(state);
   addLog("GOLD", `Beli ${name} (-${g.price} gold)`);
+  showToast(`Beli ${name} (-${g.price} gold)`, "gold");
+  pulseGold();
+  pulseMarketGrid();
   refresh(state);
   return true;
 }
@@ -1959,6 +1980,9 @@ function sellItem(name){
   p.gold += gain;
   autosave(state);
   addLog("GOLD", `Jual ${name} (+${gain} gold)`);
+  showToast(`Jual ${name} (+${gain} gold)`, "gold");
+  pulseGold();
+  pulseMarketGrid();
   refresh(state);
   return true;
 }
