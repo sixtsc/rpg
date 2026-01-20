@@ -77,6 +77,13 @@ function renderAllyRow(state) {
       card.style.display = "none";
     }
   });
+
+  const maxAllies = typeof MAX_ALLIES === "number" ? MAX_ALLIES : 2;
+  const slotsFilled = allies.filter(Boolean).length;
+  const teamSlotPill = $("teamSlotPill");
+  if (teamSlotPill) {
+    teamSlotPill.textContent = `Slot ${slotsFilled}/${maxAllies}`;
+  }
 }
 
 export const modal = {
