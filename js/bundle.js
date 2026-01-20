@@ -1334,16 +1334,23 @@ const modal = {
     }
 
     // Layout: make Stats modals show 2-3 columns
+    const modalEl = document.querySelector(".modal");
     body.classList.remove("statsGrid");
     body.classList.remove("marketGrid");
     body.classList.remove("equipmentGrid");
     body.classList.remove("marketSubCompact");
+    body.classList.remove("confirmPopup");
+    if (modalEl) modalEl.classList.remove("confirmPopup");
     const lowerTitle = String(title).toLowerCase();
     if (String(title).toLowerCase().includes("stats")) body.classList.add("statsGrid");
     if (lowerTitle.includes("market") || lowerTitle.includes("inventory")) body.classList.add("marketGrid");
     if (String(title).toLowerCase().includes("equipment")) body.classList.add("equipmentGrid");
     if (choices.some((c) => String(c.className || "").includes("marketSub"))) {
       body.classList.add("marketSubCompact");
+    }
+    if (lowerTitle.includes("konfirmasi")) {
+      body.classList.add("confirmPopup");
+      if (modalEl) modalEl.classList.add("confirmPopup");
     }
 
     choices.forEach((c) => {
@@ -1884,9 +1891,18 @@ function openMarketConfirm(mode, name){
   modal.open(
     title,
     [
-      { title: "Back", desc: `Kembali ke Market ${actionLabel}.`, meta: "", value: "back", className: "subMenuBack" },
-      { title: name, desc: ref.desc || "Item", meta: isBuy ? `${basePrice} gold` : priceText, value: undefined, className: "readonly" },
-      { title: actionLabel, desc: `${actionLabel} ${name}?`, meta: priceText, value: `confirm:${name}` },
+      { title: name, desc: ref.desc || "Item", meta: isBuy ? `${basePrice} gold` : priceText, value: undefined, className: "confirmDetails" },
+      {
+        title: actionLabel,
+        desc: `${actionLabel} ${name}?`,
+        meta: "",
+        value: undefined,
+        className: "confirmActions",
+        buttons: [
+          { text: "Batal", value: "back", className: "ghost" },
+          { text: actionLabel, value: `confirm:${name}`, className: "primary" },
+        ],
+      },
     ],
     (pick) => {
       if (pick === "back") return openShopModal(mode);
