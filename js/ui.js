@@ -79,6 +79,15 @@ function renderAllyRow(state) {
   });
 }
 
+function updateAllySlotBadge(state) {
+  const badgeText = $("allySlotText");
+  if (!badgeText) return;
+  const allies = Array.isArray(state.allies) ? state.allies : [];
+  const filled = allies.filter(Boolean).length;
+  const totalSlots = document.querySelectorAll(".allyCard.extra").length || 2;
+  badgeText.textContent = `${filled}/${totalSlots}`;
+}
+
 export const modal = {
   open(title, choices, onPick) {
     $("modalTitle").textContent = title;
@@ -227,4 +236,5 @@ export function refresh(state) {
   if (metaEl) metaEl.textContent = "";
 
   renderAllyRow(state);
+  updateAllySlotBadge(state);
 }

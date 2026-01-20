@@ -919,6 +919,15 @@ function renderAllyRow() {
   });
 }
 
+function updateAllySlotBadge() {
+  const badgeText = $("allySlotText");
+  if (!badgeText) return;
+  const allies = Array.isArray(state.allies) ? state.allies : [];
+  const filled = allies.filter(Boolean).length;
+  const totalSlots = document.querySelectorAll(".allyCard.extra").length || 2;
+  badgeText.textContent = `${filled}/${totalSlots}`;
+}
+
 function applyEnemyAvatar(box, enemy) {
   if (!box) return;
   if (!enemy) {
@@ -1625,6 +1634,7 @@ function refresh(state) {
     }
   }
   renderAllyRow();
+  updateAllySlotBadge();
   renderEnemyRow();
 }
 

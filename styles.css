@@ -89,6 +89,9 @@ h1{ font-size:18px; margin:0; font-weight:800; letter-spacing:.2px; }
 .enemyCard{
   cursor:pointer;
 }
+.allyCard#playerCard{
+  position:relative;
+}
 .allyCard.extra{
   display:none;
 }
@@ -132,6 +135,26 @@ h1{ font-size:18px; margin:0; font-weight:800; letter-spacing:.2px; }
   justify-content:space-between;
   gap:10px;
   margin-bottom:8px;
+}
+.allySlotBadge{
+  position:absolute;
+  top:10px;
+  right:10px;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:4px 8px;
+  border-radius:999px;
+  background:rgba(15, 23, 35, 0.75);
+  border:1px solid rgba(148, 183, 255, 0.35);
+  color:#d9e6ff;
+  font-size:12px;
+  letter-spacing:.2px;
+  box-shadow:0 4px 12px rgba(0,0,0,.35);
+}
+.allySlotIcon{
+  font-size:12px;
+  line-height:1;
 }
 
 .playerTitle{
