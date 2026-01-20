@@ -1070,7 +1070,8 @@ select.authInput{
 /* Town: hide enemy card and let player span full width */
 body.inTown #enemyRow{ display:none; }
 body.inTown #allyRow{ grid-column:1 / -1; }
-body.inTown .allyCard.extra{ display:none; }
+body.inTown .allyCard.extra{ display:none !important; }
+body.inBattle .allySlotBadge{ display:none; }
 
 /* Nice appear animation when battle starts */
 @keyframes popIn{
