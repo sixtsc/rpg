@@ -1943,11 +1943,15 @@ function openMarketConfirm(mode, name){
       },
     ],
     (pick) => {
-      if (pick === "back") return openShopModal(mode);
+      if (pick === "back") {
+        modal.close();
+        renderMarketPage();
+        return;
+      }
       if (!String(pick || "").startsWith("confirm:")) return;
       const ok = isBuy ? buyItem(name) : sellItem(name);
       if (!ok) showToast(isBuy ? "Gold tidak cukup atau item tidak tersedia." : "Item tidak bisa dijual.", "warn");
-      openShopModal(mode);
+      renderMarketPage();
     }
   );
 }
@@ -2027,7 +2031,7 @@ function setMarketPageVisible(show){
 
 function ensureMarketState(){
   if (!state.marketMode) state.marketMode = "buy";
-  if (!state.shopMarketCategory) state.shopMarketCategory = "consumable";
+  if (!state.shopMarketCategory) state.shopMarketCategory = "equipment";
   if (!state.shopEquipCategory) state.shopEquipCategory = "weapon";
 }
 

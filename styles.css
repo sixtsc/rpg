@@ -917,6 +917,7 @@ body.inBattle .enemyMiniMeta .muted{
   background:#333;
   align-items:flex-start;
   width:100%;
+  box-sizing:border-box;
 }
 .confirmThumb{
   width:72px;
@@ -934,12 +935,21 @@ body.inBattle .enemyMiniMeta .muted{
   flex-direction:column;
   gap:6px;
   font-size:14px;
+  width:100%;
 }
 .confirmStatRow{
   display:flex;
   justify-content:space-between;
   gap:12px;
-  min-width:180px;
+  min-width:0;
+}
+.confirmStatRow span,
+.confirmStatRow b{
+  max-width:50%;
+  text-align:left;
+}
+.confirmStatRow b{
+  text-align:right;
 }
 .confirmStatRow span{
   color:rgba(255,255,255,0.6);
