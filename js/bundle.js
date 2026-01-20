@@ -1348,7 +1348,7 @@ const modal = {
     if (choices.some((c) => String(c.className || "").includes("marketSub"))) {
       body.classList.add("marketSubCompact");
     }
-    if (lowerTitle.includes("konfirmasi")) {
+    if (lowerTitle.includes("konfirmasi") || choices.some((c) => String(c.className || "").includes("confirmDetails"))) {
       body.classList.add("confirmPopup");
       if (modalEl) modalEl.classList.add("confirmPopup");
     }
@@ -1885,22 +1885,41 @@ function openMarketConfirm(mode, name){
   if (isBuy && !g) return openShopModal(mode);
   const basePrice = g?.price || 10;
   const gain = Math.max(1, Math.floor(basePrice / 2));
-  const priceText = isBuy ? `-${basePrice} gold` : `+${gain} gold`;
+  const priceValue = isBuy ? basePrice : gain;
+  const priceText = isBuy ? `${basePrice} gold` : `${gain} gold`;
   const actionLabel = isBuy ? "Beli" : "Jual";
-  const title = isBuy ? "Konfirmasi Beli" : "Konfirmasi Jual";
+  const title = name;
+  const typeLabel = ref.kind === "gear" ? "Equipment" : "Consumable";
+  const stats = [
+    { label: "Tipe", value: typeLabel },
+    { label: "Harga", value: priceText },
+    ref.atk ? { label: "ATK", value: `+${ref.atk}` } : null,
+    ref.def ? { label: "DEF", value: `+${ref.def}` } : null,
+    ref.spd ? { label: "SPD", value: `+${ref.spd}` } : null,
+  ].filter(Boolean);
+  const statsHtml = stats.map((s) => `<div class="confirmStatRow"><span>${escapeHtml(s.label)}:</span><b>${escapeHtml(String(s.value))}</b></div>`).join("");
+  const descHtml = `
+    <div class="confirmDetailCard">
+      <div class="confirmThumb">🗡️</div>
+      <div class="confirmStats">
+        ${statsHtml}
+      </div>
+    </div>
+    <div class="confirmDesc">${escapeHtml(ref.desc || "Item")}</div>
+  `;
   modal.open(
     title,
     [
-      { title: name, desc: ref.desc || "Item", meta: isBuy ? `${basePrice} gold` : priceText, value: undefined, className: "confirmDetails" },
+      { title: "Detail", descHtml, meta: "", value: undefined, className: "confirmDetails" },
       {
         title: actionLabel,
-        desc: `${actionLabel} ${name}?`,
+        desc: isBuy ? `Beli dengan ${priceValue} gold?` : `Jual dan dapat ${priceValue} gold?`,
         meta: "",
         value: undefined,
         className: "confirmActions",
         buttons: [
-          { text: "Batal", value: "back", className: "ghost" },
-          { text: actionLabel, value: `confirm:${name}`, className: "primary" },
+          { text: "Batal", value: "back", className: "ghost wide" },
+          { text: actionLabel.toUpperCase(), value: `confirm:${name}`, className: "primary wide" },
         ],
       },
     ],
@@ -2077,23 +2096,17 @@ function renderMarketItems(){
     grid.appendChild(empty);
   };
   if (mode === "buy") {
-    const goods = getMarketGoods();
+    const goods = getMarketGoods().slice(0, 9);
     if (!goods.length) return emptyState();
     goods.forEach((g) => {
       const ref = g.ref || {};
       const card = document.createElement("button");
       card.type = "button";
-      card.className = "marketItemCard";
+      card.className = "marketItemCard compact";
+      card.setAttribute("aria-label", `${g.name} (${g.price} gold)`);
       card.innerHTML = `
         <div class="marketItemThumb">📦</div>
-        <div>
-          <strong>${g.name}</strong>
-          <div class="muted">${ref.desc || "Item"}</div>
-        </div>
-        <div class="marketItemMeta">
-          <span>${ref.kind === "gear" ? "Equipment" : "Consumable"}</span>
-          <span class="marketItemPrice">${g.price} gold</span>
-        </div>
+        <span class="marketItemLabel">${g.name}</span>
       `;
       card.onclick = () => openMarketConfirm("buy", g.name);
       grid.appendChild(card);
@@ -2101,24 +2114,19 @@ function renderMarketItems(){
     return;
   }
   const inv = state.player.inv || {};
-  const sellKeys = getMarketSellGoods();
+  const sellKeys = getMarketSellGoods().slice(0, 9);
   if (!sellKeys.length) return emptyState();
   sellKeys.forEach((name) => {
     const ref = inv[name];
     const price = Math.max(1, Math.floor((getShopItem(name)?.price || 10) / 2));
     const card = document.createElement("button");
     card.type = "button";
-    card.className = "marketItemCard";
+    card.className = "marketItemCard compact";
+    card.setAttribute("aria-label", `${name} x${ref.qty} (+${price} gold)`);
     card.innerHTML = `
       <div class="marketItemThumb">📤</div>
-      <div>
-        <strong>${name} x${ref.qty}</strong>
-        <div class="muted">${ref.desc || "Item"}</div>
-      </div>
-      <div class="marketItemMeta">
-        <span>${ref.kind === "gear" ? "Equipment" : "Consumable"}</span>
-        <span class="marketItemPrice">+${price} gold</span>
-      </div>
+      <span class="marketItemLabel">${name}</span>
+      <span class="marketItemBadge">x${ref.qty}</span>
     `;
     card.onclick = () => openMarketConfirm("sell", name);
     grid.appendChild(card);

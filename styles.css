@@ -881,18 +881,66 @@ body.inBattle .enemyMiniMeta .muted{
 
 /* Confirm popup (market buy/sell) */
 .modal.confirmPopup{
-  width:min(420px, 100%);
+  width:min(620px, 92vw);
   border-radius:20px;
+  background:#2a2a2a;
 }
 .modalBody.confirmPopup{
   grid-template-columns:1fr;
   gap:12px;
+  padding:16px;
 }
 .modalBody.confirmPopup .choice{
   align-items:flex-start;
+  border:none;
+  padding:0;
+  background:transparent;
 }
 .modalBody.confirmPopup .choice.confirmDetails{
-  padding:14px;
+  padding:0;
+}
+.confirmDetailCard{
+  display:flex;
+  gap:18px;
+  padding:16px;
+  border-radius:16px;
+  background:#333;
+  align-items:flex-start;
+}
+.confirmThumb{
+  width:88px;
+  height:88px;
+  border-radius:16px;
+  background:#3b3b3b;
+  border:1px solid rgba(255,255,255,0.12);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:36px;
+  box-shadow:0 6px 0 rgba(58,142,255,0.6);
+}
+.confirmStats{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  font-size:16px;
+}
+.confirmStatRow{
+  display:flex;
+  justify-content:space-between;
+  gap:18px;
+  min-width:220px;
+}
+.confirmStatRow span{
+  color:rgba(255,255,255,0.6);
+}
+.confirmStatRow b{
+  color:#fff;
+}
+.confirmDesc{
+  margin-top:12px;
+  color:rgba(255,255,255,0.65);
+  font-size:14px;
 }
 .modalBody.confirmPopup .choice.confirmActions{
   border:none;
@@ -903,10 +951,19 @@ body.inBattle .enemyMiniMeta .muted{
   width:100%;
   display:flex;
   justify-content:flex-end;
-  gap:10px;
+  gap:12px;
 }
 .modalBody.confirmPopup .choice.confirmActions .titleRow b{
-  font-size:14px;
+  font-size:16px;
+}
+.modalBody.confirmPopup .choice.confirmActions .miniBtn{
+  font-size:15px;
+  padding:12px 18px;
+  border-radius:14px;
+  min-width:130px;
+}
+.modalBody.confirmPopup .choice.confirmActions .miniBtn.wide{
+  min-width:160px;
 }
 
 .xbtn{
@@ -1023,8 +1080,11 @@ body.inBattle .enemyMiniMeta .muted{
 }
 .marketItemsGrid{
   display:grid;
-  grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
-  gap:16px;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  grid-auto-rows:110px;
+  gap:12px;
+  max-width:540px;
+  margin:0 auto;
 }
 .marketItemCard{
   display:flex;
@@ -1039,13 +1099,21 @@ body.inBattle .enemyMiniMeta .muted{
   cursor:pointer;
   transition:transform .2s ease, box-shadow .2s ease;
 }
+.marketItemCard.compact{
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:10px;
+  gap:6px;
+  position:relative;
+}
 .marketItemCard:hover{
   transform:translateY(-2px);
   box-shadow:0 12px 24px rgba(0,0,0,0.25);
 }
 .marketItemThumb{
-  width:56px;
-  height:56px;
+  width:52px;
+  height:52px;
   border-radius:12px;
   background:rgba(255,255,255,0.08);
   border:1px dashed rgba(255,255,255,0.3);
@@ -1053,6 +1121,19 @@ body.inBattle .enemyMiniMeta .muted{
   align-items:center;
   justify-content:center;
   font-size:22px;
+}
+.marketItemLabel{
+  display:none;
+}
+.marketItemBadge{
+  position:absolute;
+  right:10px;
+  top:10px;
+  font-size:11px;
+  padding:2px 6px;
+  border-radius:999px;
+  background:rgba(255,255,255,0.12);
+  color:#fff;
 }
 .marketItemMeta{
   display:flex;
@@ -1067,8 +1148,6 @@ body.inBattle .enemyMiniMeta .muted{
 }
 .marketEmptyState{
   grid-column:1/-1;
-}
-.marketEmptyState{
   text-align:center;
   max-width:520px;
   margin:0 auto;
