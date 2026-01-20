@@ -1981,10 +1981,162 @@ function setMarketPageVisible(show){
   }
 }
 
+function ensureMarketState(){
+  if (!state.marketMode) state.marketMode = "buy";
+  if (!state.shopMarketCategory) state.shopMarketCategory = "consumable";
+  if (!state.shopEquipCategory) state.shopEquipCategory = "weapon";
+}
+
+function createMarketToggleButton(label, isActive, onClick){
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = `marketToggleBtn${isActive ? " active" : ""}`;
+  btn.textContent = label;
+  btn.onclick = onClick;
+  return btn;
+}
+
+function createMarketTabButton({ label, desc, icon, isActive, onClick }){
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = `marketTabBtn${isActive ? " active" : ""}`;
+  btn.innerHTML = `${icon ? `${icon} ` : ""}${label}${desc ? `<small>${desc}</small>` : ""}`;
+  btn.onclick = onClick;
+  return btn;
+}
+
+function renderMarketToggle(){
+  const toggle = byId("marketModeToggle");
+  if (!toggle) return;
+  toggle.innerHTML = "";
+  toggle.appendChild(createMarketToggleButton("Beli", state.marketMode === "buy", () => {
+    state.marketMode = "buy";
+    renderMarketPage();
+  }));
+  toggle.appendChild(createMarketToggleButton("Jual", state.marketMode === "sell", () => {
+    state.marketMode = "sell";
+    renderMarketPage();
+  }));
+}
+
+function renderMarketTabs(){
+  const categoryTabs = byId("marketCategoryTabs");
+  const equipTabs = byId("marketEquipTabs");
+  if (!categoryTabs || !equipTabs) return;
+  categoryTabs.innerHTML = "";
+  equipTabs.innerHTML = "";
+  const categories = [
+    { key:"consumable", label:"Consumable", icon:"🧪", desc:"Potion & item sekali pakai." },
+    { key:"equipment", label:"Equipment", icon:"🛡️", desc:"Senjata & armor." },
+  ];
+  const equipCategories = [
+    { key:"weapon", label:"Weapon", icon:"🗡️", desc:"Slot: Hand" },
+    { key:"head", label:"Head", icon:"🪖", desc:"Slot: Head" },
+    { key:"armor", label:"Armor", icon:"🥋", desc:"Slot: Armor" },
+    { key:"pant", label:"Pant", icon:"👖", desc:"Slot: Pant" },
+    { key:"shoes", label:"Shoes", icon:"🥾", desc:"Slot: Shoes" },
+  ];
+  categories.forEach((c) => {
+    categoryTabs.appendChild(createMarketTabButton({
+      label: c.label,
+      desc: c.desc,
+      icon: c.icon,
+      isActive: state.shopMarketCategory === c.key,
+      onClick: () => {
+        state.shopMarketCategory = c.key;
+        if (c.key !== "equipment") state.shopEquipCategory = "weapon";
+        renderMarketPage();
+      },
+    }));
+  });
+  if (state.shopMarketCategory === "equipment") {
+    equipCategories.forEach((c) => {
+      equipTabs.appendChild(createMarketTabButton({
+        label: c.label,
+        desc: c.desc,
+        icon: c.icon,
+        isActive: state.shopEquipCategory === c.key,
+        onClick: () => {
+          state.shopEquipCategory = c.key;
+          renderMarketPage();
+        },
+      }));
+    });
+  }
+}
+
+function renderMarketItems(){
+  const grid = byId("marketItemsGrid");
+  if (!grid) return;
+  grid.innerHTML = "";
+  const mode = state.marketMode || "buy";
+  const emptyState = () => {
+    const empty = document.createElement("div");
+    empty.className = "marketEmptyState";
+    empty.innerHTML = "<h3>Belum ada item</h3><p>Silakan pilih kategori lain atau kembali lagi nanti.</p>";
+    grid.appendChild(empty);
+  };
+  if (mode === "buy") {
+    const goods = getMarketGoods();
+    if (!goods.length) return emptyState();
+    goods.forEach((g) => {
+      const ref = g.ref || {};
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "marketItemCard";
+      card.innerHTML = `
+        <div class="marketItemThumb">📦</div>
+        <div>
+          <strong>${g.name}</strong>
+          <div class="muted">${ref.desc || "Item"}</div>
+        </div>
+        <div class="marketItemMeta">
+          <span>${ref.kind === "gear" ? "Equipment" : "Consumable"}</span>
+          <span class="marketItemPrice">${g.price} gold</span>
+        </div>
+      `;
+      card.onclick = () => openMarketConfirm("buy", g.name);
+      grid.appendChild(card);
+    });
+    return;
+  }
+  const inv = state.player.inv || {};
+  const sellKeys = getMarketSellGoods();
+  if (!sellKeys.length) return emptyState();
+  sellKeys.forEach((name) => {
+    const ref = inv[name];
+    const price = Math.max(1, Math.floor((getShopItem(name)?.price || 10) / 2));
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "marketItemCard";
+    card.innerHTML = `
+      <div class="marketItemThumb">📤</div>
+      <div>
+        <strong>${name} x${ref.qty}</strong>
+        <div class="muted">${ref.desc || "Item"}</div>
+      </div>
+      <div class="marketItemMeta">
+        <span>${ref.kind === "gear" ? "Equipment" : "Consumable"}</span>
+        <span class="marketItemPrice">+${price} gold</span>
+      </div>
+    `;
+    card.onclick = () => openMarketConfirm("sell", name);
+    grid.appendChild(card);
+  });
+}
+
+function renderMarketPage(){
+  ensureMarketState();
+  renderMarketToggle();
+  renderMarketTabs();
+  renderMarketItems();
+}
+
 function openMarketPage(){
   if (state.inBattle) return;
   modal.close();
   setMarketPageVisible(true);
+  renderMarketPage();
 }
 
 function openShopModal(mode = "menu"){
