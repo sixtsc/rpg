@@ -1026,10 +1026,10 @@ function renderEnemyRow() {
     if (hpText) hpText.textContent = `${enemy.hp}/${enemy.maxHp}`;
     if (mpText) mpText.textContent = `${enemy.mp}/${enemy.maxMp}`;
     if (hpFill) {
-      setBar(hpFill, enemy.hp, enemy.maxHp);
       const hpBar = hpFill.parentElement;
+      if (hpBar) hpBar.dataset.prevPct = `${prevHpPct}`;
+      setBar(hpFill, enemy.hp, enemy.maxHp);
       if (hpBar && enemy.hp < prevHp) {
-        triggerBarLoss(hpBar, prevHpPct, hpPct);
         if (hpBar._hpPulseTimer) clearTimeout(hpBar._hpPulseTimer);
         hpBar.classList.remove("hpPulse");
         void hpBar.offsetWidth;
@@ -1273,27 +1273,6 @@ function setBar(el, cur, max) {
   bar.dataset.prevPct = `${pct}`;
 }
 
-function triggerBarLoss(bar, prevPct, pct) {
-  if (!bar || !bar.classList || !bar.classList.contains("bar")) return;
-  if (pct >= prevPct - 0.01) return;
-  let loss = bar.querySelector(".loss");
-  if (!loss) {
-    loss = document.createElement("div");
-    loss.className = "loss";
-    bar.insertBefore(loss, bar.firstChild);
-  }
-  loss.style.transition = "none";
-  loss.style.width = `${prevPct}%`;
-  loss.style.opacity = "0.9";
-
-  requestAnimationFrame(() => {
-    loss.style.transition = "width 420ms ease-out, opacity 650ms ease-out";
-    loss.style.width = `${pct}%`;
-    setTimeout(() => {
-      loss.style.opacity = "0";
-    }, 420);
-  });
-}
 const modal = {
   open(title, choices, onPick) {
     $("modalTitle").textContent = title;
@@ -1513,10 +1492,10 @@ function refresh(state) {
       const prevHpPct = e.maxHp ? clamp((prevHp / e.maxHp) * 100, 0, 100) : 0;
       const hpBar = $("eHpBar");
       if (hpBar) {
-        setBar(hpBar, e.hp, e.maxHp);
         const barWrap = hpBar.parentElement;
+        if (barWrap) barWrap.dataset.prevPct = `${prevHpPct}`;
+        setBar(hpBar, e.hp, e.maxHp);
         if (barWrap && e.hp < prevHp) {
-          triggerBarLoss(barWrap, prevHpPct, clamp((e.hp / e.maxHp) * 100, 0, 100));
           if (barWrap._hpPulseTimer) clearTimeout(barWrap._hpPulseTimer);
           barWrap.classList.remove("hpPulse");
           void barWrap.offsetWidth;
