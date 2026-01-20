@@ -789,8 +789,16 @@ function skillIconHtml(skill){
 
 function normalizeEnemyQueue(){
   if (!Array.isArray(state.enemyQueue)) return [];
-  state.enemyQueue = state.enemyQueue.filter((enemy) => enemy && enemy.hp > 0);
+  state.enemyQueue = state.enemyQueue.filter((enemy) => enemy);
   return state.enemyQueue;
+}
+
+function getAliveEnemyQueue(){
+  return getEnemyQueue().filter((enemy) => enemy && enemy.hp > 0);
+}
+
+function getDefeatedEnemies(){
+  return getEnemyQueue().filter((enemy) => enemy && enemy.hp <= 0 && !enemy._defeated);
 }
 
 function getEnemyQueue(){
@@ -806,7 +814,13 @@ function getPrimaryEnemy(){
 function getTargetEnemy(){
   const queue = getEnemyQueue();
   if (!queue.length) return null;
-  const idx = clamp(state.enemyTargetIndex || 0, 0, queue.length - 1);
+  let idx = clamp(state.enemyTargetIndex || 0, 0, queue.length - 1);
+  if (!queue[idx] || queue[idx].hp <= 0) {
+    const aliveIndex = queue.findIndex((enemy) => enemy && enemy.hp > 0);
+    if (aliveIndex === -1) return null;
+    idx = aliveIndex;
+    state.enemyTargetIndex = idx;
+  }
   return queue[idx];
 }
 
@@ -818,6 +832,8 @@ function getEnemyIndex(enemy){
 function setActiveEnemyByIndex(index){
   const queue = getEnemyQueue();
   if (!queue.length) return false;
+  const target = queue[index];
+  if (!target || target.hp <= 0) return false;
   state.enemyTargetIndex = clamp(index, 0, queue.length - 1);
   return true;
 }
@@ -906,30 +922,48 @@ function renderAllyRow() {
 function applyEnemyAvatar(box, enemy) {
   if (!box) return;
   if (!enemy) {
-    box.textContent = "";
+    const iconEl = box.querySelector(".avatarIcon");
+    if (iconEl) iconEl.textContent = "";
     box.style.background = "rgba(255,255,255,0.03)";
     box.removeAttribute("title");
     return;
   }
   const config = ENEMY_AVATARS[enemy.name] || {};
   const fallback = enemy.name ? enemy.name.slice(0, 1).toUpperCase() : "?";
-  box.textContent = config.icon || fallback;
-  box.style.background = config.bg || "linear-gradient(135deg, #4b5c6e, #202934)";
+  const icon = config.icon || fallback;
+  let iconEl = box.querySelector(".avatarIcon");
+  if (!iconEl) {
+    iconEl = document.createElement("span");
+    iconEl.className = "avatarIcon";
+    box.appendChild(iconEl);
+  }
+  if (iconEl.textContent !== icon) iconEl.textContent = icon;
+  const bg = config.bg || "linear-gradient(135deg, #4b5c6e, #202934)";
+  if (box.style.background !== bg) box.style.background = bg;
   box.setAttribute("title", enemy.name);
 }
 
 function applyAllyAvatar(box, ally) {
   if (!box) return;
   if (!ally) {
-    box.textContent = "";
+    const iconEl = box.querySelector(".avatarIcon");
+    if (iconEl) iconEl.textContent = "";
     box.style.background = "rgba(255,255,255,0.03)";
     box.removeAttribute("title");
     return;
   }
   const config = ALLY_AVATARS[ally.name] || ALLY_AVATARS[ally.role] || {};
   const fallback = ally.name ? ally.name.slice(0, 1).toUpperCase() : "?";
-  box.textContent = config.icon || fallback;
-  box.style.background = config.bg || "linear-gradient(135deg, #4b5c6e, #202934)";
+  const icon = config.icon || fallback;
+  let iconEl = box.querySelector(".avatarIcon");
+  if (!iconEl) {
+    iconEl = document.createElement("span");
+    iconEl.className = "avatarIcon";
+    box.appendChild(iconEl);
+  }
+  if (iconEl.textContent !== icon) iconEl.textContent = icon;
+  const bg = config.bg || "linear-gradient(135deg, #4b5c6e, #202934)";
+  if (box.style.background !== bg) box.style.background = bg;
   box.setAttribute("title", ally.name);
 }
 
@@ -940,47 +974,114 @@ function allyAvatarIcon(name){
 function renderEnemyRow() {
   const row = $("enemyRow");
   if (!row) return;
-  row.querySelectorAll(".enemyCard.extra").forEach((el) => el.remove());
 
   const queue = getEnemyQueue();
-
   const activeEnemy = getTargetEnemy();
-  queue.slice(1, 3).forEach((enemy, offset) => {
+  const visibleEnemies = queue.slice(1, 3);
+  const activeIndices = new Set();
+
+  visibleEnemies.forEach((enemy, offset) => {
     const enemyIndex = offset + 1;
-    const card = document.createElement("div");
-    card.className = "card enemyCard extra";
+    activeIndices.add(String(enemyIndex));
+
+    let card = row.querySelector(`.enemyCard.extra[data-enemy-index="${enemyIndex}"]`);
+    if (!card) {
+      card = document.createElement("div");
+      card.className = "card enemyCard extra";
+      card.dataset.enemyIndex = `${enemyIndex}`;
+      card.innerHTML = `
+        <div class="damageText enemyDamage"></div>
+        <div class="sectionTitle">
+          <div><b class="enemyName"></b> <span class="pill enemyLevel"></span></div>
+        </div>
+        <div class="avatarWrap">
+          <div class="avatarBox enemyAvatarBox"></div>
+        </div>
+        <div class="enemyMiniMeta">
+          <div class="bar"><div class="fill hp enemyHpFill"></div></div>
+          <div class="muted enemyHpText"></div>
+          <div class="bar"><div class="fill mp enemyMpFill"></div></div>
+          <div class="muted enemyMpText"></div>
+        </div>
+      `;
+      row.appendChild(card);
+    } else {
+      row.appendChild(card);
+    }
+
     const hpPct = enemy.maxHp ? clamp((enemy.hp / enemy.maxHp) * 100, 0, 100) : 0;
     const mpPct = enemy.maxMp ? clamp((enemy.mp / enemy.maxMp) * 100, 0, 100) : 0;
-    if (enemy === activeEnemy) card.classList.add("active");
-    card.innerHTML = `
-      <div class="damageText enemyDamage"></div>
-      <div class="sectionTitle">
-        <div><b>${escapeHtml(enemy.name)}</b> <span class="pill">Lv${enemy.level}</span></div>
-      </div>
-      <div class="avatarWrap">
-        <div class="avatarBox enemyAvatarBox"></div>
-      </div>
-      <div class="enemyMiniMeta">
-        <div class="bar"><div class="fill hp" style="width:${hpPct}%"></div></div>
-        <div class="muted">${enemy.hp}/${enemy.maxHp}</div>
-        <div class="bar"><div class="fill mp" style="width:${mpPct}%"></div></div>
-        <div class="muted">${enemy.mp}/${enemy.maxMp}</div>
-      </div>
-    `;
-    card.dataset.enemyIndex = `${enemyIndex}`;
-    applyEnemyAvatar(card.querySelector(".enemyAvatarBox"), enemy);
-    const targetIndex = enemyIndex;
-    card.onclick = () => {
-      if (setActiveEnemyByIndex(targetIndex)) {
-        addLog("TARGET", `Target: ${enemy.name}`);
-        refresh(state);
+
+    const nameEl = card.querySelector(".enemyName");
+    const lvlEl = card.querySelector(".enemyLevel");
+    const hpText = card.querySelector(".enemyHpText");
+    const mpText = card.querySelector(".enemyMpText");
+    const hpFill = card.querySelector(".enemyHpFill");
+    const mpFill = card.querySelector(".enemyMpFill");
+    const prevHp = (typeof enemy._prevHp === "number") ? enemy._prevHp : enemy.hp;
+    const prevHpPct = enemy.maxHp ? clamp((prevHp / enemy.maxHp) * 100, 0, 100) : 0;
+
+    if (nameEl) nameEl.textContent = enemy.name || "-";
+    if (lvlEl) lvlEl.textContent = `Lv${enemy.level || 1}`;
+    if (hpText) hpText.textContent = `${enemy.hp}/${enemy.maxHp}`;
+    if (mpText) mpText.textContent = `${enemy.mp}/${enemy.maxMp}`;
+    if (hpFill) {
+      const hpBar = hpFill.parentElement;
+      const prevHpFillPct = hpFill.style.width
+        ? parseFloat(hpFill.style.width)
+        : prevHpPct;
+      if (hpBar) hpBar.dataset.prevPct = `${prevHpPct}`;
+      if (!Number.isNaN(prevHpFillPct)) {
+        hpFill.style.transition = "none";
+        hpFill.style.width = `${prevHpFillPct}%`;
+        void hpFill.offsetWidth;
+        hpFill.style.transition = "";
       }
-    };
-    row.appendChild(card);
+      setBar(hpFill, enemy.hp, enemy.maxHp);
+      if (hpBar && enemy.hp < prevHp) {
+        if (hpBar._hpPulseTimer) clearTimeout(hpBar._hpPulseTimer);
+        hpBar.classList.remove("hpPulse");
+        void hpBar.offsetWidth;
+        hpBar.classList.add("hpPulse");
+        hpBar._hpPulseTimer = setTimeout(() => {
+          hpBar.classList.remove("hpPulse");
+        }, 360);
+      }
+    }
+    if (mpFill) setBar(mpFill, enemy.mp, enemy.maxMp);
+
+    card.classList.toggle("active", enemy === activeEnemy);
+    const wasAlive = enemy._alive === true;
+    const isAlive = enemy.hp > 0;
+    card.classList.toggle("down", !isAlive);
+    if (wasAlive && !isAlive) card.classList.add("enemyDown");
+    if (isAlive) card.classList.remove("enemyDown");
+    enemy._alive = isAlive;
+    enemy._prevHp = enemy.hp;
+
+    applyEnemyAvatar(card.querySelector(".enemyAvatarBox"), enemy);
+
+    if (isAlive) {
+      const targetIndex = enemyIndex;
+      card.onclick = () => {
+        if (setActiveEnemyByIndex(targetIndex)) {
+          addLog("TARGET", `Target: ${enemy.name}`);
+          refresh(state);
+        }
+      };
+    } else {
+      card.onclick = null;
+    }
+  });
+
+  row.querySelectorAll(".enemyCard.extra").forEach((card) => {
+    if (!activeIndices.has(card.dataset.enemyIndex)) {
+      card.remove();
+    }
   });
 }
 
-const damageTimers = { player: null, enemy: null };
+const damageTimers = { player: null, enemy: null, ally: {} };
 function showDamageText(target, text){
   const el = $(target === "player" ? "playerDamage" : "enemyDamage");
   if (!el) return;
@@ -1009,6 +1110,23 @@ function showEnemyDamageText(text, enemyIndex){
   el.classList.add("show");
   if (damageTimers.enemy) clearTimeout(damageTimers.enemy);
   damageTimers.enemy = setTimeout(() => {
+    el.classList.remove("show");
+  }, 1400);
+}
+
+function showAllyDamageText(text, ally){
+  if (!ally || !Array.isArray(state.allies)) return;
+  const idx = state.allies.indexOf(ally);
+  if (idx < 0) return;
+  const slotIndex = idx + 1;
+  const el = document.querySelector(`.allyCard.extra[data-ally-slot="${slotIndex}"] .allyDamage`);
+  if (!el) return;
+  el.textContent = text;
+  el.classList.remove("show");
+  void el.offsetWidth;
+  el.classList.add("show");
+  if (damageTimers.ally[slotIndex]) clearTimeout(damageTimers.ally[slotIndex]);
+  damageTimers.ally[slotIndex] = setTimeout(() => {
     el.classList.remove("show");
   }, 1400);
 }
@@ -1163,6 +1281,7 @@ function setBar(el, cur, max) {
 
   bar.dataset.prevPct = `${pct}`;
 }
+
 const modal = {
   open(title, choices, onPick) {
     $("modalTitle").textContent = title;
@@ -1378,8 +1497,26 @@ function refresh(state) {
       $("enemyBars").style.display = "grid";
       $("eHpText").textContent = `${e.hp}/${e.maxHp}`;
       $("eMpText").textContent = `${e.mp}/${e.maxMp}`;
-      setBar($("eHpBar"), e.hp, e.maxHp);
-      setBar($("eMpBar"), e.mp, e.maxMp);
+      const prevHp = (typeof e._prevHp === "number") ? e._prevHp : e.hp;
+      const prevHpPct = e.maxHp ? clamp((prevHp / e.maxHp) * 100, 0, 100) : 0;
+      const hpBar = $("eHpBar");
+      if (hpBar) {
+        const barWrap = hpBar.parentElement;
+        if (barWrap) barWrap.dataset.prevPct = `${prevHpPct}`;
+        setBar(hpBar, e.hp, e.maxHp);
+        if (barWrap && e.hp < prevHp) {
+          if (barWrap._hpPulseTimer) clearTimeout(barWrap._hpPulseTimer);
+          barWrap.classList.remove("hpPulse");
+          void barWrap.offsetWidth;
+          barWrap.classList.add("hpPulse");
+          barWrap._hpPulseTimer = setTimeout(() => {
+            barWrap.classList.remove("hpPulse");
+          }, 360);
+        }
+      }
+      const mpBar = $("eMpBar");
+      if (mpBar) setBar(mpBar, e.mp, e.maxMp);
+      e._prevHp = e.hp;
     } else {
       $("enemyBars").style.display = "none";
     }
@@ -1428,6 +1565,20 @@ function refresh(state) {
     if (enemyBtns) enemyBtns.style.display = "flex";
     const enemyCard = $("enemyCard");
     if (enemyCard) {
+      const wasAlive = enemyCard.dataset.enemyAlive === "true";
+      const isAlive = e ? e.hp > 0 : false;
+      enemyCard.classList.toggle("down", !isAlive && !!e);
+      if (wasAlive && !isAlive) {
+        enemyCard.classList.remove("enemyDown");
+        void enemyCard.offsetWidth;
+        enemyCard.classList.add("enemyDown");
+      }
+      if (isAlive) enemyCard.classList.remove("enemyDown");
+      if (e) {
+        enemyCard.dataset.enemyAlive = isAlive ? "true" : "false";
+      } else {
+        delete enemyCard.dataset.enemyAlive;
+      }
       enemyCard.classList.toggle("active", state.enemyTargetIndex === 0);
       enemyCard.onclick = () => {
         if (setActiveEnemyByIndex(0)) {
@@ -1468,6 +1619,8 @@ function refresh(state) {
     const enemyCard = $("enemyCard");
     if (enemyCard) {
       enemyCard.classList.remove("active");
+      enemyCard.classList.remove("down", "enemyDown");
+      delete enemyCard.dataset.enemyAlive;
       enemyCard.onclick = null;
     }
   }
@@ -2183,8 +2336,8 @@ function enemyTurn() {
 
   const p = state.player;
   const enemies = Array.isArray(state.enemyQueue) && state.enemyQueue.length
-    ? normalizeEnemyQueue()
-    : (state.enemy ? [state.enemy] : []);
+    ? getAliveEnemyQueue()
+    : (state.enemy && state.enemy.hp > 0 ? [state.enemy] : []);
 
   const endTurnAfter = (waitMs = 0) => {
     setTimeout(() => {
@@ -2197,8 +2350,9 @@ function enemyTurn() {
       }
 
       if (Array.isArray(state.enemyQueue)) {
-        normalizeEnemyQueue();
-        if (!state.enemyQueue.length) {
+        const aliveEnemies = getAliveEnemyQueue();
+        if (!aliveEnemies.length) {
+          state.enemyQueue = [];
           winBattle();
           return;
         }
@@ -2232,6 +2386,7 @@ function enemyTurn() {
       if (isPlayer) showDamageText("player", "MISS");
       else {
         playAllyDodgeFade(target);
+        showAllyDamageText("MISS", target);
         addLog("ENEMY", `${enemy.name} meleset menyerang ${target.name}.`);
       }
       done(0);
@@ -2261,6 +2416,7 @@ function enemyTurn() {
       }
     } else {
       addLog("ENEMY", `${enemy.name} menyerang ${target.name}! Damage ${res.dmg}.`);
+      showAllyDamageText(formatDamageText(res, res.dmg), target);
       if (res.reflected > 0) {
         addLog("ALLY", `${target.name} memantulkan ${res.reflected} damage.`);
       }
@@ -2301,16 +2457,23 @@ function enemyTurn() {
 
 function handleEnemyDefeat(){
   const queue = getEnemyQueue();
-  if (!queue.length) {
+  const aliveEnemies = getAliveEnemyQueue();
+  if (!aliveEnemies.length) {
+    if (Array.isArray(state.enemyQueue)) state.enemyQueue = [];
     winBattle();
     return true;
   }
   if (Array.isArray(state.enemyQueue)) {
     normalizeEnemyQueue();
-    if (state.enemyQueue.length) {
-      state.enemy = state.enemyQueue[0];
-      state.enemyTargetIndex = clamp(state.enemyTargetIndex || 0, 0, state.enemyQueue.length - 1);
-      addLog("INFO", `Musuh tersisa: ${state.enemyQueue.length}`);
+    if (aliveEnemies.length) {
+      state.enemy = aliveEnemies[0];
+      const nextIndex = queue.indexOf(state.enemy);
+      state.enemyTargetIndex = clamp(
+        Number.isFinite(nextIndex) ? nextIndex : (state.enemyTargetIndex || 0),
+        0,
+        queue.length - 1
+      );
+      addLog("INFO", `Musuh tersisa: ${aliveEnemies.length}`);
       setTurn("enemy");
       refresh(state);
       setTimeout(() => {
@@ -2328,12 +2491,10 @@ function alliesAct(done){
   const allies = getAliveAllies()
     .slice()
     .sort((a, b) => (Number(b.spd) || 0) - (Number(a.spd) || 0));
-  const target = getTargetEnemy();
-  if (!allies.length || !target) {
+  if (!allies.length || !getTargetEnemy()) {
     if (done) done();
     return;
   }
-  const targetIndex = getEnemyIndex(target);
   const maxSpd = Math.max(...allies.map((ally) => Number(ally.spd) || 0), 0);
   const baseDelay = 260;
   const orderGap = 220;
@@ -2344,15 +2505,18 @@ function alliesAct(done){
     const delay = baseDelay + (index * orderGap) + speedLag;
     lastDelay = Math.max(lastDelay, delay);
     setTimeout(() => {
-      if (!getTargetEnemy() || ally.hp <= 0) return;
-      const res = resolveAttack(ally, target, 2);
+      const currentTarget = getTargetEnemy();
+      if (!currentTarget || ally.hp <= 0) return;
+      const targetIndex = getEnemyIndex(currentTarget);
+      if (targetIndex < 0) return;
+      const res = resolveAttack(ally, currentTarget, 2);
       if (res.missed) {
         addLog("ALLY", `${ally.name} meleset.`);
         refresh(state);
         return;
       }
       if (res.dmg > 0) {
-        target.hp = clamp(target.hp - res.dmg, 0, target.maxHp);
+        currentTarget.hp = clamp(currentTarget.hp - res.dmg, 0, currentTarget.maxHp);
         playEnemySlash(targetIndex, 60);
       }
       if (res.reflected > 0) {
@@ -2375,18 +2539,24 @@ function afterPlayerAction() {
     return;
   }
 
-  const e = getTargetEnemy();
-  if (!e) return;
-
-  if (e.hp <= 0) {
+  const defeated = getDefeatedEnemies();
+  if (defeated.length) {
+    defeated.forEach((enemy) => { enemy._defeated = true; });
+    refresh(state);
     handleEnemyDefeat();
     return;
   }
 
+  const e = getTargetEnemy();
+  if (!e) return;
+
   alliesAct(() => {
     if (!state.inBattle) return;
     const target = getTargetEnemy();
-    if (target && target.hp <= 0) {
+    const defeated = getDefeatedEnemies();
+    if (defeated.length || (target && target.hp <= 0)) {
+      defeated.forEach((enemy) => { enemy._defeated = true; });
+      refresh(state);
       handleEnemyDefeat();
       return;
     }
