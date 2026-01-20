@@ -924,21 +924,6 @@ function renderAllyRow() {
   if (teamSlotPill) {
     teamSlotPill.textContent = `Slot ${slotsFilled}/${maxAllies}`;
   }
-
-  for (let i = 0; i < maxAllies; i += 1) {
-    const slotIndex = i + 1;
-    const ally = allies[i] || null;
-    const slotEl = document.querySelector(`[data-team-slot="${slotIndex}"]`);
-    const statusEl = document.querySelector(`[data-team-slot-status="${slotIndex}"]`);
-    if (!slotEl || !statusEl) continue;
-    if (ally) {
-      slotEl.classList.add("filled");
-      statusEl.textContent = ally.name || `Ally ${slotIndex}`;
-    } else {
-      slotEl.classList.remove("filled");
-      statusEl.textContent = "Kosong";
-    }
-  }
 }
 
 function applyEnemyAvatar(box, enemy) {
