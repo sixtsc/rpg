@@ -151,6 +151,7 @@ h1{ font-size:18px; margin:0; font-weight:800; letter-spacing:.2px; }
   font-size:12px;
   letter-spacing:.2px;
   box-shadow:0 4px 12px rgba(0,0,0,.35);
+  pointer-events:none;
 }
 .allySlotIcon{
   font-size:12px;
