@@ -1019,6 +1019,7 @@ function renderEnemyRow() {
     const hpFill = card.querySelector(".enemyHpFill");
     const mpFill = card.querySelector(".enemyMpFill");
     const prevHp = (typeof enemy._prevHp === "number") ? enemy._prevHp : enemy.hp;
+    const prevHpPct = enemy.maxHp ? clamp((prevHp / enemy.maxHp) * 100, 0, 100) : 0;
 
     if (nameEl) nameEl.textContent = enemy.name || "-";
     if (lvlEl) lvlEl.textContent = `Lv${enemy.level || 1}`;
@@ -1028,6 +1029,7 @@ function renderEnemyRow() {
       setBar(hpFill, enemy.hp, enemy.maxHp);
       const hpBar = hpFill.parentElement;
       if (hpBar && enemy.hp < prevHp) {
+        triggerBarLoss(hpBar, prevHpPct, hpPct);
         if (hpBar._hpPulseTimer) clearTimeout(hpBar._hpPulseTimer);
         hpBar.classList.remove("hpPulse");
         void hpBar.offsetWidth;
@@ -1269,6 +1271,28 @@ function setBar(el, cur, max) {
   }
 
   bar.dataset.prevPct = `${pct}`;
+}
+
+function triggerBarLoss(bar, prevPct, pct) {
+  if (!bar || !bar.classList || !bar.classList.contains("bar")) return;
+  if (pct >= prevPct - 0.01) return;
+  let loss = bar.querySelector(".loss");
+  if (!loss) {
+    loss = document.createElement("div");
+    loss.className = "loss";
+    bar.insertBefore(loss, bar.firstChild);
+  }
+  loss.style.transition = "none";
+  loss.style.width = `${prevPct}%`;
+  loss.style.opacity = "0.9";
+
+  requestAnimationFrame(() => {
+    loss.style.transition = "width 420ms ease-out, opacity 650ms ease-out";
+    loss.style.width = `${pct}%`;
+    setTimeout(() => {
+      loss.style.opacity = "0";
+    }, 420);
+  });
 }
 const modal = {
   open(title, choices, onPick) {
