@@ -1027,7 +1027,16 @@ function renderEnemyRow() {
     if (mpText) mpText.textContent = `${enemy.mp}/${enemy.maxMp}`;
     if (hpFill) {
       const hpBar = hpFill.parentElement;
+      const prevHpFillPct = hpFill.style.width
+        ? parseFloat(hpFill.style.width)
+        : prevHpPct;
       if (hpBar) hpBar.dataset.prevPct = `${prevHpPct}`;
+      if (!Number.isNaN(prevHpFillPct)) {
+        hpFill.style.transition = "none";
+        hpFill.style.width = `${prevHpFillPct}%`;
+        void hpFill.offsetWidth;
+        hpFill.style.transition = "";
+      }
       setBar(hpFill, enemy.hp, enemy.maxHp);
       if (hpBar && enemy.hp < prevHp) {
         if (hpBar._hpPulseTimer) clearTimeout(hpBar._hpPulseTimer);
