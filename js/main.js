@@ -603,6 +603,13 @@ function bind() {
   byId("btnInventory").onclick = openInventoryReadOnly;
   const btnRecruit = byId("btnRecruit");
   if (btnRecruit) btnRecruit.onclick = openRecruitModal;
+  const allySlotBadge = byId("allySlotBadge");
+  if (allySlotBadge) {
+    allySlotBadge.onclick = () => {
+      if (state.inBattle) return;
+      openRecruitModal();
+    };
+  }
   const btnStats = byId("btnStats");
   if (btnStats) btnStats.onclick = openStatsModal;
 
