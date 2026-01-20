@@ -1509,8 +1509,26 @@ function refresh(state) {
       $("enemyBars").style.display = "grid";
       $("eHpText").textContent = `${e.hp}/${e.maxHp}`;
       $("eMpText").textContent = `${e.mp}/${e.maxMp}`;
-      setBar($("eHpBar"), e.hp, e.maxHp);
-      setBar($("eMpBar"), e.mp, e.maxMp);
+      const prevHp = (typeof e._prevHp === "number") ? e._prevHp : e.hp;
+      const prevHpPct = e.maxHp ? clamp((prevHp / e.maxHp) * 100, 0, 100) : 0;
+      const hpBar = $("eHpBar");
+      if (hpBar) {
+        setBar(hpBar, e.hp, e.maxHp);
+        const barWrap = hpBar.parentElement;
+        if (barWrap && e.hp < prevHp) {
+          triggerBarLoss(barWrap, prevHpPct, clamp((e.hp / e.maxHp) * 100, 0, 100));
+          if (barWrap._hpPulseTimer) clearTimeout(barWrap._hpPulseTimer);
+          barWrap.classList.remove("hpPulse");
+          void barWrap.offsetWidth;
+          barWrap.classList.add("hpPulse");
+          barWrap._hpPulseTimer = setTimeout(() => {
+            barWrap.classList.remove("hpPulse");
+          }, 360);
+        }
+      }
+      const mpBar = $("eMpBar");
+      if (mpBar) setBar(mpBar, e.mp, e.maxMp);
+      e._prevHp = e.hp;
     } else {
       $("enemyBars").style.display = "none";
     }
