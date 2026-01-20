@@ -1853,6 +1853,51 @@ function getMarketGoods(){
   return SHOP_GOODS.filter((g) => g.ref && g.ref.kind !== "gear");
 }
 
+function getMarketSellGoods(){
+  const inv = state.player.inv || {};
+  const keys = Object.keys(inv);
+  const category = state.shopMarketCategory || "consumable";
+  const equipCategory = state.shopEquipCategory || "weapon";
+  return keys.filter((name) => {
+    const ref = inv[name];
+    if (!ref) return false;
+    if (category === "equipment") {
+      const slot = equipCategory === "weapon" ? "hand" : equipCategory;
+      return ref.kind === "gear" && ref.slot === slot;
+    }
+    return ref.kind !== "gear";
+  });
+}
+
+function openMarketConfirm(mode, name){
+  const g = getShopItem(name);
+  const inv = state.player.inv || {};
+  const ref = g?.ref || inv[name];
+  if (!ref) return openShopModal(mode);
+  const isBuy = mode === "buy";
+  if (isBuy && !g) return openShopModal(mode);
+  const basePrice = g?.price || 10;
+  const gain = Math.max(1, Math.floor(basePrice / 2));
+  const priceText = isBuy ? `-${basePrice} gold` : `+${gain} gold`;
+  const actionLabel = isBuy ? "Beli" : "Jual";
+  const title = isBuy ? "Konfirmasi Beli" : "Konfirmasi Jual";
+  modal.open(
+    title,
+    [
+      { title: "Back", desc: `Kembali ke Market ${actionLabel}.`, meta: "", value: "back", className: "subMenuBack" },
+      { title: name, desc: ref.desc || "Item", meta: isBuy ? `${basePrice} gold` : priceText, value: undefined, className: "readonly" },
+      { title: actionLabel, desc: `${actionLabel} ${name}?`, meta: priceText, value: `confirm:${name}` },
+    ],
+    (pick) => {
+      if (pick === "back") return openShopModal(mode);
+      if (!String(pick || "").startsWith("confirm:")) return;
+      const ok = isBuy ? buyItem(name) : sellItem(name);
+      if (!ok) addLog("WARN", isBuy ? "Gold tidak cukup atau item tidak tersedia." : "Item tidak bisa dijual.");
+      openShopModal(mode);
+    }
+  );
+}
+
 function buyItem(name){
   const p = state.player;
   const g = getShopItem(name);
@@ -2024,19 +2069,45 @@ function openShopModal(mode = "menu"){
           openShopModal("buy");
           return;
         }
-        const ok = buyItem(name);
-        if (!ok) addLog("WARN", "Gold tidak cukup atau item tidak tersedia.");
-        openShopModal("buy");
+        openMarketConfirm("buy", name);
       }
     );
     return;
   }
 
   if (mode === "sell"){
+    const categories = [
+      { key:"consumable", label:"Consumable", icon:"🧪", desc:"Potion & item sekali pakai." },
+      { key:"equipment", label:"Equipment", icon:"🛡️", desc:"Gear & perlengkapan." },
+    ];
+    const equipCategories = [
+      { key:"weapon", label:"Weapon", icon:"🗡️", slot:"hand", desc:"Slot: Hand" },
+      { key:"head", label:"Head", icon:"🪖", slot:"head", desc:"Slot: Head" },
+      { key:"armor", label:"Armor", icon:"🥋", slot:"armor", desc:"Slot: Armor" },
+      { key:"pant", label:"Pant", icon:"👖", slot:"pant", desc:"Slot: Pant" },
+      { key:"shoes", label:"Shoes", icon:"🥾", slot:"shoes", desc:"Slot: Shoes" },
+    ];
+    const categoryChoices = categories.map((c) => ({
+      title: `${c.icon} ${c.label}`,
+      desc: c.desc || "",
+      meta: "",
+      value: `cat:${c.key}`,
+      className: `marketCategory marketPrimary ${state.shopMarketCategory === c.key ? "active" : ""}`.trim(),
+    }));
+    const equipChoices = (state.shopMarketCategory === "equipment")
+      ? equipCategories.map((c) => ({
+          title: c.icon || c.label,
+          desc: "",
+          meta: "",
+          value: `equipcat:${c.key}`,
+          className: `marketCategory marketSub ${state.shopEquipCategory === c.key ? "active" : ""}`.trim(),
+        }))
+      : [];
+
     const inv = state.player.inv || {};
-    const keys = Object.keys(inv);
-    const rows = keys.length
-      ? keys.map((k) => {
+    const sellKeys = getMarketSellGoods();
+    const rows = sellKeys.length
+      ? sellKeys.map((k) => {
           const price = Math.max(1, Math.floor((getShopItem(k)?.price || 10) / 2));
           return { title: `${k} x${inv[k].qty}`, desc: inv[k].desc || "Item", meta: `+${price} gold`, value: `sell:${k}` };
         })
@@ -2044,13 +2115,26 @@ function openShopModal(mode = "menu"){
 
     modal.open(
       "Market - Jual",
-      [{ title: "Back", desc: "Kembali ke Market.", meta: "", value: "back", className: "subMenuBack" }].concat(rows),
+      [{ title: "Back", desc: "Kembali ke Market.", meta: "", value: "back", className: "subMenuBack" }]
+        .concat(categoryChoices)
+        .concat(equipChoices)
+        .concat([{ title: "Item Dijual", desc: "", meta: "", value: undefined, className: "marketDivider readonly" }])
+        .concat(rows),
       (pick) => {
         if (pick === "back") return openShopModal("market");
         const name = String(pick || "").replace(/^sell:/, "");
-        const ok = sellItem(name);
-        if (!ok) addLog("WARN", "Item tidak bisa dijual.");
-        openShopModal("sell");
+        if (String(pick || "").startsWith("cat:")) {
+          state.shopMarketCategory = String(pick || "").replace("cat:", "");
+          if (state.shopMarketCategory !== "equipment") state.shopEquipCategory = "weapon";
+          openShopModal("sell");
+          return;
+        }
+        if (String(pick || "").startsWith("equipcat:")) {
+          state.shopEquipCategory = String(pick || "").replace("equipcat:", "");
+          openShopModal("sell");
+          return;
+        }
+        openMarketConfirm("sell", name);
       }
     );
   }
