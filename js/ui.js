@@ -77,6 +77,28 @@ function renderAllyRow(state) {
       card.style.display = "none";
     }
   });
+
+  const maxAllies = typeof MAX_ALLIES === "number" ? MAX_ALLIES : 2;
+  const slotsFilled = allies.filter(Boolean).length;
+  const teamSlotPill = $("teamSlotPill");
+  if (teamSlotPill) {
+    teamSlotPill.textContent = `Slot ${slotsFilled}/${maxAllies}`;
+  }
+
+  for (let i = 0; i < maxAllies; i += 1) {
+    const slotIndex = i + 1;
+    const ally = allies[i] || null;
+    const slotEl = document.querySelector(`[data-team-slot="${slotIndex}"]`);
+    const statusEl = document.querySelector(`[data-team-slot-status="${slotIndex}"]`);
+    if (!slotEl || !statusEl) continue;
+    if (ally) {
+      slotEl.classList.add("filled");
+      statusEl.textContent = ally.name || `Ally ${slotIndex}`;
+    } else {
+      slotEl.classList.remove("filled");
+      statusEl.textContent = "Kosong";
+    }
+  }
 }
 
 export const modal = {

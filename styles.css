@@ -110,6 +110,63 @@ h1{ font-size:18px; margin:0; font-weight:800; letter-spacing:.2px; }
 .enemyCard{
   min-width:200px;
 }
+.teamCard{
+  display:none;
+}
+.teamTitle{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.teamLogoWrap{
+  width:40px;
+  height:40px;
+  border-radius:12px;
+  background:var(--card2);
+  border:1px solid var(--line);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+}
+.teamLogo{
+  width:24px;
+  height:24px;
+}
+.teamSlots{
+  display:grid;
+  gap:8px;
+  margin-top:8px;
+}
+.teamSlot{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:8px 10px;
+  background:var(--card2);
+  border:1px dashed var(--line);
+  border-radius:12px;
+  font-size:13px;
+}
+.teamSlot.filled{
+  border-style:solid;
+  border-color: rgba(97, 162, 255, 0.6);
+  box-shadow: 0 0 0 1px rgba(97, 162, 255, 0.2) inset;
+}
+.teamSlotIndex{
+  font-weight:700;
+  color:#d8e6f8;
+}
+.teamSlotStatus{
+  color:var(--muted);
+}
+.teamSlot.filled .teamSlotStatus{
+  color:#e8f1ff;
+}
+.teamHint{
+  margin-top:8px;
+  font-size:12px;
+}
 .enemyCard.active{
   border-color: rgba(97, 162, 255, 0.75);
   box-shadow: 0 0 0 1px rgba(97, 162, 255, 0.35), 0 10px 20px rgba(0,0,0,.35);
@@ -1044,10 +1101,12 @@ select.authInput{
   padding:2px 10px;
 }
 
-/* Town: hide enemy card and let player span full width */
-body.inTown #enemyRow{ display:none; }
-body.inTown #allyRow{ grid-column:1 / -1; }
+/* Town: hide enemy card and extra ally cards, show team card */
+body.inTown #enemyRow{ display:flex; }
+body.inTown #enemyCard{ display:none; }
+body.inTown .teamCard{ display:block; }
 body.inTown .allyCard.extra{ display:none; }
+body.inBattle .teamCard{ display:none; }
 
 /* Nice appear animation when battle starts */
 @keyframes popIn{
@@ -1057,8 +1116,8 @@ body.inTown .allyCard.extra{ display:none; }
 .popIn{ animation: popIn 280ms ease-out; }
 
 
-/* Town layout: single column so no empty space on the right */
-body.inTown .grid{ grid-template-columns: 1fr !important; }
+/* Town layout: keep two columns for team card */
+body.inTown .grid{ grid-template-columns: 1.05fr .95fr; }
 
 
 /* Damage flash / loss overlay on bars (HP/MP) */

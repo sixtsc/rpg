@@ -185,6 +185,31 @@
 
           <!-- RIGHT: Enemy ONLY -->
           <div class="enemyRow" id="enemyRow">
+            <div class="card teamCard" id="teamCard">
+              <div class="sectionTitle">
+                <div class="teamTitle">
+                  <div class="teamLogoWrap">
+                    <img class="teamLogo" src="./assets/logo.svg" alt="Team Logo" />
+                  </div>
+                  <div class="teamMeta">
+                    <b>Team</b>
+                    <div class="muted">Recruit slots</div>
+                  </div>
+                </div>
+                <div class="pill" id="teamSlotPill">Slot 0/2</div>
+              </div>
+              <div class="teamSlots">
+                <div class="teamSlot" data-team-slot="1">
+                  <span class="teamSlotIndex">1</span>
+                  <span class="teamSlotStatus" data-team-slot-status="1">Kosong</span>
+                </div>
+                <div class="teamSlot" data-team-slot="2">
+                  <span class="teamSlotIndex">2</span>
+                  <span class="teamSlotStatus" data-team-slot-status="2">Kosong</span>
+                </div>
+              </div>
+              <div class="teamHint muted">Gunakan menu Recruit untuk mengisi slot.</div>
+            </div>
             <div class="card enemyCard" id="enemyCard">
               <div class="damageText" id="enemyDamage"></div>
               <div class="sectionTitle">
