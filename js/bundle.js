@@ -3499,6 +3499,13 @@ function bind() {
   byId("btnInventory").onclick = openInventoryReadOnly;
   const btnRecruit = byId("btnRecruit");
   if (btnRecruit) btnRecruit.onclick = openRecruitModal;
+  const allySlotBadge = byId("allySlotBadge");
+  if (allySlotBadge) {
+    allySlotBadge.onclick = () => {
+      if (state.inBattle) return;
+      openRecruitModal();
+    };
+  }
   const btnEnemyStats = byId("btnEnemyStats");
   if (btnEnemyStats) btnEnemyStats.onclick = openEnemyStatsModal;
   // MENU (Save/Load/New Game)
