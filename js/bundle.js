@@ -599,6 +599,115 @@ async function apiJson(path, opts = {}) {
   return { res, data };
 }
 
+async function mailboxList() {
+  return apiJson("/api/mailbox-list?limit=50");
+}
+
+async function mailboxMarkRead(id) {
+  return apiJson("/api/mailbox-read", {
+    method: "POST",
+    body: JSON.stringify({ id }),
+  });
+}
+
+async function mailboxClaim(id) {
+  return apiJson("/api/mailbox-claim", {
+    method: "POST",
+    body: JSON.stringify({ id }),
+  });
+}
+
+function formatMailboxTime(epochSec) {
+  if (!epochSec) return "";
+  try {
+    return new Date(epochSec * 1000).toLocaleString("id-ID");
+  } catch {
+    return "";
+  }
+}
+
+function updateMailboxBadge(items) {
+  const btn = byId("mailButton");
+  if (!btn) return;
+  const hasUnread = Array.isArray(items) && items.some((item) => !item.read_at);
+  btn.classList.toggle("hasUnread", hasUnread);
+}
+
+async function refreshMailboxBadge() {
+  const { res, data } = await mailboxList();
+  if (!res.ok) {
+    updateMailboxBadge([]);
+    return;
+  }
+  updateMailboxBadge(data?.items || []);
+}
+
+async function openMailboxModal() {
+  const { res, data } = await mailboxList();
+  if (!res.ok) {
+    const message = data?.message || "Silakan login dulu.";
+    modal.open("Mailbox", [
+      { title: "Tidak bisa dibuka", desc: message, meta: "" },
+      { title: "Back", desc: "Kembali.", meta: "", value: "back", className: "subMenuBack" },
+    ], () => {});
+    return;
+  }
+
+  const items = Array.isArray(data?.items) ? data.items : [];
+  updateMailboxBadge(items);
+
+  const choices = [
+    { title: "Back", desc: "Tutup mailbox.", meta: "", value: "back", className: "subMenuBack" },
+  ];
+
+  if (items.length === 0) {
+    choices.push({ title: "Inbox kosong", desc: "Belum ada pesan.", meta: "" });
+  } else {
+    items.forEach((item) => {
+      const unread = !item.read_at;
+      const claimed = !!item.claimed_at;
+      const attachmentCount = Array.isArray(item.attachments) ? item.attachments.length : 0;
+      const timeLabel = formatMailboxTime(item.created_at);
+      const title = `${unread ? "NEW • " : ""}${item.title || "Mailbox"}`;
+      const desc = item.body || "";
+      const meta = claimed ? "Claimed" : (attachmentCount ? `${attachmentCount} hadiah` : "");
+      const metaText = [timeLabel, meta].filter(Boolean).join(" • ");
+      const buttons = (!claimed && attachmentCount > 0)
+        ? [{ text: "Claim", value: `claim:${item.id}`, className: "primary" }]
+        : [];
+
+      choices.push({
+        title,
+        desc,
+        meta: metaText,
+        value: `read:${item.id}`,
+        buttons,
+        keepOpen: true,
+        allowClick: true,
+      });
+    });
+  }
+
+  modal.open("Mailbox", choices, async (pick) => {
+    if (pick === "back") return;
+    const [action, id] = String(pick || "").split(":");
+    if (!id) return;
+
+    if (action === "read") {
+      const item = items.find((entry) => entry.id === id);
+      if (item && !item.read_at) {
+        await mailboxMarkRead(id);
+      }
+      await openMailboxModal();
+      return;
+    }
+    if (action === "claim") {
+      await mailboxClaim(id);
+      await openMailboxModal();
+    }
+  });
+}
+
 async function cloudMe() {
   const { res, data } = await apiJson("/api/me");
   if (!res.ok) return null;
@@ -3626,6 +3735,7 @@ function openTownMenu(){
           try { await cloudLogout(); } catch(e) {}
           safeRemove(SAVE_KEY);
           resetToEmptyProfile();
+          updateMailboxBadge([]);
           // Hide any character overlays and show auth overlay
           showCharCreate(false);
           showCharMenu(false);
@@ -3669,6 +3779,13 @@ function bind() {
   if (btnShop) btnShop.onclick = () => openShopModal();
   const playerStatLink = byId("playerStatLink");
   if (playerStatLink) playerStatLink.onclick = openStatsModal;
+  const mailButton = byId("mailButton");
+  if (mailButton) {
+    mailButton.onclick = () => {
+      if (state.inBattle) return;
+      openMailboxModal();
+    };
+  }
 
   // Character create menu buttons
   const ccCreate = byId("ccCreate");
@@ -4125,6 +4242,12 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
   // Show character menu
   showAuth(false);
   openCharacterMenu();
+
+  try {
+    await refreshMailboxBadge();
+  } catch (e) {
+    console.error("[MAILBOX] gagal refresh badge", e);
+  }
 
   return true;
 }
