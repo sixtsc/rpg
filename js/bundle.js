@@ -504,7 +504,11 @@ function normalizeProfilePayload(payload){
 
     for (let i = 0; i < MAX_CHAR_SLOTS; i++){
       const slot = payload.slots[i];
-      out.slots[i] = slot ? normalizePlayer(slot) : null;
+      const normalized = slot ? normalizePlayer(slot) : null;
+      if (normalized && typeof normalized.charId !== "number") {
+        normalized.charId = i;
+      }
+      out.slots[i] = normalized;
     }
     return out;
   }
@@ -530,11 +534,18 @@ function getProfilePayloadFromState(){
   );
   out.slots = Array.from({ length: MAX_CHAR_SLOTS }, (_, i) => {
     const slot = state.slots && state.slots[i];
-    return slot ? normalizePlayer(slot) : null;
+    if (!slot) return null;
+    const normalized = normalizePlayer(slot);
+    if (typeof normalized.charId !== "number") normalized.charId = i;
+    return normalized;
   });
 
   // Persist current player into active slot
-  if (state.player) out.slots[out.activeSlot] = normalizePlayer(state.player);
+  if (state.player) {
+    const normalized = normalizePlayer(state.player);
+    if (typeof normalized.charId !== "number") normalized.charId = out.activeSlot;
+    out.slots[out.activeSlot] = normalized;
+  }
 
   out.t = Date.now();
   return out;
@@ -3163,9 +3174,12 @@ function applyAttributeDelta(statKey, delta){
 }
 
 function openProfileModal(){
+  const charId = (state.player && typeof state.player.charId === "number") ? state.player.charId : state.activeSlot;
+  const charMeta = charId === 0 ? "Admin" : "";
   modal.open(
     "Profile",
     [
+      { title: `ID: ${charId}`, desc: "ID karakter (mulai dari 0).", meta: charMeta },
       { title: "Equipment", desc: "Kelola gear (hand, head, pant, armor, shoes).", meta: "", value: "equip" },
       { title: "Stat", desc: "Atur stat poin.", meta: "", value: "stat" },
       { title: "Skill Slot", desc: "Pilih skill untuk slot battle.", meta: "", value: "skill_slot" },
@@ -3989,6 +4003,7 @@ function handleCreateCharacter(){
   const p = normalizePlayer(newPlayer());
   p.name = name;
   p.gender = gender;
+  p.charId = pendingCreateSlot;
 
   state.slots[pendingCreateSlot] = p;
   state.activeSlot = pendingCreateSlot;
