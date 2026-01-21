@@ -48,6 +48,46 @@ body{
 
 h1{ font-size:18px; margin:0; font-weight:800; letter-spacing:.2px; }
 
+.mailButton{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:40px;
+  height:40px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background:var(--card2);
+  color:var(--text);
+  cursor:pointer;
+  box-shadow:0 6px 18px rgba(0,0,0,.25);
+}
+
+.mailButton:hover{
+  border-color: rgba(97, 162, 255, 0.6);
+}
+
+.mailIcon{
+  width:22px;
+  height:22px;
+}
+
+.mailBadge{
+  position:absolute;
+  top:6px;
+  right:6px;
+  width:10px;
+  height:10px;
+  border-radius:999px;
+  background:#ff4d4d;
+  border:2px solid var(--card2);
+  display:none;
+}
+
+.mailButton.hasUnread .mailBadge{
+  display:block;
+}
+
 .pill{
   display:inline-flex;
   align-items:center;
