@@ -3179,7 +3179,7 @@ function openProfileModal(){
   modal.open(
     "Profile",
     [
-      { title: `ID: ${charId}`, desc: "ID karakter (mulai dari 0).", meta: charMeta },
+      { title: `ID: ${charId}`, desc: "ID karakter.", meta: charMeta },
       { title: "Equipment", desc: "Kelola gear (hand, head, pant, armor, shoes).", meta: "", value: "equip" },
       { title: "Stat", desc: "Atur stat poin.", meta: "", value: "stat" },
       { title: "Skill Slot", desc: "Pilih skill untuk slot battle.", meta: "", value: "skill_slot" },
