@@ -2088,11 +2088,16 @@ function createMarketToggleButton(label, isActive, onClick){
   return btn;
 }
 
-function createMarketTabButton({ label, desc, icon, isActive, onClick }){
+function createMarketTabButton({ label, desc, icon, iconSrc, isActive, onClick, onlyIcon }){
   const btn = document.createElement("button");
   btn.type = "button";
-  btn.className = `marketTabBtn${isActive ? " active" : ""}`;
-  btn.innerHTML = `${icon ? `${icon} ` : ""}${label}${desc ? `<small>${desc}</small>` : ""}`;
+  btn.className = `marketTabBtn${isActive ? " active" : ""}${onlyIcon ? " iconOnly" : ""}`;
+  if (label) btn.setAttribute("aria-label", label);
+  if (iconSrc) {
+    btn.innerHTML = `<img class="marketTabIcon" src="${escapeHtml(iconSrc)}" alt="" />`;
+  } else {
+    btn.innerHTML = `${icon ? `${icon} ` : ""}${label}${desc ? `<small>${desc}</small>` : ""}`;
+  }
   btn.onclick = onClick;
   return btn;
 }
@@ -2122,11 +2127,11 @@ function renderMarketTabs(){
     { key:"consumable", label:"Consumable", icon:"🧪", desc:"Potion & item sekali pakai." },
   ];
   const equipCategories = [
-    { key:"weapon", label:"Weapon", icon:"🗡️", desc:"Slot: Hand" },
-    { key:"head", label:"Head", icon:"🪖", desc:"Slot: Head" },
-    { key:"armor", label:"Armor", icon:"🥋", desc:"Slot: Armor" },
-    { key:"pant", label:"Pant", icon:"👖", desc:"Slot: Pant" },
-    { key:"shoes", label:"Shoes", icon:"🥾", desc:"Slot: Shoes" },
+    { key:"weapon", label:"Weapon", iconSrc:"./assets/icons/weapon.svg" },
+    { key:"head", label:"Head", iconSrc:"./assets/icons/head.svg" },
+    { key:"armor", label:"Armor", iconSrc:"./assets/icons/armor.svg" },
+    { key:"pant", label:"Pant", iconSrc:"./assets/icons/pant.svg" },
+    { key:"shoes", label:"Shoes", iconSrc:"./assets/icons/shoes.svg" },
   ];
   categories.forEach((c) => {
     categoryTabs.appendChild(createMarketTabButton({
@@ -2145,9 +2150,9 @@ function renderMarketTabs(){
     equipCategories.forEach((c) => {
       equipTabs.appendChild(createMarketTabButton({
         label: c.label,
-        desc: c.desc,
-        icon: c.icon,
+        iconSrc: c.iconSrc,
         isActive: state.shopEquipCategory === c.key,
+        onlyIcon: true,
         onClick: () => {
           state.shopEquipCategory = c.key;
           renderMarketPage();
