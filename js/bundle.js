@@ -1904,24 +1904,42 @@ function openMarketConfirm(mode, name){
   if (isBuy && !g) return openShopModal(mode);
   const basePrice = g?.price || 10;
   const gain = Math.max(1, Math.floor(basePrice / 2));
-  const priceValue = isBuy ? basePrice : gain;
-  const priceText = isBuy ? `${basePrice} gold` : `${gain} gold`;
+  const maxQty = !isBuy ? Math.max(1, Number(inv[name]?.qty || 1)) : 1;
+  const startQty = !isBuy ? Math.min(Math.max(1, Number(state.marketSellQty || 1)), maxQty) : 1;
+  state.marketSellQty = startQty;
+  const priceValue = isBuy ? basePrice : gain * startQty;
+  const priceText = `${priceValue} gold`;
   const actionLabel = isBuy ? "Beli" : "Jual";
   const title = name;
   const typeLabel = ref.kind === "gear" ? "Equipment" : "Consumable";
   const stats = [
     { label: "Tipe", value: typeLabel },
     { label: "Harga", value: priceText },
+    !isBuy && maxQty > 1 ? { label: "Jumlah", value: String(startQty) } : null,
     ref.atk ? { label: "ATK", value: `+${ref.atk}` } : null,
     ref.def ? { label: "DEF", value: `+${ref.def}` } : null,
     ref.spd ? { label: "SPD", value: `+${ref.spd}` } : null,
   ].filter(Boolean);
-  const statsHtml = stats.map((s) => `<div class="confirmStatRow"><span>${escapeHtml(s.label)}:</span><b>${escapeHtml(String(s.value))}</b></div>`).join("");
+  const statsHtml = stats.map((s) => {
+    const statKey = s.label === "Harga" ? "price" : (s.label === "Jumlah" ? "qty" : "");
+    const keyAttr = statKey ? ` data-stat="${statKey}"` : "";
+    return `<div class="confirmStatRow"><span>${escapeHtml(s.label)}:</span><b${keyAttr}>${escapeHtml(String(s.value))}</b></div>`;
+  }).join("");
+  const qtyControls = !isBuy && maxQty > 1
+    ? `
+      <div class="confirmQtyRow">
+        <button type="button" class="confirmQtyBtn" data-action="minus">-</button>
+        <span class="confirmQtyValue" data-qty>${startQty}</span>
+        <button type="button" class="confirmQtyBtn" data-action="plus">+</button>
+      </div>
+    `
+    : "";
   const descHtml = `
     <div class="confirmDetailCard">
       <div class="confirmThumb">📦</div>
       <div class="confirmStats">
         ${statsHtml}
+        ${qtyControls}
       </div>
     </div>
     <div class="confirmDesc">${escapeHtml(ref.desc || "Item")}</div>
@@ -1949,11 +1967,35 @@ function openMarketConfirm(mode, name){
         return;
       }
       if (!String(pick || "").startsWith("confirm:")) return;
-      const ok = isBuy ? buyItem(name) : sellItem(name);
+      const qty = isBuy ? 1 : Math.min(Math.max(1, Number(state.marketSellQty || 1)), maxQty);
+      const ok = isBuy ? buyItem(name) : sellItem(name, qty);
       if (!ok) showToast(isBuy ? "Gold tidak cukup atau item tidak tersedia." : "Item tidak bisa dijual.", "warn");
       renderMarketPage();
     }
   );
+
+  if (!isBuy && maxQty > 1) {
+    const modalBody = $("modalBody");
+    const qtyValue = modalBody?.querySelector(".confirmQtyValue");
+    const priceValueEl = modalBody?.querySelector('[data-stat="price"]');
+    const qtyStatEl = modalBody?.querySelector('[data-stat="qty"]');
+    const updateQtyDisplay = (nextQty) => {
+      state.marketSellQty = nextQty;
+      if (qtyValue) qtyValue.textContent = String(nextQty);
+      if (qtyStatEl) qtyStatEl.textContent = String(nextQty);
+      if (priceValueEl) priceValueEl.textContent = `${gain * nextQty} gold`;
+    };
+    modalBody?.querySelectorAll(".confirmQtyBtn").forEach((btn) => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const action = btn.getAttribute("data-action");
+        let nextQty = Number(state.marketSellQty || 1);
+        if (action === "minus") nextQty = Math.max(1, nextQty - 1);
+        if (action === "plus") nextQty = Math.min(maxQty, nextQty + 1);
+        updateQtyDisplay(nextQty);
+      };
+    });
+  }
 }
 
 function buyItem(name){
@@ -1974,18 +2016,20 @@ function buyItem(name){
   return true;
 }
 
-function sellItem(name){
+function sellItem(name, qty = 1){
   const p = state.player;
   if (!p || !p.inv || !p.inv[name]) return false;
   const inv = p.inv[name];
   const base = getShopItem(name)?.price || 10;
   const gain = Math.max(1, Math.floor(base / 2));
-  inv.qty -= 1;
+  const sellQty = Math.min(Math.max(1, Number(qty || 1)), inv.qty);
+  if (!sellQty) return false;
+  inv.qty -= sellQty;
   if (inv.qty <= 0) delete p.inv[name];
-  p.gold += gain;
+  p.gold += gain * sellQty;
   autosave(state);
-  addLog("GOLD", `Jual ${name} (+${gain} gold)`);
-  showToast(`Jual ${name} (+${gain} gold)`, "gold");
+  addLog("GOLD", `Jual ${name} x${sellQty} (+${gain * sellQty} gold)`);
+  showToast(`Jual ${name} x${sellQty} (+${gain * sellQty} gold)`, "gold");
   pulseGold();
   pulseMarketGrid();
   refresh(state);
@@ -2173,6 +2217,7 @@ function openMarketPage(){
   if (state.inBattle) return;
   modal.close();
   setMarketPageVisible(true);
+  state.shopMarketCategory = "equipment";
   renderMarketPage();
 }
 

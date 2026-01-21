@@ -953,6 +953,28 @@ body.inBattle .enemyMiniMeta .muted{
 .confirmStatRow b{
   text-align:right;
 }
+.confirmQtyRow{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-top:6px;
+}
+.confirmQtyBtn{
+  width:28px;
+  height:28px;
+  border-radius:10px;
+  border:1px solid var(--line);
+  background:var(--card);
+  color:var(--text);
+  font-weight:700;
+  cursor:pointer;
+}
+.confirmQtyValue{
+  min-width:24px;
+  text-align:center;
+  color:var(--text);
+  font-weight:600;
+}
 .confirmStatRow span{
   color:var(--muted);
 }
