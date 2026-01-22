@@ -281,22 +281,24 @@
 
   <section id="marketPage" class="marketPage hidden" aria-hidden="true">
     <div class="marketPageHeader">
+      <div class="marketCurrency" aria-label="Mata uang saat ini">
+        <div class="pill currencyPill">
+          <img class="currencyIcon" src="./assets/icons/coin.svg" alt="" />
+          <span id="marketGoldValue">0</span>
+        </div>
+        <div class="pill currencyPill">
+          <img class="currencyIcon" src="./assets/icons/gem.svg" alt="" />
+          <span id="marketGemValue">0</span>
+        </div>
+      </div>
       <div class="marketTitle">
         <h2>Market</h2>
         <p>Halaman khusus untuk transaksi di Market.</p>
       </div>
       <div class="marketActions">
-        <div class="marketCurrency" aria-label="Mata uang saat ini">
-          <div class="pill currencyPill">
-            <img class="currencyIcon" src="./assets/icons/coin.svg" alt="" />
-            <span id="marketGoldValue">0</span>
-          </div>
-          <div class="pill currencyPill">
-            <img class="currencyIcon" src="./assets/icons/gem.svg" alt="" />
-            <span id="marketGemValue">0</span>
-          </div>
-        </div>
-        <button class="btn ghost" id="marketBack" type="button">Kembali ke Town</button>
+        <button class="marketBackBtn" id="marketBack" type="button" aria-label="Kembali">
+          <span aria-hidden="true">←</span>
+        </button>
       </div>
     </div>
     <div class="marketPageControls">
