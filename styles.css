@@ -1082,7 +1082,7 @@ body.inBattle .enemyMiniMeta .muted{
   display:flex;
   flex-wrap:wrap;
   justify-content:space-between;
-  align-items:center;
+  align-items:flex-start;
   gap:16px;
   margin-bottom:24px;
 }
@@ -1091,6 +1091,15 @@ body.inBattle .enemyMiniMeta .muted{
   flex-wrap:wrap;
   align-items:center;
   gap:12px;
+  margin-left:auto;
+}
+.marketActions .btn{
+  margin-left:auto;
+}
+.marketCurrency{
+  display:flex;
+  align-items:center;
+  gap:8px;
 }
 .marketCurrency .currencyPill{
   font-weight:700;

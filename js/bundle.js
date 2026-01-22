@@ -1495,6 +1495,8 @@ function refresh(state) {
   if (marketGoldValue) marketGoldValue.textContent = `${p.gold}`;
   const gemValue = $("gemValue");
   if (gemValue) gemValue.textContent = `${p.gems || 0}`;
+  const marketGemValue = $("marketGemValue");
+  if (marketGemValue) marketGemValue.textContent = `${p.gems || 0}`;
 
   // Player bars
   $("hpText").textContent = `${p.hp}/${p.maxHp}`;
