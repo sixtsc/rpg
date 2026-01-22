@@ -161,12 +161,19 @@ body.inBattle .mailButton{
 .mailboxClose{
   width:28px;
   height:28px;
-  border-radius:10px;
-  border:1px solid var(--line);
-  background:var(--card2);
+  border-radius:999px;
+  border:none;
+  background:transparent;
   color:var(--text);
   font-weight:700;
   cursor:pointer;
+  display:grid;
+  place-items:center;
+  padding:0;
+}
+
+.mailboxClose:hover{
+  background:rgba(255,255,255,0.08);
 }
 
 .mailboxTabs{
@@ -283,8 +290,27 @@ body.inBattle .mailButton{
 }
 
 .mailStatus{
+  display:flex;
+  align-items:center;
+  gap:6px;
   font-size:11px;
   color:#a9c7ff;
+  white-space:nowrap;
+}
+
+.mailStatusIcon{
+  width:18px;
+  height:18px;
+  border-radius:8px;
+  background:rgba(255,255,255,0.08);
+  display:grid;
+  place-items:center;
+}
+
+.mailStatusIcon svg{
+  width:12px;
+  height:12px;
+  color:#cfe0ff;
 }
 
 .mailboxDetail{

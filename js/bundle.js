@@ -694,6 +694,20 @@ function renderMailboxList() {
 
     const hasRewards = Array.isArray(item.attachments) && item.attachments.length > 0 && !item.claimed_at;
     const metaText = [formatMailboxTime(item.created_at), item.source].filter(Boolean).join(" • ");
+    const statusIcon = item.claimed_at
+      ? `<span class="mailStatusIcon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M6 12.5 10 16l8-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>`
+      : (!item.read_at ? "" : `<span class="mailStatusIcon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M4 7.5h16a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 20 18.5H4A1.5 1.5 0 0 1 2.5 17V9A1.5 1.5 0 0 1 4 7.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="m3.5 9 8.5 5 8.5-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>`);
+    const statusText = item.claimed_at ? "Claimed" : (item.read_at ? "Read" : "");
+
     card.innerHTML = `
       <div class="mailAvatar">
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -707,7 +721,7 @@ function renderMailboxList() {
         <div class="mailBody">${escapeHtml(item.body || "")}</div>
         <div class="mailMeta">${escapeHtml(metaText)}</div>
       </div>
-      <div class="mailStatus">${item.claimed_at ? "Claimed" : ""}</div>
+      <div class="mailStatus">${statusIcon}${escapeHtml(statusText)}</div>
     `;
     card.onclick = () => openMailboxDetail(item.id);
     list.appendChild(card);
