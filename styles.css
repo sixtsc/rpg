@@ -152,6 +152,23 @@ body.inBattle .mailButton{
   cursor:pointer;
 }
 
+.mailboxHeaderActions{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.mailboxClose{
+  width:28px;
+  height:28px;
+  border-radius:10px;
+  border:1px solid var(--line);
+  background:var(--card2);
+  color:var(--text);
+  font-weight:700;
+  cursor:pointer;
+}
+
 .mailboxTabs{
   display:flex;
   gap:10px;
@@ -304,6 +321,11 @@ body.inBattle .mailButton{
   margin-bottom:10px;
 }
 
+.mailboxDetailHeaderText{
+  width:100%;
+  text-align:center;
+}
+
 .mailboxDetailTitle{
   font-size:16px;
   font-weight:700;
@@ -345,28 +367,22 @@ body.inBattle .mailButton{
   border-radius:12px;
   padding:10px;
   text-align:center;
-  border:1px solid transparent;
+  border:1px solid rgba(255,255,255,0.08);
   font-size:12px;
+  display:grid;
+  gap:6px;
+  justify-items:center;
 }
 
-.rewardCard.common{
-  border-color:rgba(117, 177, 255, 0.45);
-  box-shadow:0 0 10px rgba(58, 108, 255, 0.3);
-}
-
-.rewardCard.rare{
-  border-color:rgba(122, 255, 214, 0.6);
-  box-shadow:0 0 12px rgba(34, 211, 170, 0.35);
-}
-
-.rewardCard.epic{
-  border-color:rgba(208, 139, 255, 0.6);
-  box-shadow:0 0 12px rgba(168, 85, 247, 0.35);
-}
-
-.rewardCard.legendary{
-  border-color:rgba(255, 203, 82, 0.7);
-  box-shadow:0 0 12px rgba(245, 158, 11, 0.35);
+.rewardAvatar{
+  width:34px;
+  height:34px;
+  border-radius:10px;
+  background:rgba(255,255,255,0.06);
+  display:grid;
+  place-items:center;
+  color:#cfe0ff;
+  font-weight:700;
 }
 
 .mailboxDetailFooter{

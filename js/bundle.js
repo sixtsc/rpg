@@ -732,17 +732,22 @@ function renderMailboxDetail(item) {
   if (grid) {
     if (attachments.length === 0) {
       const empty = document.createElement("div");
-      empty.className = "rewardCard common";
-      empty.textContent = "Tidak ada hadiah";
+      empty.className = "rewardCard";
+      empty.innerHTML = `
+        <div class="rewardAvatar">?</div>
+        <div>Tidak ada hadiah</div>
+      `;
       grid.appendChild(empty);
     } else {
       attachments.forEach((reward) => {
-        const rarity = String(reward?.rarity || "common").toLowerCase();
         const card = document.createElement("div");
-        card.className = `rewardCard ${rarity}`;
+        card.className = "rewardCard";
         const name = reward?.name || reward?.type || "Reward";
         const amount = reward?.amount ? `x${reward.amount}` : "";
-        card.textContent = `${name} ${amount}`.trim();
+        card.innerHTML = `
+          <div class="rewardAvatar">${escapeHtml(String(name).slice(0, 1).toUpperCase())}</div>
+          <div>${escapeHtml(`${name} ${amount}`.trim())}</div>
+        `;
         grid.appendChild(card);
       });
     }
@@ -3903,6 +3908,9 @@ function bind() {
 
   const mailboxClose = byId("mailboxCloseBtn");
   if (mailboxClose) mailboxClose.onclick = () => setMailboxDetailOpen(false);
+
+  const mailboxOverlayClose = byId("mailboxClose");
+  if (mailboxOverlayClose) mailboxOverlayClose.onclick = () => closeMailboxOverlay();
 
   const mailboxAction = byId("mailboxAction");
   if (mailboxAction) {

@@ -81,7 +81,10 @@
           <div class="mailboxTitle">Mail Box</div>
           <div class="mailboxSubtitle">Pesan &amp; hadiah untukmu</div>
         </div>
-        <button id="mailboxAction" class="mailboxAction" type="button">Tandai semua dibaca</button>
+        <div class="mailboxHeaderActions">
+          <button id="mailboxAction" class="mailboxAction" type="button">Tandai semua dibaca</button>
+          <button id="mailboxClose" class="mailboxClose" type="button" aria-label="Tutup mailbox">✕</button>
+        </div>
       </header>
 
       <div class="mailboxTabs">
@@ -95,7 +98,7 @@
     <div id="mailboxDetail" class="mailboxDetail" aria-hidden="true">
       <div class="mailboxSheetHandle"></div>
       <div class="mailboxDetailHeader">
-        <div>
+        <div class="mailboxDetailHeaderText">
           <div id="mailboxDetailTitle" class="mailboxDetailTitle">Mail</div>
           <div id="mailboxDetailSender" class="mailboxDetailSender">System</div>
         </div>
