@@ -74,6 +74,44 @@
     </div>
   </div>
 
+  <div id="mailboxOverlay" class="mailboxOverlay hidden" aria-hidden="true">
+    <div class="mailboxPanel">
+      <header class="mailboxHeader">
+        <div>
+          <div class="mailboxTitle">Mail Box</div>
+          <div class="mailboxSubtitle">Pesan &amp; hadiah untukmu</div>
+        </div>
+        <button id="mailboxAction" class="mailboxAction" type="button">Tandai semua dibaca</button>
+      </header>
+
+      <div class="mailboxTabs">
+        <button class="mailboxTab active" type="button" data-tab="all">Semua</button>
+        <button class="mailboxTab" type="button" data-tab="unclaimed">Belum Claim</button>
+      </div>
+
+      <div id="mailboxList" class="mailboxList"></div>
+    </div>
+
+    <div id="mailboxDetail" class="mailboxDetail" aria-hidden="true">
+      <div class="mailboxSheetHandle"></div>
+      <div class="mailboxDetailHeader">
+        <div>
+          <div id="mailboxDetailTitle" class="mailboxDetailTitle">Mail</div>
+          <div id="mailboxDetailSender" class="mailboxDetailSender">System</div>
+        </div>
+      </div>
+      <div id="mailboxDetailBody" class="mailboxDetailBody"></div>
+      <div class="mailboxRewards">
+        <div class="mailboxRewardsTitle">Rewards</div>
+        <div id="mailboxRewardsGrid" class="mailboxRewardsGrid"></div>
+      </div>
+      <div class="mailboxDetailFooter">
+        <button id="mailboxClaimBtn" class="btn primary" type="button">Claim</button>
+        <button id="mailboxCloseBtn" class="btn ghost" type="button">Tutup</button>
+      </div>
+    </div>
+  </div>
+
 <div class="wrap">
     <div class="topbar">
       <div class="brand">

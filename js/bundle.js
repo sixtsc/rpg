@@ -626,6 +626,12 @@ function formatMailboxTime(epochSec) {
   }
 }
 
+const mailboxState = {
+  items: [],
+  tab: "all",
+  selected: null,
+};
+
 function updateMailboxBadge(items) {
   const btn = byId("mailButton");
   if (!btn) return;
@@ -642,70 +648,156 @@ async function refreshMailboxBadge() {
   updateMailboxBadge(data?.items || []);
 }
 
-async function openMailboxModal() {
-  const { res, data } = await mailboxList();
-  if (!res.ok) {
-    const message = data?.message || "Silakan login dulu.";
-    modal.open("Mailbox", [
-      { title: "Tidak bisa dibuka", desc: message, meta: "" },
-      { title: "Back", desc: "Kembali.", meta: "", value: "back", className: "subMenuBack" },
-    ], () => {});
+function getMailboxOverlay() {
+  return byId("mailboxOverlay");
+}
+
+function setMailboxOverlayVisible(visible) {
+  const overlay = getMailboxOverlay();
+  if (!overlay) return;
+  overlay.classList.toggle("hidden", !visible);
+  overlay.setAttribute("aria-hidden", visible ? "false" : "true");
+}
+
+function renderMailboxList() {
+  const list = byId("mailboxList");
+  if (!list) return;
+  list.innerHTML = "";
+
+  const filtered = mailboxState.tab === "unclaimed"
+    ? mailboxState.items.filter((item) => !item.claimed_at)
+    : mailboxState.items.slice();
+
+  if (filtered.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "mailItem";
+    empty.innerHTML = `
+      <div class="mailAvatar">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 6.5h16a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 20 17.5H4A1.5 1.5 0 0 1 2.5 16V8A1.5 1.5 0 0 1 4 6.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          <path d="m3.5 8 8.5 5 8.5-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="mailTitle">Inbox kosong</div>
+        <div class="mailBody">Belum ada pesan.</div>
+      </div>
+    `;
+    list.appendChild(empty);
     return;
   }
 
-  const items = Array.isArray(data?.items) ? data.items : [];
-  updateMailboxBadge(items);
+  filtered.forEach((item) => {
+    const card = document.createElement("div");
+    const unread = !item.read_at;
+    card.className = `mailItem${unread ? " mailItemUnread" : ""}`;
 
-  const choices = [
-    { title: "Back", desc: "Tutup mailbox.", meta: "", value: "back", className: "subMenuBack" },
-  ];
+    const hasRewards = Array.isArray(item.attachments) && item.attachments.length > 0 && !item.claimed_at;
+    const metaText = [formatMailboxTime(item.created_at), item.source].filter(Boolean).join(" • ");
+    card.innerHTML = `
+      <div class="mailAvatar">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 6.5h16a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 20 17.5H4A1.5 1.5 0 0 1 2.5 16V8A1.5 1.5 0 0 1 4 6.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          <path d="m3.5 8 8.5 5 8.5-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        ${hasRewards ? "<span class=\"mailRewardBadge\">★</span>" : ""}
+      </div>
+      <div>
+        <div class="mailTitle">${escapeHtml(item.title || "Mailbox")}</div>
+        <div class="mailBody">${escapeHtml(item.body || "")}</div>
+        <div class="mailMeta">${escapeHtml(metaText)}</div>
+      </div>
+      <div class="mailStatus">${item.claimed_at ? "Claimed" : ""}</div>
+    `;
+    card.onclick = () => openMailboxDetail(item.id);
+    list.appendChild(card);
+  });
+}
 
-  if (items.length === 0) {
-    choices.push({ title: "Inbox kosong", desc: "Belum ada pesan.", meta: "" });
-  } else {
-    items.forEach((item) => {
-      const unread = !item.read_at;
-      const claimed = !!item.claimed_at;
-      const attachmentCount = Array.isArray(item.attachments) ? item.attachments.length : 0;
-      const timeLabel = formatMailboxTime(item.created_at);
-      const title = `${unread ? "NEW • " : ""}${item.title || "Mailbox"}`;
-      const desc = item.body || "";
-      const meta = claimed ? "Claimed" : (attachmentCount ? `${attachmentCount} hadiah` : "");
-      const metaText = [timeLabel, meta].filter(Boolean).join(" • ");
-      const buttons = (!claimed && attachmentCount > 0)
-        ? [{ text: "Claim", value: `claim:${item.id}`, className: "primary" }]
-        : [];
+function renderMailboxDetail(item) {
+  const detail = byId("mailboxDetail");
+  if (!detail) return;
+  const title = byId("mailboxDetailTitle");
+  const sender = byId("mailboxDetailSender");
+  const body = byId("mailboxDetailBody");
+  const grid = byId("mailboxRewardsGrid");
+  const claimBtn = byId("mailboxClaimBtn");
 
-      choices.push({
-        title,
-        desc,
-        meta: metaText,
-        value: `read:${item.id}`,
-        buttons,
-        keepOpen: true,
-        allowClick: true,
+  if (title) title.textContent = item?.title || "Mail";
+  if (sender) sender.textContent = item?.source || "System";
+  if (body) body.textContent = item?.body || "";
+  if (grid) grid.innerHTML = "";
+
+  const attachments = Array.isArray(item?.attachments) ? item.attachments : [];
+  if (grid) {
+    if (attachments.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "rewardCard common";
+      empty.textContent = "Tidak ada hadiah";
+      grid.appendChild(empty);
+    } else {
+      attachments.forEach((reward) => {
+        const rarity = String(reward?.rarity || "common").toLowerCase();
+        const card = document.createElement("div");
+        card.className = `rewardCard ${rarity}`;
+        const name = reward?.name || reward?.type || "Reward";
+        const amount = reward?.amount ? `x${reward.amount}` : "";
+        card.textContent = `${name} ${amount}`.trim();
+        grid.appendChild(card);
       });
-    });
+    }
   }
 
-  modal.open("Mailbox", choices, async (pick) => {
-    if (pick === "back") return;
-    const [action, id] = String(pick || "").split(":");
-    if (!id) return;
+  if (claimBtn) {
+    const canClaim = attachments.length > 0 && !item?.claimed_at;
+    claimBtn.disabled = !canClaim;
+    claimBtn.textContent = item?.claimed_at ? "Claimed" : "Claim";
+  }
+}
 
-    if (action === "read") {
-      const item = items.find((entry) => entry.id === id);
-      if (item && !item.read_at) {
-        await mailboxMarkRead(id);
-      }
-      await openMailboxModal();
-      return;
-    }
-    if (action === "claim") {
-      await mailboxClaim(id);
-      await openMailboxModal();
-    }
-  });
+function setMailboxDetailOpen(open) {
+  const detail = byId("mailboxDetail");
+  if (!detail) return;
+  detail.classList.toggle("open", open);
+  detail.setAttribute("aria-hidden", open ? "false" : "true");
+}
+
+async function openMailboxDetail(id) {
+  const item = mailboxState.items.find((entry) => entry.id === id);
+  if (!item) return;
+  if (!item.read_at) {
+    await mailboxMarkRead(id);
+    await refreshMailboxItems();
+  }
+  mailboxState.selected = id;
+  const refreshed = mailboxState.items.find((entry) => entry.id === id) || item;
+  renderMailboxDetail(refreshed);
+  setMailboxDetailOpen(true);
+}
+
+async function refreshMailboxItems() {
+  const { res, data } = await mailboxList();
+  if (!res.ok) {
+    mailboxState.items = [];
+    renderMailboxList();
+    updateMailboxBadge([]);
+    return;
+  }
+  mailboxState.items = Array.isArray(data?.items) ? data.items : [];
+  updateMailboxBadge(mailboxState.items);
+  renderMailboxList();
+}
+
+async function openMailboxOverlay() {
+  setMailboxOverlayVisible(true);
+  await refreshMailboxItems();
+  setMailboxDetailOpen(false);
+}
+
+function closeMailboxOverlay() {
+  setMailboxOverlayVisible(false);
+  setMailboxDetailOpen(false);
+  mailboxState.selected = null;
 }
 
 async function cloudMe() {
@@ -1634,6 +1726,9 @@ function refresh(state) {
 
   document.body.classList.toggle("inBattle", !!inBattle);
   document.body.classList.toggle("inTown", !inBattle);
+  if (inBattle) {
+    closeMailboxOverlay();
+  }
 
   if (inBattle) {
     const e = getPrimaryEnemy();
@@ -3736,6 +3831,7 @@ function openTownMenu(){
           safeRemove(SAVE_KEY);
           resetToEmptyProfile();
           updateMailboxBadge([]);
+          closeMailboxOverlay();
           // Hide any character overlays and show auth overlay
           showCharCreate(false);
           showCharMenu(false);
@@ -3783,7 +3879,49 @@ function bind() {
   if (mailButton) {
     mailButton.onclick = () => {
       if (state.inBattle) return;
-      openMailboxModal();
+      openMailboxOverlay();
+    };
+  }
+
+  const mailboxOverlay = byId("mailboxOverlay");
+  if (mailboxOverlay) {
+    mailboxOverlay.addEventListener("click", (event) => {
+      if (event.target === mailboxOverlay) closeMailboxOverlay();
+    });
+  }
+
+  document.querySelectorAll(".mailboxTab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const value = tab.getAttribute("data-tab") || "all";
+      mailboxState.tab = value;
+      document.querySelectorAll(".mailboxTab").forEach((btn) => {
+        btn.classList.toggle("active", btn === tab);
+      });
+      renderMailboxList();
+    });
+  });
+
+  const mailboxClose = byId("mailboxCloseBtn");
+  if (mailboxClose) mailboxClose.onclick = () => setMailboxDetailOpen(false);
+
+  const mailboxAction = byId("mailboxAction");
+  if (mailboxAction) {
+    mailboxAction.onclick = async () => {
+      const unreadItems = mailboxState.items.filter((item) => !item.read_at);
+      await Promise.all(unreadItems.map((item) => mailboxMarkRead(item.id)));
+      await refreshMailboxItems();
+    };
+  }
+
+  const mailboxClaimBtn = byId("mailboxClaimBtn");
+  if (mailboxClaimBtn) {
+    mailboxClaimBtn.onclick = async () => {
+      const id = mailboxState.selected;
+      if (!id) return;
+      await mailboxClaim(id);
+      await refreshMailboxItems();
+      const updated = mailboxState.items.find((entry) => entry.id === id);
+      if (updated) renderMailboxDetail(updated);
     };
   }
 
@@ -4244,7 +4382,7 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
   openCharacterMenu();
 
   try {
-    await refreshMailboxBadge();
+    await refreshMailboxItems();
   } catch (e) {
     console.error("[MAILBOX] gagal refresh badge", e);
   }
