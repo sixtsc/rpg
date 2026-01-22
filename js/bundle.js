@@ -758,12 +758,14 @@ function addLog(tag, msg) {
 }
 
 function pulseGold(){
-  const el = $("goldValue") || $("goldPill");
-  if (!el) return;
-  el.classList.remove("goldPulse");
-  void el.offsetWidth;
-  el.classList.add("goldPulse");
-  setTimeout(() => el.classList.remove("goldPulse"), 600);
+  const targets = [$("goldValue"), $("marketGoldValue"), $("goldPill")].filter(Boolean);
+  if (!targets.length) return;
+  targets.forEach((el) => {
+    el.classList.remove("goldPulse");
+    void el.offsetWidth;
+    el.classList.add("goldPulse");
+    setTimeout(() => el.classList.remove("goldPulse"), 600);
+  });
 }
 
 function pulseMarketGrid(){
@@ -1489,6 +1491,8 @@ function refresh(state) {
   }
   const goldValue = $("goldValue");
   if (goldValue) goldValue.textContent = `${p.gold}`;
+  const marketGoldValue = $("marketGoldValue");
+  if (marketGoldValue) marketGoldValue.textContent = `${p.gold}`;
   const gemValue = $("gemValue");
   if (gemValue) gemValue.textContent = `${p.gems || 0}`;
 

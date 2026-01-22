@@ -967,6 +967,11 @@ body.inBattle .enemyMiniMeta .muted{
   background:var(--card);
   color:var(--text);
   font-weight:700;
+  font-size:14px;
+  line-height:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   cursor:pointer;
 }
 .confirmQtyValue{
@@ -1080,6 +1085,17 @@ body.inBattle .enemyMiniMeta .muted{
   align-items:center;
   gap:16px;
   margin-bottom:24px;
+}
+.marketActions{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:12px;
+}
+.marketCurrency .currencyPill{
+  font-weight:700;
+  min-width:86px;
+  justify-content:center;
 }
 .marketPageHeader h2{
   margin:0 0 6px;
@@ -1198,15 +1214,16 @@ body.inBattle .enemyMiniMeta .muted{
   box-shadow:0 12px 24px rgba(0,0,0,0.25);
 }
 .marketItemThumb{
-  width:64px;
-  height:64px;
+  width:60px;
+  height:60px;
   border-radius:12px;
   background:var(--card);
   border:1px dashed rgba(159,178,200,0.4);
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:28px;
+  font-size:26px;
+  line-height:1;
   position:relative;
 }
 .marketItemThumb img{
