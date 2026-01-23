@@ -1109,24 +1109,32 @@ body.inBattle .enemyMiniMeta .muted{
   text-align:center;
 }
 .marketBackBtn{
-  width:40px;
-  height:40px;
-  border-radius:999px;
-  border:1px solid var(--line);
-  background:var(--card2);
-  color:var(--text);
-  font-size:18px;
-  font-weight:700;
+  width:44px;
+  height:44px;
+  border-radius:12px;
+  border:1px solid rgba(58,108,255,0.45);
+  background:rgba(58,108,255,0.18);
+  color:#e8efff;
+  font-size:20px;
+  font-weight:800;
   cursor:pointer;
   display:flex;
   align-items:center;
   justify-content:center;
-  transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  line-height:1;
+  box-shadow:0 0 0 1px rgba(58,108,255,0.2) inset;
+  transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease;
 }
 .marketBackBtn:hover{
   transform:translateY(-1px);
-  border-color:rgba(58,108,255,0.55);
-  box-shadow:0 6px 14px rgba(0,0,0,0.25);
+  border-color:rgba(58,108,255,0.7);
+  background:rgba(58,108,255,0.28);
+  box-shadow:0 6px 14px rgba(0,0,0,0.25), 0 0 0 1px rgba(58,108,255,0.35) inset;
+}
+.marketBackBtn span{
+  display:block;
+  line-height:1;
+  transform:translateY(-1px);
 }
 .marketCurrency .currencyPill{
   font-weight:700;
