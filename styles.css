@@ -1094,6 +1094,7 @@ body.inBattle .enemyMiniMeta .muted{
   grid-column:2;
   grid-row:1;
   align-self:start;
+  margin-top:-6px;
 }
 .marketCurrency{
   display:flex;
@@ -1115,7 +1116,7 @@ body.inBattle .enemyMiniMeta .muted{
   border:1px solid rgba(58,108,255,0.45);
   background:rgba(58,108,255,0.18);
   color:#e8efff;
-  font-size:20px;
+  font-size:22px;
   font-weight:800;
   cursor:pointer;
   display:flex;
@@ -1134,7 +1135,7 @@ body.inBattle .enemyMiniMeta .muted{
 .marketBackBtn span{
   display:block;
   line-height:1;
-  transform:translateY(-1px);
+  transform:translateY(-2px);
 }
 .marketCurrency .currencyPill{
   font-weight:700;
