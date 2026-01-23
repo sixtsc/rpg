@@ -1093,6 +1093,7 @@ body.inBattle .enemyMiniMeta .muted{
   justify-content:flex-end;
   grid-column:2;
   grid-row:1;
+  align-self:start;
 }
 .marketCurrency{
   display:flex;
