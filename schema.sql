@@ -24,3 +24,20 @@ CREATE TABLE IF NOT EXISTS saves (
 );
 
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+
+CREATE TABLE IF NOT EXISTS mailbox_messages (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  attachments TEXT,
+  created_at INTEGER NOT NULL,
+  expires_at INTEGER,
+  read_at INTEGER,
+  claimed_at INTEGER,
+  source TEXT,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_mailbox_user_created ON mailbox_messages(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_mailbox_user_claimed ON mailbox_messages(user_id, claimed_at);

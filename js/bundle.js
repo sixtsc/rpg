@@ -504,7 +504,11 @@ function normalizeProfilePayload(payload){
 
     for (let i = 0; i < MAX_CHAR_SLOTS; i++){
       const slot = payload.slots[i];
-      out.slots[i] = slot ? normalizePlayer(slot) : null;
+      const normalized = slot ? normalizePlayer(slot) : null;
+      if (normalized && typeof normalized.charId !== "number") {
+        normalized.charId = i;
+      }
+      out.slots[i] = normalized;
     }
     return out;
   }
@@ -530,11 +534,18 @@ function getProfilePayloadFromState(){
   );
   out.slots = Array.from({ length: MAX_CHAR_SLOTS }, (_, i) => {
     const slot = state.slots && state.slots[i];
-    return slot ? normalizePlayer(slot) : null;
+    if (!slot) return null;
+    const normalized = normalizePlayer(slot);
+    if (typeof normalized.charId !== "number") normalized.charId = i;
+    return normalized;
   });
 
   // Persist current player into active slot
-  if (state.player) out.slots[out.activeSlot] = normalizePlayer(state.player);
+  if (state.player) {
+    const normalized = normalizePlayer(state.player);
+    if (typeof normalized.charId !== "number") normalized.charId = out.activeSlot;
+    out.slots[out.activeSlot] = normalized;
+  }
 
   out.t = Date.now();
   return out;
@@ -586,6 +597,226 @@ async function apiJson(path, opts = {}) {
   let data = null;
   try { data = await res.json(); } catch {}
   return { res, data };
+}
+
+async function mailboxList() {
+  return apiJson("/api/mailbox-list?limit=50");
+}
+
+async function mailboxMarkRead(id) {
+  return apiJson("/api/mailbox-read", {
+    method: "POST",
+    body: JSON.stringify({ id }),
+  });
+}
+
+async function mailboxClaim(id) {
+  return apiJson("/api/mailbox-claim", {
+    method: "POST",
+    body: JSON.stringify({ id }),
+  });
+}
+
+function formatMailboxTime(epochSec) {
+  if (!epochSec) return "";
+  try {
+    return new Date(epochSec * 1000).toLocaleString("id-ID");
+  } catch {
+    return "";
+  }
+}
+
+const mailboxState = {
+  items: [],
+  tab: "all",
+  selected: null,
+};
+
+function updateMailboxBadge(items) {
+  const btn = byId("mailButton");
+  if (!btn) return;
+  const hasUnread = Array.isArray(items) && items.some((item) => !item.read_at);
+  btn.classList.toggle("hasUnread", hasUnread);
+}
+
+async function refreshMailboxBadge() {
+  const { res, data } = await mailboxList();
+  if (!res.ok) {
+    updateMailboxBadge([]);
+    return;
+  }
+  updateMailboxBadge(data?.items || []);
+}
+
+function getMailboxOverlay() {
+  return byId("mailboxOverlay");
+}
+
+function setMailboxOverlayVisible(visible) {
+  const overlay = getMailboxOverlay();
+  if (!overlay) return;
+  overlay.classList.toggle("hidden", !visible);
+  overlay.setAttribute("aria-hidden", visible ? "false" : "true");
+}
+
+function renderMailboxList() {
+  const list = byId("mailboxList");
+  if (!list) return;
+  list.innerHTML = "";
+
+  const filtered = mailboxState.tab === "unclaimed"
+    ? mailboxState.items.filter((item) => !item.claimed_at)
+    : mailboxState.items.slice();
+
+  if (filtered.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "mailItem";
+    empty.innerHTML = `
+      <div class="mailAvatar">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 6.5h16a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 20 17.5H4A1.5 1.5 0 0 1 2.5 16V8A1.5 1.5 0 0 1 4 6.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          <path d="m3.5 8 8.5 5 8.5-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="mailTitle">Inbox kosong</div>
+        <div class="mailBody">Belum ada pesan.</div>
+      </div>
+    `;
+    list.appendChild(empty);
+    return;
+  }
+
+  filtered.forEach((item) => {
+    const card = document.createElement("div");
+    const unread = !item.read_at;
+    card.className = `mailItem${unread ? " mailItemUnread" : ""}`;
+
+    const hasRewards = Array.isArray(item.attachments) && item.attachments.length > 0 && !item.claimed_at;
+    const metaText = [formatMailboxTime(item.created_at), item.source].filter(Boolean).join(" • ");
+    const statusIcon = item.claimed_at
+      ? `<span class="mailStatusIcon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M6 12.5 10 16l8-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>`
+      : (!item.read_at ? "" : `<span class="mailStatusIcon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M4 7.5h16a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 20 18.5H4A1.5 1.5 0 0 1 2.5 17V9A1.5 1.5 0 0 1 4 7.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="m3.5 9 8.5 5 8.5-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>`);
+    const statusText = item.claimed_at ? "Claimed" : (item.read_at ? "Read" : "");
+
+    card.innerHTML = `
+      <div class="mailAvatar">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 6.5h16a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 20 17.5H4A1.5 1.5 0 0 1 2.5 16V8A1.5 1.5 0 0 1 4 6.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          <path d="m3.5 8 8.5 5 8.5-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        ${hasRewards ? "<span class=\"mailRewardBadge\">★</span>" : ""}
+      </div>
+      <div>
+        <div class="mailTitle">${escapeHtml(item.title || "Mailbox")}</div>
+        <div class="mailBody">${escapeHtml(item.body || "")}</div>
+        <div class="mailMeta">${escapeHtml(metaText)}</div>
+      </div>
+      <div class="mailStatus">${statusIcon}${escapeHtml(statusText)}</div>
+    `;
+    card.onclick = () => openMailboxDetail(item.id);
+    list.appendChild(card);
+  });
+}
+
+function renderMailboxDetail(item) {
+  const detail = byId("mailboxDetail");
+  if (!detail) return;
+  const title = byId("mailboxDetailTitle");
+  const sender = byId("mailboxDetailSender");
+  const body = byId("mailboxDetailBody");
+  const grid = byId("mailboxRewardsGrid");
+  const claimBtn = byId("mailboxClaimBtn");
+
+  if (title) title.textContent = item?.title || "Mail";
+  if (sender) sender.textContent = item?.source || "System";
+  if (body) body.textContent = item?.body || "";
+  if (grid) grid.innerHTML = "";
+
+  const attachments = Array.isArray(item?.attachments) ? item.attachments : [];
+  if (grid) {
+    if (attachments.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "rewardCard";
+      empty.innerHTML = `
+        <div class="rewardAvatar">?</div>
+        <div>Tidak ada hadiah</div>
+      `;
+      grid.appendChild(empty);
+    } else {
+      attachments.forEach((reward) => {
+        const card = document.createElement("div");
+        card.className = "rewardCard";
+        const name = reward?.name || reward?.type || "Reward";
+        const amount = reward?.amount ? `x${reward.amount}` : "";
+        card.innerHTML = `
+          <div class="rewardAvatar">${escapeHtml(String(name).slice(0, 1).toUpperCase())}</div>
+          <div>${escapeHtml(`${name} ${amount}`.trim())}</div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+  }
+
+  if (claimBtn) {
+    const canClaim = attachments.length > 0 && !item?.claimed_at;
+    claimBtn.disabled = !canClaim;
+    claimBtn.textContent = item?.claimed_at ? "Claimed" : "Claim";
+  }
+}
+
+function setMailboxDetailOpen(open) {
+  const detail = byId("mailboxDetail");
+  if (!detail) return;
+  detail.classList.toggle("open", open);
+  detail.setAttribute("aria-hidden", open ? "false" : "true");
+}
+
+async function openMailboxDetail(id) {
+  const item = mailboxState.items.find((entry) => entry.id === id);
+  if (!item) return;
+  if (!item.read_at) {
+    await mailboxMarkRead(id);
+    await refreshMailboxItems();
+  }
+  mailboxState.selected = id;
+  const refreshed = mailboxState.items.find((entry) => entry.id === id) || item;
+  renderMailboxDetail(refreshed);
+  setMailboxDetailOpen(true);
+}
+
+async function refreshMailboxItems() {
+  const { res, data } = await mailboxList();
+  if (!res.ok) {
+    mailboxState.items = [];
+    renderMailboxList();
+    updateMailboxBadge([]);
+    return;
+  }
+  mailboxState.items = Array.isArray(data?.items) ? data.items : [];
+  updateMailboxBadge(mailboxState.items);
+  renderMailboxList();
+}
+
+async function openMailboxOverlay() {
+  setMailboxOverlayVisible(true);
+  await refreshMailboxItems();
+  setMailboxDetailOpen(false);
+}
+
+function closeMailboxOverlay() {
+  setMailboxOverlayVisible(false);
+  setMailboxDetailOpen(false);
+  mailboxState.selected = null;
 }
 
 async function cloudMe() {
@@ -1514,6 +1745,9 @@ function refresh(state) {
 
   document.body.classList.toggle("inBattle", !!inBattle);
   document.body.classList.toggle("inTown", !inBattle);
+  if (inBattle) {
+    closeMailboxOverlay();
+  }
 
   if (inBattle) {
     const e = getPrimaryEnemy();
@@ -3163,9 +3397,12 @@ function applyAttributeDelta(statKey, delta){
 }
 
 function openProfileModal(){
+  const charId = (state.player && typeof state.player.charId === "number") ? state.player.charId : state.activeSlot;
+  const charMeta = charId === 0 ? "Admin" : "";
   modal.open(
     "Profile",
     [
+      { title: `ID: ${charId}`, desc: "ID karakter.", meta: charMeta },
       { title: "Equipment", desc: "Kelola gear (hand, head, pant, armor, shoes).", meta: "", value: "equip" },
       { title: "Stat", desc: "Atur stat poin.", meta: "", value: "stat" },
       { title: "Skill Slot", desc: "Pilih skill untuk slot battle.", meta: "", value: "skill_slot" },
@@ -3612,6 +3849,8 @@ function openTownMenu(){
           try { await cloudLogout(); } catch(e) {}
           safeRemove(SAVE_KEY);
           resetToEmptyProfile();
+          updateMailboxBadge([]);
+          closeMailboxOverlay();
           // Hide any character overlays and show auth overlay
           showCharCreate(false);
           showCharMenu(false);
@@ -3655,6 +3894,58 @@ function bind() {
   if (btnShop) btnShop.onclick = () => openShopModal();
   const playerStatLink = byId("playerStatLink");
   if (playerStatLink) playerStatLink.onclick = openStatsModal;
+  const mailButton = byId("mailButton");
+  if (mailButton) {
+    mailButton.onclick = () => {
+      if (state.inBattle) return;
+      openMailboxOverlay();
+    };
+  }
+
+  const mailboxOverlay = byId("mailboxOverlay");
+  if (mailboxOverlay) {
+    mailboxOverlay.addEventListener("click", (event) => {
+      if (event.target === mailboxOverlay) closeMailboxOverlay();
+    });
+  }
+
+  document.querySelectorAll(".mailboxTab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const value = tab.getAttribute("data-tab") || "all";
+      mailboxState.tab = value;
+      document.querySelectorAll(".mailboxTab").forEach((btn) => {
+        btn.classList.toggle("active", btn === tab);
+      });
+      renderMailboxList();
+    });
+  });
+
+  const mailboxClose = byId("mailboxCloseBtn");
+  if (mailboxClose) mailboxClose.onclick = () => setMailboxDetailOpen(false);
+
+  const mailboxOverlayClose = byId("mailboxClose");
+  if (mailboxOverlayClose) mailboxOverlayClose.onclick = () => closeMailboxOverlay();
+
+  const mailboxAction = byId("mailboxAction");
+  if (mailboxAction) {
+    mailboxAction.onclick = async () => {
+      const unreadItems = mailboxState.items.filter((item) => !item.read_at);
+      await Promise.all(unreadItems.map((item) => mailboxMarkRead(item.id)));
+      await refreshMailboxItems();
+    };
+  }
+
+  const mailboxClaimBtn = byId("mailboxClaimBtn");
+  if (mailboxClaimBtn) {
+    mailboxClaimBtn.onclick = async () => {
+      const id = mailboxState.selected;
+      if (!id) return;
+      await mailboxClaim(id);
+      await refreshMailboxItems();
+      const updated = mailboxState.items.find((entry) => entry.id === id);
+      if (updated) renderMailboxDetail(updated);
+    };
+  }
 
   // Character create menu buttons
   const ccCreate = byId("ccCreate");
@@ -3989,6 +4280,7 @@ function handleCreateCharacter(){
   const p = normalizePlayer(newPlayer());
   p.name = name;
   p.gender = gender;
+  p.charId = pendingCreateSlot;
 
   state.slots[pendingCreateSlot] = p;
   state.activeSlot = pendingCreateSlot;
@@ -4110,6 +4402,12 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
   // Show character menu
   showAuth(false);
   openCharacterMenu();
+
+  try {
+    await refreshMailboxItems();
+  } catch (e) {
+    console.error("[MAILBOX] gagal refresh badge", e);
+  }
 
   return true;
 }

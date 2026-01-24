@@ -74,12 +74,60 @@
     </div>
   </div>
 
+  <div id="mailboxOverlay" class="mailboxOverlay hidden" aria-hidden="true">
+    <div class="mailboxPanel">
+      <header class="mailboxHeader">
+        <div>
+          <div class="mailboxTitle">Mail Box</div>
+          <div class="mailboxSubtitle">Pesan &amp; hadiah untukmu</div>
+        </div>
+        <div class="mailboxHeaderActions">
+          <button id="mailboxAction" class="mailboxAction" type="button">Tandai semua dibaca</button>
+          <button id="mailboxClose" class="mailboxClose" type="button" aria-label="Tutup mailbox">✕</button>
+        </div>
+      </header>
+
+      <div class="mailboxTabs">
+        <button class="mailboxTab active" type="button" data-tab="all">Semua</button>
+        <button class="mailboxTab" type="button" data-tab="unclaimed">Belum Claim</button>
+      </div>
+
+      <div id="mailboxList" class="mailboxList"></div>
+    </div>
+
+    <div id="mailboxDetail" class="mailboxDetail" aria-hidden="true">
+      <div class="mailboxSheetHandle"></div>
+      <div class="mailboxDetailHeader">
+        <div class="mailboxDetailHeaderText">
+          <div id="mailboxDetailTitle" class="mailboxDetailTitle">Mail</div>
+          <div id="mailboxDetailSender" class="mailboxDetailSender">System</div>
+        </div>
+      </div>
+      <div id="mailboxDetailBody" class="mailboxDetailBody"></div>
+      <div class="mailboxRewards">
+        <div class="mailboxRewardsTitle">Rewards</div>
+        <div id="mailboxRewardsGrid" class="mailboxRewardsGrid"></div>
+      </div>
+      <div class="mailboxDetailFooter">
+        <button id="mailboxClaimBtn" class="btn primary" type="button">Claim</button>
+        <button id="mailboxCloseBtn" class="btn ghost" type="button">Tutup</button>
+      </div>
+    </div>
+  </div>
+
 <div class="wrap">
     <div class="topbar">
       <div class="brand">
         <img class="logo" src="./assets/logo.svg" alt="RPG Logo" />
         <h1>Text RPG Turn-Based <span class="pill" id="modePill">Town</span></h1>
       </div>
+      <button id="mailButton" class="mailButton" type="button" aria-label="Mailbox">
+        <svg class="mailIcon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 6.5h16a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 20 17.5H4A1.5 1.5 0 0 1 2.5 16V8A1.5 1.5 0 0 1 4 6.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          <path d="m3.5 8 8.5 5 8.5-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="mailBadge" aria-hidden="true"></span>
+      </button>
     </div>
 
     <div class="grid">
