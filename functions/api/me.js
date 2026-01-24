@@ -25,8 +25,12 @@ export async function onRequest({ request, env }) {
   const userId = await authUserId(request, env);
   if (!userId) return json({ ok: false, loggedIn: false });
 
-  const row = await env.DB.prepare("SELECT username FROM users WHERE id = ?").bind(userId).first();
-  return json({ ok: true, loggedIn: true, user: { id: userId, username: row?.username || "" } });
+  const row = await env.DB.prepare("SELECT username, is_admin FROM users WHERE id = ?").bind(userId).first();
+  return json({
+    ok: true,
+    loggedIn: true,
+    user: { id: userId, username: row?.username || "", isAdmin: row?.is_admin === 1 },
+  });
   } catch (e) {
     return json({ message: "Server error (me): " + (e?.message || String(e)) }, { status: 500 });
   }

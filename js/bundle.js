@@ -278,6 +278,20 @@ function normalizeAlly(ally){
   };
 }
 
+function generateCharId(){
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  const buf = new Uint8Array(16);
+  crypto.getRandomValues(buf);
+  return Array.from(buf).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function ensureCharId(value){
+  if (typeof value === "string" && value.trim()) return value;
+  return generateCharId();
+}
+
 
 function normalizePlayer(p){
   if (!p) return p;
@@ -365,6 +379,7 @@ function normalizePlayer(p){
   if (typeof p.level !== "number") p.level = 1;
   if (typeof p.name !== "string") p.name = "Hero";
   if (typeof p.gems !== "number") p.gems = 0;
+  p.charId = ensureCharId(p.charId);
 
   applyDerivedStats(p);
   applyEquipmentStats(p);
@@ -505,9 +520,7 @@ function normalizeProfilePayload(payload){
     for (let i = 0; i < MAX_CHAR_SLOTS; i++){
       const slot = payload.slots[i];
       const normalized = slot ? normalizePlayer(slot) : null;
-      if (normalized && typeof normalized.charId !== "number") {
-        normalized.charId = i;
-      }
+      if (normalized) normalized.charId = ensureCharId(normalized.charId);
       out.slots[i] = normalized;
     }
     return out;
@@ -519,6 +532,7 @@ function normalizeProfilePayload(payload){
     out.t = payload.t || Date.now();
     out.activeSlot = 0;
     out.slots[0] = normalizePlayer(payload.player);
+    if (out.slots[0]) out.slots[0].charId = ensureCharId(out.slots[0].charId);
     return out;
   }
 
@@ -536,14 +550,14 @@ function getProfilePayloadFromState(){
     const slot = state.slots && state.slots[i];
     if (!slot) return null;
     const normalized = normalizePlayer(slot);
-    if (typeof normalized.charId !== "number") normalized.charId = i;
+    normalized.charId = ensureCharId(normalized.charId);
     return normalized;
   });
 
   // Persist current player into active slot
   if (state.player) {
     const normalized = normalizePlayer(state.player);
-    if (typeof normalized.charId !== "number") normalized.charId = out.activeSlot;
+    normalized.charId = ensureCharId(normalized.charId);
     out.slots[out.activeSlot] = normalized;
   }
 
@@ -3667,13 +3681,17 @@ function applyAttributeDelta(statKey, delta){
   return true;
 }
 
+function isAdminUser(){
+  return !!(cloudUserCache && cloudUserCache.isAdmin);
+}
+
 function openProfileModal(){
-  const charId = (state.player && typeof state.player.charId === "number") ? state.player.charId : state.activeSlot;
-  const charMeta = charId === 0 ? "Admin" : "";
+  const charId = state.player?.charId || "—";
+  const charMeta = isAdminUser() ? "Admin" : "";
   modal.open(
     "Profile",
     [
-      { title: `ID: ${charId}`, desc: "ID karakter.", meta: charMeta },
+      { title: `ID: ${charId}`, desc: "ID karakter (unik).", meta: charMeta },
       { title: "Equipment", desc: "Kelola gear (hand, head, pant, armor, shoes).", meta: "", value: "equip" },
       { title: "Stat", desc: "Atur stat poin.", meta: "", value: "stat" },
       { title: "Skill Slot", desc: "Pilih skill untuk slot battle.", meta: "", value: "skill_slot" },
@@ -3682,6 +3700,58 @@ function openProfileModal(){
       if (pick === "equip") return openEquipmentModal();
       if (pick === "stat") return openProfileStatModal();
       if (pick === "skill_slot") return openSkillSlotModal();
+    }
+  );
+}
+
+function openDevToolsModal(){
+  if (!isAdminUser()) {
+    addLog("WARN", "Dev tool hanya untuk admin.");
+    return;
+  }
+  const p = state.player;
+  if (!p) return;
+
+  modal.open(
+    "Dev Tools",
+    [
+      { title: "Back", desc: "Kembali ke Menu.", meta: "", value: "back", className: "subMenuBack" },
+      { title: "Gold +1000", desc: "Tambah 1000 gold.", meta: "", value: "gold" },
+      { title: "Gems +50", desc: "Tambah 50 gems.", meta: "", value: "gems" },
+      { title: "Heal penuh", desc: "Pulihkan HP/MP party.", meta: "", value: "heal" },
+      { title: "Level +1", desc: "Naikkan level karakter.", meta: "", value: "level" },
+      { title: "Stat Points +5", desc: "Tambah 5 stat points.", meta: "", value: "stat" },
+    ],
+    (pick) => {
+      if (pick === "back") return openTownMenu();
+      if (pick === "gold") {
+        p.gold = Math.max(0, (p.gold || 0) + 1000);
+        addLog("DEV", "Gold +1000.");
+      }
+      if (pick === "gems") {
+        p.gems = Math.max(0, (p.gems || 0) + 50);
+        addLog("DEV", "Gems +50.");
+      }
+      if (pick === "heal") {
+        p.hp = p.maxHp;
+        p.mp = p.maxMp;
+        restoreAllies();
+        addLog("DEV", "HP/MP party dipulihkan.");
+      }
+      if (pick === "level") {
+        levelUp();
+        addLog("DEV", "Level +1.");
+      }
+      if (pick === "stat") {
+        p.statPoints = (p.statPoints || 0) + 5;
+        addLog("DEV", "Stat points +5.");
+      }
+
+      if (Array.isArray(state.slots)) state.slots[state.activeSlot] = p;
+      autosave(state);
+      (async () => { try { await cloudTrySaveCurrentProfile(); } catch(e) {} })();
+      refresh(state);
+      openDevToolsModal();
     }
   );
 }
@@ -4010,18 +4080,30 @@ function openInventoryReadOnly() {
 
 /* ------------------------------ Town MENU ------------------------------ */
 
-function openTownMenu(){
+async function openTownMenu(){
   if (state.inBattle) return;
+
+  const me = await ensureCloudUser();
+  const isAdmin = !!me?.isAdmin;
+
+  const choices = [
+    { title: "Load Cloud", desc: "Load progress dari cloud.", meta: "", value: "cloud_load" },
+    { title: "Save Cloud", desc: "Save progress ke cloud.", meta: "", value: "cloud_save" },
+    { title: "Ganti Karakter", desc: "Pilih slot karakter lain.", meta: "", value: "switch_char" },
+  ];
+  if (isAdmin) {
+    choices.push({ title: "Dev Tools", desc: "Tool admin untuk debug.", meta: "", value: "dev_tools" });
+  }
+  choices.push({ title: "Log out", desc: "Keluar dari akun cloud dan kembali ke halaman login.", meta: "", value: "logout", className:"danger" });
 
   modal.open(
     "Menu",
-    [
-      { title: "Load Cloud", desc: "Load progress dari cloud.", meta: "", value: "cloud_load" },
-      { title: "Save Cloud", desc: "Save progress ke cloud.", meta: "", value: "cloud_save" },
-      { title: "Ganti Karakter", desc: "Pilih slot karakter lain.", meta: "", value: "switch_char" },
-      { title: "Log out", desc: "Keluar dari akun cloud dan kembali ke halaman login.", meta: "", value: "logout", className:"danger" },
-    ],
+    choices,
     (pick) => {
+      if (pick === "dev_tools") {
+        openDevToolsModal();
+        return;
+      }
       if (pick === "cloud_save") {
         (async () => {
           try {
@@ -4306,6 +4388,7 @@ function startNewGame(slotIdx){
     if (prev.name) p.name = prev.name;
     if (prev.gender) p.gender = prev.gender;
   }
+  p.charId = generateCharId();
 
   state.slots[idx] = p;
   state.activeSlot = idx;
@@ -4553,7 +4636,7 @@ function handleCreateCharacter(){
   const p = normalizePlayer(newPlayer());
   p.name = name;
   p.gender = gender;
-  p.charId = pendingCreateSlot;
+  p.charId = generateCharId();
 
   state.slots[pendingCreateSlot] = p;
   state.activeSlot = pendingCreateSlot;
