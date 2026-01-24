@@ -569,6 +569,9 @@ body.inBattle .playerCurrency{
 .barRow{ display:flex; justify-content:space-between; gap:10px; margin-bottom:6px; }
 
 .bar{
+  position:relative;
+  display:flex;
+  align-items:center;
   height:12px;
   width:100%;
   border-radius:999px;
@@ -580,7 +583,23 @@ body.inBattle .playerCurrency{
 .fill{
   height:100%;
   width:0%;
+  position:relative;
+  z-index:1;
   transition: width 320ms ease-out;
+}
+
+.barText{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:11px;
+  font-weight:700;
+  color:#e6f0ff;
+  text-shadow:0 1px 2px rgba(0,0,0,.65);
+  z-index:2;
+  pointer-events:none;
 }
 
 .hp{ background:var(--good); }
@@ -771,7 +790,26 @@ body.inBattle .bars{
   margin-top:8px;
 }
 body.inBattle .bar{
-  height:8px;
+  height:10px;
+}
+body.inBattle .allyCard .sectionTitle,
+body.inBattle .enemyCard .sectionTitle{
+  order:3;
+  margin-bottom:2px;
+}
+body.inBattle .allyCard .nameSub,
+body.inBattle .allyCard .allySub,
+body.inBattle .enemyCard .nameSub{
+  order:2;
+}
+body.inBattle .allyCard .avatarWrap,
+body.inBattle .enemyCard .avatarWrap{
+  order:1;
+}
+body.inBattle .allyCard .bars,
+body.inBattle .enemyCard .bars{
+  order:4;
+  margin-top:6px;
 }
 body.inBattle .battleActions{
   gap:8px;
@@ -808,7 +846,7 @@ body.inBattle .enemyMiniMeta .muted{
     height:var(--battle-card-height);
   }
   body.inBattle .bar{
-    height:7px;
+    height:9px;
   }
 }
 
