@@ -13,23 +13,23 @@ const SKILLS = {
   meteor: { name:"Meteor", icon:"./assets/skills/meteor.svg", mpCost:12, power:20, cooldown:4, desc:"Pukulan meteor dengan damage besar." }
 };
 const ITEMS = {
-  potion: { name:"Potion", kind:"heal_hp", amount:25, desc:"Memulihkan 25 HP" },
-  ether:  { name:"Ether",  kind:"heal_mp", amount:10, desc:"Memulihkan 10 MP" },
-  woodenSword: { name:"Wooden Sword", kind:"gear", slot:"hand", desc:"Senjata kayu sederhana.", atk:2 },
-  clothHat: { name:"Cloth Hat", kind:"gear", slot:"head", desc:"Topi kain lusuh.", def:1 },
-  leatherArmor: { name:"Leather Armor", kind:"gear", slot:"armor", desc:"Armor kulit ringan.", def:2 },
-  leatherPants: { name:"Leather Pants", kind:"gear", slot:"pant", desc:"Celana kulit sederhana.", def:1 },
-  oldBoots: { name:"Old Boots", kind:"gear", slot:"shoes", desc:"Sepatu tua tapi nyaman.", spd:1 },
-  bronzeSword: { name:"Bronze Sword", kind:"gear", slot:"hand", desc:"Pedang Lv3 dengan serangan stabil.", atk:4 },
-  ironSword: { name:"Iron Sword", kind:"gear", slot:"hand", desc:"Pedang Lv6 yang kokoh.", atk:6 },
-  runeBlade: { name:"Rune Blade", kind:"gear", slot:"hand", desc:"Pedang Lv9 dengan rune kuno.", atk:9 },
-  leatherHood: { name:"Leather Hood", kind:"gear", slot:"head", desc:"Pelindung kepala Lv2.", def:2 },
-  ironHelm: { name:"Iron Helm", kind:"gear", slot:"head", desc:"Helm Lv7 yang berat.", def:4 },
-  chainVest: { name:"Chain Vest", kind:"gear", slot:"armor", desc:"Armor Lv4 berbahan rantai.", def:4 },
-  steelArmor: { name:"Steel Armor", kind:"gear", slot:"armor", desc:"Armor Lv8 dengan pertahanan tinggi.", def:7 },
-  travelerPants: { name:"Traveler Pants", kind:"gear", slot:"pant", desc:"Celana Lv3 untuk perjalanan.", def:2, spd:1 },
-  ironGreaves: { name:"Iron Greaves", kind:"gear", slot:"pant", desc:"Greaves Lv7 kokoh.", def:4 },
-  swiftBoots: { name:"Swift Boots", kind:"gear", slot:"shoes", desc:"Sepatu Lv5 meningkatkan kecepatan.", spd:2 }
+  potion: { name:"Potion", kind:"heal_hp", amount:25, desc:"Memulihkan 25 HP", level:1 },
+  ether:  { name:"Ether",  kind:"heal_mp", amount:10, desc:"Memulihkan 10 MP", level:1 },
+  woodenSword: { name:"Wooden Sword", kind:"gear", slot:"hand", desc:"Senjata kayu sederhana.", atk:2, level:1 },
+  clothHat: { name:"Cloth Hat", kind:"gear", slot:"head", desc:"Topi kain lusuh.", def:1, level:1 },
+  leatherArmor: { name:"Leather Armor", kind:"gear", slot:"armor", desc:"Armor kulit ringan.", def:2, level:1 },
+  leatherPants: { name:"Leather Pants", kind:"gear", slot:"pant", desc:"Celana kulit sederhana.", def:1, level:1 },
+  oldBoots: { name:"Old Boots", kind:"gear", slot:"shoes", desc:"Sepatu tua tapi nyaman.", spd:1, level:1 },
+  bronzeSword: { name:"Bronze Sword", kind:"gear", slot:"hand", desc:"Pedang Lv3 dengan serangan stabil.", atk:4, level:3 },
+  ironSword: { name:"Iron Sword", kind:"gear", slot:"hand", desc:"Pedang Lv6 yang kokoh.", atk:6, level:6 },
+  runeBlade: { name:"Rune Blade", kind:"gear", slot:"hand", desc:"Pedang Lv9 dengan rune kuno.", atk:9, level:9 },
+  leatherHood: { name:"Leather Hood", kind:"gear", slot:"head", desc:"Pelindung kepala Lv2.", def:2, level:2 },
+  ironHelm: { name:"Iron Helm", kind:"gear", slot:"head", desc:"Helm Lv7 yang berat.", def:4, level:7 },
+  chainVest: { name:"Chain Vest", kind:"gear", slot:"armor", desc:"Armor Lv4 berbahan rantai.", def:4, level:4 },
+  steelArmor: { name:"Steel Armor", kind:"gear", slot:"armor", desc:"Armor Lv8 dengan pertahanan tinggi.", def:7, level:8 },
+  travelerPants: { name:"Traveler Pants", kind:"gear", slot:"pant", desc:"Celana Lv3 untuk perjalanan.", def:2, spd:1, level:3 },
+  ironGreaves: { name:"Iron Greaves", kind:"gear", slot:"pant", desc:"Greaves Lv7 kokoh.", def:4, level:7 },
+  swiftBoots: { name:"Swift Boots", kind:"gear", slot:"shoes", desc:"Sepatu Lv5 meningkatkan kecepatan.", spd:2, level:5 }
 };
 const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton"];
 const ENEMY_AVATARS = {
@@ -1013,6 +1013,26 @@ function addLog(tag, msg) {
   showToast(msg, tag);
 }
 
+function pulseGold(){
+  const targets = [$("goldValue"), $("marketGoldValue"), $("goldPill")].filter(Boolean);
+  if (!targets.length) return;
+  targets.forEach((el) => {
+    el.classList.remove("goldPulse");
+    void el.offsetWidth;
+    el.classList.add("goldPulse");
+    setTimeout(() => el.classList.remove("goldPulse"), 600);
+  });
+}
+
+function pulseMarketGrid(){
+  const grid = $("marketItemsGrid");
+  if (!grid) return;
+  grid.classList.remove("marketPulse");
+  void grid.offsetWidth;
+  grid.classList.add("marketPulse");
+  setTimeout(() => grid.classList.remove("marketPulse"), 450);
+}
+
 function showBattleResultOverlay(summary, onClose) {
   const backdrop = $("battleResultBackdrop");
   if (!backdrop) return;
@@ -1606,7 +1626,7 @@ const modal = {
     if (choices.some((c) => String(c.className || "").includes("marketSub"))) {
       body.classList.add("marketSubCompact");
     }
-    if (lowerTitle.includes("konfirmasi")) {
+    if (lowerTitle.includes("konfirmasi") || choices.some((c) => String(c.className || "").includes("confirmDetails"))) {
       body.classList.add("confirmPopup");
       if (modalEl) modalEl.classList.add("confirmPopup");
     }
@@ -1620,6 +1640,7 @@ const modal = {
       if (c.style) row.style.cssText += String(c.style);
 
       const left = document.createElement("div");
+      left.className = "left";
       const iconHtml = c.icon ? `<span class="skillIconWrap"><img class="skillIcon" src="${escapeHtml(c.icon)}" alt="" /></span>` : "";
       const descHtml = c.descHtml ? String(c.descHtml) : escapeHtml(c.desc || "");
       left.innerHTML = `
@@ -1728,8 +1749,12 @@ function refresh(state) {
   }
   const goldValue = $("goldValue");
   if (goldValue) goldValue.textContent = `${p.gold}`;
+  const marketGoldValue = $("marketGoldValue");
+  if (marketGoldValue) marketGoldValue.textContent = `${p.gold}`;
   const gemValue = $("gemValue");
   if (gemValue) gemValue.textContent = `${p.gems || 0}`;
+  const marketGemValue = $("marketGemValue");
+  if (marketGemValue) marketGemValue.textContent = `${p.gems || 0}`;
 
   // Player bars
   $("hpText").textContent = `${p.hp}/${p.maxHp}`;
@@ -2146,33 +2171,98 @@ function openMarketConfirm(mode, name){
   if (isBuy && !g) return openShopModal(mode);
   const basePrice = g?.price || 10;
   const gain = Math.max(1, Math.floor(basePrice / 2));
-  const priceText = isBuy ? `-${basePrice} gold` : `+${gain} gold`;
+  const maxQty = !isBuy ? Math.max(1, Number(inv[name]?.qty || 1)) : 1;
+  const startQty = !isBuy ? Math.min(Math.max(1, Number(state.marketSellQty || 1)), maxQty) : 1;
+  state.marketSellQty = startQty;
+  const priceValue = isBuy ? basePrice : gain * startQty;
+  const priceText = `${priceValue} gold`;
   const actionLabel = isBuy ? "Beli" : "Jual";
-  const title = isBuy ? "Konfirmasi Beli" : "Konfirmasi Jual";
+  const title = name;
+  const typeLabel = ref.kind === "gear" ? "Equipment" : "Consumable";
+  const stats = [
+    { label: "Tipe", value: typeLabel },
+    { label: "Harga", value: priceText },
+    !isBuy && maxQty > 1 ? { label: "Jumlah", value: String(startQty) } : null,
+    ref.atk ? { label: "ATK", value: `+${ref.atk}` } : null,
+    ref.def ? { label: "DEF", value: `+${ref.def}` } : null,
+    ref.spd ? { label: "SPD", value: `+${ref.spd}` } : null,
+  ].filter(Boolean);
+  const statsHtml = stats.map((s) => {
+    const statKey = s.label === "Harga" ? "price" : (s.label === "Jumlah" ? "qty" : "");
+    const keyAttr = statKey ? ` data-stat="${statKey}"` : "";
+    return `<div class="confirmStatRow"><span>${escapeHtml(s.label)}:</span><b${keyAttr}>${escapeHtml(String(s.value))}</b></div>`;
+  }).join("");
+  const qtyControls = !isBuy && maxQty > 1
+    ? `
+      <div class="confirmQtyRow">
+        <button type="button" class="confirmQtyBtn" data-action="minus">-</button>
+        <span class="confirmQtyValue" data-qty>${startQty}</span>
+        <button type="button" class="confirmQtyBtn" data-action="plus">+</button>
+      </div>
+    `
+    : "";
+  const descHtml = `
+    <div class="confirmDetailCard">
+      <div class="confirmThumb">📦</div>
+      <div class="confirmStats">
+        ${statsHtml}
+        ${qtyControls}
+      </div>
+    </div>
+    <div class="confirmDesc">${escapeHtml(ref.desc || "Item")}</div>
+  `;
   modal.open(
     title,
     [
-      { title: name, desc: ref.desc || "Item", meta: isBuy ? `${basePrice} gold` : priceText, value: undefined, className: "confirmDetails" },
+      { title: "Detail", descHtml, meta: "", value: undefined, className: "confirmDetails" },
       {
-        title: actionLabel,
-        desc: `${actionLabel} ${name}?`,
+        title: "",
+        desc: "",
         meta: "",
         value: undefined,
         className: "confirmActions",
         buttons: [
-          { text: "Batal", value: "back", className: "ghost" },
-          { text: actionLabel, value: `confirm:${name}`, className: "primary" },
+          { text: "Batal", value: "back", className: "ghost wide" },
+          { text: actionLabel.toUpperCase(), value: `confirm:${name}`, className: "primary wide" },
         ],
       },
     ],
     (pick) => {
-      if (pick === "back") return openShopModal(mode);
+      if (pick === "back") {
+        modal.close();
+        renderMarketPage();
+        return;
+      }
       if (!String(pick || "").startsWith("confirm:")) return;
-      const ok = isBuy ? buyItem(name) : sellItem(name);
-      if (!ok) addLog("WARN", isBuy ? "Gold tidak cukup atau item tidak tersedia." : "Item tidak bisa dijual.");
-      openShopModal(mode);
+      const qty = isBuy ? 1 : Math.min(Math.max(1, Number(state.marketSellQty || 1)), maxQty);
+      const ok = isBuy ? buyItem(name) : sellItem(name, qty);
+      if (!ok) showToast(isBuy ? "Gold tidak cukup atau item tidak tersedia." : "Item tidak bisa dijual.", "warn");
+      renderMarketPage();
     }
   );
+
+  if (!isBuy && maxQty > 1) {
+    const modalBody = $("modalBody");
+    const qtyValue = modalBody?.querySelector(".confirmQtyValue");
+    const priceValueEl = modalBody?.querySelector('[data-stat="price"]');
+    const qtyStatEl = modalBody?.querySelector('[data-stat="qty"]');
+    const updateQtyDisplay = (nextQty) => {
+      state.marketSellQty = nextQty;
+      if (qtyValue) qtyValue.textContent = String(nextQty);
+      if (qtyStatEl) qtyStatEl.textContent = String(nextQty);
+      if (priceValueEl) priceValueEl.textContent = `${gain * nextQty} gold`;
+    };
+    modalBody?.querySelectorAll(".confirmQtyBtn").forEach((btn) => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const action = btn.getAttribute("data-action");
+        let nextQty = Number(state.marketSellQty || 1);
+        if (action === "minus") nextQty = Math.max(1, nextQty - 1);
+        if (action === "plus") nextQty = Math.min(maxQty, nextQty + 1);
+        updateQtyDisplay(nextQty);
+      };
+    });
+  }
 }
 
 function buyItem(name){
@@ -2186,21 +2276,29 @@ function buyItem(name){
   else inv[name] = { ...g.ref, qty:1 };
   autosave(state);
   addLog("GOLD", `Beli ${name} (-${g.price} gold)`);
+  showToast(`Beli ${name} (-${g.price} gold)`, "gold");
+  pulseGold();
+  pulseMarketGrid();
   refresh(state);
   return true;
 }
 
-function sellItem(name){
+function sellItem(name, qty = 1){
   const p = state.player;
   if (!p || !p.inv || !p.inv[name]) return false;
   const inv = p.inv[name];
   const base = getShopItem(name)?.price || 10;
   const gain = Math.max(1, Math.floor(base / 2));
-  inv.qty -= 1;
+  const sellQty = Math.min(Math.max(1, Number(qty || 1)), inv.qty);
+  if (!sellQty) return false;
+  inv.qty -= sellQty;
   if (inv.qty <= 0) delete p.inv[name];
-  p.gold += gain;
+  p.gold += gain * sellQty;
   autosave(state);
-  addLog("GOLD", `Jual ${name} (+${gain} gold)`);
+  addLog("GOLD", `Jual ${name} x${sellQty} (+${gain * sellQty} gold)`);
+  showToast(`Jual ${name} x${sellQty} (+${gain * sellQty} gold)`, "gold");
+  pulseGold();
+  pulseMarketGrid();
   refresh(state);
   return true;
 }
@@ -2227,6 +2325,176 @@ function learnSkill(skillKey){
   return { ok:true };
 }
 
+function setMarketPageVisible(show){
+  const page = byId("marketPage");
+  const wrap = document.querySelector(".wrap");
+  if (!page || !wrap) return;
+  if (show) {
+    page.classList.remove("hidden");
+    page.setAttribute("aria-hidden", "false");
+    wrap.classList.add("hidden");
+  } else {
+    page.classList.add("hidden");
+    page.setAttribute("aria-hidden", "true");
+    wrap.classList.remove("hidden");
+  }
+}
+
+function ensureMarketState(){
+  if (!state.marketMode) state.marketMode = "buy";
+  if (!state.shopMarketCategory) state.shopMarketCategory = "equipment";
+  if (!state.shopEquipCategory) state.shopEquipCategory = "weapon";
+}
+
+function createMarketToggleButton(label, isActive, onClick){
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = `marketToggleBtn${isActive ? " active" : ""}`;
+  btn.textContent = label;
+  btn.onclick = onClick;
+  return btn;
+}
+
+function createMarketTabButton({ label, desc, icon, iconSrc, isActive, onClick, onlyIcon }){
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = `marketTabBtn${isActive ? " active" : ""}${onlyIcon ? " iconOnly" : ""}`;
+  if (label) btn.setAttribute("aria-label", label);
+  if (iconSrc) {
+    btn.innerHTML = `<img class="marketTabIcon" src="${escapeHtml(iconSrc)}" alt="" />`;
+  } else {
+    btn.innerHTML = `${icon ? `${icon} ` : ""}${label}${desc ? `<small>${desc}</small>` : ""}`;
+  }
+  btn.onclick = onClick;
+  return btn;
+}
+
+function renderMarketToggle(){
+  const toggle = byId("marketModeToggle");
+  if (!toggle) return;
+  toggle.innerHTML = "";
+  toggle.appendChild(createMarketToggleButton("Beli", state.marketMode === "buy", () => {
+    state.marketMode = "buy";
+    renderMarketPage();
+  }));
+  toggle.appendChild(createMarketToggleButton("Jual", state.marketMode === "sell", () => {
+    state.marketMode = "sell";
+    renderMarketPage();
+  }));
+}
+
+function renderMarketTabs(){
+  const categoryTabs = byId("marketCategoryTabs");
+  const equipTabs = byId("marketEquipTabs");
+  if (!categoryTabs || !equipTabs) return;
+  categoryTabs.innerHTML = "";
+  equipTabs.innerHTML = "";
+  const categories = [
+    { key:"equipment", label:"Equipment", icon:"🛡️", desc:"Senjata & armor." },
+    { key:"consumable", label:"Consumable", icon:"🧪", desc:"Potion & item sekali pakai." },
+  ];
+  const equipCategories = [
+    { key:"weapon", label:"Weapon", iconSrc:"./assets/icons/weapon.svg" },
+    { key:"head", label:"Head", iconSrc:"./assets/icons/head.svg" },
+    { key:"armor", label:"Armor", iconSrc:"./assets/icons/armor.svg" },
+    { key:"pant", label:"Pant", iconSrc:"./assets/icons/pant.svg" },
+    { key:"shoes", label:"Shoes", iconSrc:"./assets/icons/shoes.svg" },
+  ];
+  categories.forEach((c) => {
+    categoryTabs.appendChild(createMarketTabButton({
+      label: c.label,
+      desc: c.desc,
+      icon: c.icon,
+      isActive: state.shopMarketCategory === c.key,
+      onClick: () => {
+        state.shopMarketCategory = c.key;
+        if (c.key !== "equipment") state.shopEquipCategory = "weapon";
+        renderMarketPage();
+      },
+    }));
+  });
+  if (state.shopMarketCategory === "equipment") {
+    equipCategories.forEach((c) => {
+      equipTabs.appendChild(createMarketTabButton({
+        label: c.label,
+        iconSrc: c.iconSrc,
+        isActive: state.shopEquipCategory === c.key,
+        onlyIcon: true,
+        onClick: () => {
+          state.shopEquipCategory = c.key;
+          renderMarketPage();
+        },
+      }));
+    });
+  }
+}
+
+function renderMarketItems(){
+  const grid = byId("marketItemsGrid");
+  if (!grid) return;
+  grid.innerHTML = "";
+  const mode = state.marketMode || "buy";
+  const emptyState = () => {
+    const empty = document.createElement("div");
+    empty.className = "marketEmptyState";
+    empty.innerHTML = "<h3>Belum ada item</h3><p>Silakan pilih kategori lain atau kembali lagi nanti.</p>";
+    grid.appendChild(empty);
+  };
+  if (mode === "buy") {
+    const goods = getMarketGoods().slice(0, 9);
+    if (!goods.length) return emptyState();
+    goods.forEach((g) => {
+      const ref = g.ref || {};
+      const level = ref?.level;
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "marketItemCard compact";
+      card.setAttribute("aria-label", `${g.name} (${g.price} gold)`);
+      card.innerHTML = `
+        <div class="marketItemThumb">📦${level ? `<span class="marketItemLevel">Lv.${level}</span>` : ""}</div>
+        <span class="marketItemLabel">${g.name}</span>
+      `;
+      card.onclick = () => openMarketConfirm("buy", g.name);
+      grid.appendChild(card);
+    });
+    return;
+  }
+  const inv = state.player.inv || {};
+  const sellKeys = getMarketSellGoods().slice(0, 9);
+  if (!sellKeys.length) return emptyState();
+  sellKeys.forEach((name) => {
+    const ref = inv[name];
+    const price = Math.max(1, Math.floor((getShopItem(name)?.price || 10) / 2));
+    const level = ref?.level;
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "marketItemCard compact";
+    card.setAttribute("aria-label", `${name} x${ref.qty} (+${price} gold)`);
+    card.innerHTML = `
+      <div class="marketItemThumb">📤${level ? `<span class="marketItemLevel">Lv.${level}</span>` : ""}</div>
+      <span class="marketItemLabel">${name}</span>
+      <span class="marketItemBadge">x${ref.qty}</span>
+    `;
+    card.onclick = () => openMarketConfirm("sell", name);
+    grid.appendChild(card);
+  });
+}
+
+function renderMarketPage(){
+  ensureMarketState();
+  renderMarketToggle();
+  renderMarketTabs();
+  renderMarketItems();
+}
+
+function openMarketPage(){
+  if (state.inBattle) return;
+  modal.close();
+  setMarketPageVisible(true);
+  state.shopMarketCategory = "equipment";
+  renderMarketPage();
+}
+
 function openShopModal(mode = "menu"){
   if (state.inBattle) return;
   if (mode === "menu"){
@@ -2236,7 +2504,10 @@ function openShopModal(mode = "menu"){
         { title: "Market", desc: "Beli / jual item.", meta: "", value: "market" },
         { title: "Learn Skill", desc: "Pelajari skill baru.", meta: "", value: "learn" },
       ],
-      (pick) => openShopModal(String(pick || "menu"))
+      (pick) => {
+        if (pick === "market") return openMarketPage();
+        openShopModal(String(pick || "menu"));
+      }
     );
     return;
   }
@@ -3892,6 +4163,8 @@ function bind() {
   if (btnProfile) btnProfile.onclick = openProfileModal;
   const btnShop = byId("btnShop");
   if (btnShop) btnShop.onclick = () => openShopModal();
+  const marketBack = byId("marketBack");
+  if (marketBack) marketBack.onclick = () => setMarketPageVisible(false);
   const playerStatLink = byId("playerStatLink");
   if (playerStatLink) playerStatLink.onclick = openStatsModal;
   const mailButton = byId("mailButton");

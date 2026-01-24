@@ -326,6 +326,45 @@
     </div>
   </div>
 
+  <section id="marketPage" class="marketPage hidden" aria-hidden="true">
+    <div class="marketPageHeader">
+      <div class="marketCurrency" aria-label="Mata uang saat ini">
+        <div class="pill currencyPill">
+          <img class="currencyIcon" src="./assets/icons/coin.svg" alt="" />
+          <span id="marketGoldValue">0</span>
+        </div>
+        <div class="pill currencyPill">
+          <img class="currencyIcon" src="./assets/icons/gem.svg" alt="" />
+          <span id="marketGemValue">0</span>
+        </div>
+      </div>
+      <div class="marketTitle">
+        <h2>Market</h2>
+        <p>Halaman khusus untuk transaksi di Market.</p>
+      </div>
+      <div class="marketActions">
+        <button class="marketBackBtn" id="marketBack" type="button" aria-label="Tutup">
+          <span aria-hidden="true">✕</span>
+        </button>
+      </div>
+    </div>
+    <div class="marketPageControls">
+      <div class="marketToggle" id="marketModeToggle" role="group" aria-label="Mode Market"></div>
+      <div class="marketTabs">
+        <div class="marketTabRow" id="marketCategoryTabs" role="tablist" aria-label="Kategori Market"></div>
+        <div class="marketTabRow sub" id="marketEquipTabs" role="tablist" aria-label="Kategori Equipment"></div>
+      </div>
+    </div>
+    <div class="marketPageBody">
+      <div class="marketItemsGrid" id="marketItemsGrid">
+        <div class="marketEmptyState">
+          <h3>Market siap dipakai</h3>
+          <p>Mode beli/jual, tab kategori, dan kartu item segera ditampilkan.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Modal (tetap satu kali) -->
   <div class="modalBackdrop" id="modalBackdrop">
     <div class="modal">
