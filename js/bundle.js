@@ -3232,14 +3232,14 @@ function explore() {
 }
 
 function openAdventureLevels(){
-  const stages = [1, 3, 5, 7, 10, 11];
+  const stages = [1, 3, 5, 7, 8, 10];
   modal.open(
     "Adventure - Level",
     stages.map((lv) => ({
       title: `Stage ${lv}`,
-      desc: lv === 11
+      desc: lv === 10
         ? "Stage spesial: 3 musuh."
-        : lv === 10
+        : lv === 8
           ? "Stage spesial: 2 musuh."
           : "Pilih stage petualangan",
       meta: "",
@@ -3254,8 +3254,8 @@ function openAdventureLevels(){
 
 function startAdventureBattle(targetLevel, stageName){
   state.currentStageName = stageName;
-  if (targetLevel === 10 || targetLevel === 11) {
-    const count = targetLevel === 11 ? 3 : 2;
+  if (targetLevel === 8 || targetLevel === 10) {
+    const count = targetLevel === 10 ? 3 : 2;
     state.enemyQueue = Array.from({ length: count }, () => genEnemy(targetLevel));
     state.enemy = state.enemyQueue[0];
     state.enemyTargetIndex = 0;
