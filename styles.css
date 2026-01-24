@@ -1116,7 +1116,7 @@ body.inBattle .enemyMiniMeta .muted{
   border:1px solid rgba(58,108,255,0.45);
   background:rgba(58,108,255,0.18);
   color:#e8efff;
-  font-size:22px;
+  font-size:20px;
   font-weight:800;
   cursor:pointer;
   display:flex;
@@ -1134,8 +1134,9 @@ body.inBattle .enemyMiniMeta .muted{
 }
 .marketBackBtn span{
   display:block;
+  font-size:26px;
   line-height:1;
-  transform:translateY(-2px);
+  transform:translateY(-1px);
 }
 .marketCurrency .currencyPill{
   font-weight:700;
