@@ -13,23 +13,23 @@ const SKILLS = {
   meteor: { name:"Meteor", icon:"./assets/skills/meteor.svg", mpCost:12, power:20, cooldown:4, desc:"Pukulan meteor dengan damage besar." }
 };
 const ITEMS = {
-  potion: { name:"Potion", kind:"heal_hp", amount:25, desc:"Memulihkan 25 HP" },
-  ether:  { name:"Ether",  kind:"heal_mp", amount:10, desc:"Memulihkan 10 MP" },
-  woodenSword: { name:"Wooden Sword", kind:"gear", slot:"hand", desc:"Senjata kayu sederhana.", atk:2 },
-  clothHat: { name:"Cloth Hat", kind:"gear", slot:"head", desc:"Topi kain lusuh.", def:1 },
-  leatherArmor: { name:"Leather Armor", kind:"gear", slot:"armor", desc:"Armor kulit ringan.", def:2 },
-  leatherPants: { name:"Leather Pants", kind:"gear", slot:"pant", desc:"Celana kulit sederhana.", def:1 },
-  oldBoots: { name:"Old Boots", kind:"gear", slot:"shoes", desc:"Sepatu tua tapi nyaman.", spd:1 },
-  bronzeSword: { name:"Bronze Sword", kind:"gear", slot:"hand", desc:"Pedang Lv3 dengan serangan stabil.", atk:4 },
-  ironSword: { name:"Iron Sword", kind:"gear", slot:"hand", desc:"Pedang Lv6 yang kokoh.", atk:6 },
-  runeBlade: { name:"Rune Blade", kind:"gear", slot:"hand", desc:"Pedang Lv9 dengan rune kuno.", atk:9 },
-  leatherHood: { name:"Leather Hood", kind:"gear", slot:"head", desc:"Pelindung kepala Lv2.", def:2 },
-  ironHelm: { name:"Iron Helm", kind:"gear", slot:"head", desc:"Helm Lv7 yang berat.", def:4 },
-  chainVest: { name:"Chain Vest", kind:"gear", slot:"armor", desc:"Armor Lv4 berbahan rantai.", def:4 },
-  steelArmor: { name:"Steel Armor", kind:"gear", slot:"armor", desc:"Armor Lv8 dengan pertahanan tinggi.", def:7 },
-  travelerPants: { name:"Traveler Pants", kind:"gear", slot:"pant", desc:"Celana Lv3 untuk perjalanan.", def:2, spd:1 },
-  ironGreaves: { name:"Iron Greaves", kind:"gear", slot:"pant", desc:"Greaves Lv7 kokoh.", def:4 },
-  swiftBoots: { name:"Swift Boots", kind:"gear", slot:"shoes", desc:"Sepatu Lv5 meningkatkan kecepatan.", spd:2 }
+  potion: { name:"Potion", kind:"heal_hp", amount:25, desc:"Memulihkan 25 HP", level:1 },
+  ether:  { name:"Ether",  kind:"heal_mp", amount:10, desc:"Memulihkan 10 MP", level:1 },
+  woodenSword: { name:"Wooden Sword", kind:"gear", slot:"hand", desc:"Senjata kayu sederhana.", atk:2, level:1 },
+  clothHat: { name:"Cloth Hat", kind:"gear", slot:"head", desc:"Topi kain lusuh.", def:1, level:1 },
+  leatherArmor: { name:"Leather Armor", kind:"gear", slot:"armor", desc:"Armor kulit ringan.", def:2, level:1 },
+  leatherPants: { name:"Leather Pants", kind:"gear", slot:"pant", desc:"Celana kulit sederhana.", def:1, level:1 },
+  oldBoots: { name:"Old Boots", kind:"gear", slot:"shoes", desc:"Sepatu tua tapi nyaman.", spd:1, level:1 },
+  bronzeSword: { name:"Bronze Sword", kind:"gear", slot:"hand", desc:"Pedang Lv3 dengan serangan stabil.", atk:4, level:3 },
+  ironSword: { name:"Iron Sword", kind:"gear", slot:"hand", desc:"Pedang Lv6 yang kokoh.", atk:6, level:6 },
+  runeBlade: { name:"Rune Blade", kind:"gear", slot:"hand", desc:"Pedang Lv9 dengan rune kuno.", atk:9, level:9 },
+  leatherHood: { name:"Leather Hood", kind:"gear", slot:"head", desc:"Pelindung kepala Lv2.", def:2, level:2 },
+  ironHelm: { name:"Iron Helm", kind:"gear", slot:"head", desc:"Helm Lv7 yang berat.", def:4, level:7 },
+  chainVest: { name:"Chain Vest", kind:"gear", slot:"armor", desc:"Armor Lv4 berbahan rantai.", def:4, level:4 },
+  steelArmor: { name:"Steel Armor", kind:"gear", slot:"armor", desc:"Armor Lv8 dengan pertahanan tinggi.", def:7, level:8 },
+  travelerPants: { name:"Traveler Pants", kind:"gear", slot:"pant", desc:"Celana Lv3 untuk perjalanan.", def:2, spd:1, level:3 },
+  ironGreaves: { name:"Iron Greaves", kind:"gear", slot:"pant", desc:"Greaves Lv7 kokoh.", def:4, level:7 },
+  swiftBoots: { name:"Swift Boots", kind:"gear", slot:"shoes", desc:"Sepatu Lv5 meningkatkan kecepatan.", spd:2, level:5 }
 };
 const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton"];
 const ENEMY_AVATARS = {
@@ -758,12 +758,14 @@ function addLog(tag, msg) {
 }
 
 function pulseGold(){
-  const el = $("goldValue") || $("goldPill");
-  if (!el) return;
-  el.classList.remove("goldPulse");
-  void el.offsetWidth;
-  el.classList.add("goldPulse");
-  setTimeout(() => el.classList.remove("goldPulse"), 600);
+  const targets = [$("goldValue"), $("marketGoldValue"), $("goldPill")].filter(Boolean);
+  if (!targets.length) return;
+  targets.forEach((el) => {
+    el.classList.remove("goldPulse");
+    void el.offsetWidth;
+    el.classList.add("goldPulse");
+    setTimeout(() => el.classList.remove("goldPulse"), 600);
+  });
 }
 
 function pulseMarketGrid(){
@@ -1489,8 +1491,12 @@ function refresh(state) {
   }
   const goldValue = $("goldValue");
   if (goldValue) goldValue.textContent = `${p.gold}`;
+  const marketGoldValue = $("marketGoldValue");
+  if (marketGoldValue) marketGoldValue.textContent = `${p.gold}`;
   const gemValue = $("gemValue");
   if (gemValue) gemValue.textContent = `${p.gems || 0}`;
+  const marketGemValue = $("marketGemValue");
+  if (marketGemValue) marketGemValue.textContent = `${p.gems || 0}`;
 
   // Player bars
   $("hpText").textContent = `${p.hp}/${p.maxHp}`;
@@ -2178,12 +2184,13 @@ function renderMarketItems(){
     if (!goods.length) return emptyState();
     goods.forEach((g) => {
       const ref = g.ref || {};
+      const level = ref?.level;
       const card = document.createElement("button");
       card.type = "button";
       card.className = "marketItemCard compact";
       card.setAttribute("aria-label", `${g.name} (${g.price} gold)`);
       card.innerHTML = `
-        <div class="marketItemThumb">📦</div>
+        <div class="marketItemThumb">📦${level ? `<span class="marketItemLevel">Lv.${level}</span>` : ""}</div>
         <span class="marketItemLabel">${g.name}</span>
       `;
       card.onclick = () => openMarketConfirm("buy", g.name);
@@ -2197,12 +2204,13 @@ function renderMarketItems(){
   sellKeys.forEach((name) => {
     const ref = inv[name];
     const price = Math.max(1, Math.floor((getShopItem(name)?.price || 10) / 2));
+    const level = ref?.level;
     const card = document.createElement("button");
     card.type = "button";
     card.className = "marketItemCard compact";
     card.setAttribute("aria-label", `${name} x${ref.qty} (+${price} gold)`);
     card.innerHTML = `
-      <div class="marketItemThumb">📤</div>
+      <div class="marketItemThumb">📤${level ? `<span class="marketItemLevel">Lv.${level}</span>` : ""}</div>
       <span class="marketItemLabel">${name}</span>
       <span class="marketItemBadge">x${ref.qty}</span>
     `;

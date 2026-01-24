@@ -967,6 +967,11 @@ body.inBattle .enemyMiniMeta .muted{
   background:var(--card);
   color:var(--text);
   font-weight:700;
+  font-size:14px;
+  line-height:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   cursor:pointer;
 }
 .confirmQtyValue{
@@ -1074,12 +1079,69 @@ body.inBattle .enemyMiniMeta .muted{
   color:var(--text);
 }
 .marketPageHeader{
-  display:flex;
-  flex-wrap:wrap;
-  justify-content:space-between;
+  display:grid;
+  grid-template-columns:1fr auto;
+  grid-template-rows:auto auto;
+  column-gap:12px;
+  row-gap:8px;
   align-items:center;
-  gap:16px;
   margin-bottom:24px;
+}
+.marketActions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  grid-column:2;
+  grid-row:1;
+  align-self:start;
+  margin-top:-6px;
+}
+.marketCurrency{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  justify-content:flex-start;
+  grid-column:1 / -1;
+  grid-row:2;
+}
+.marketTitle{
+  grid-column:1 / -1;
+  grid-row:1;
+  text-align:center;
+}
+.marketBackBtn{
+  width:44px;
+  height:44px;
+  border-radius:12px;
+  border:1px solid rgba(58,108,255,0.45);
+  background:rgba(58,108,255,0.18);
+  color:#e8efff;
+  font-size:20px;
+  font-weight:800;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  line-height:1;
+  box-shadow:0 0 0 1px rgba(58,108,255,0.2) inset;
+  transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease;
+}
+.marketBackBtn:hover{
+  transform:translateY(-1px);
+  border-color:rgba(58,108,255,0.7);
+  background:rgba(58,108,255,0.28);
+  box-shadow:0 6px 14px rgba(0,0,0,0.25), 0 0 0 1px rgba(58,108,255,0.35) inset;
+}
+.marketBackBtn span{
+  display:block;
+  font-size:26px;
+  line-height:1;
+  transform:translateY(-1px);
+}
+.marketCurrency .currencyPill{
+  font-weight:700;
+  min-width:86px;
+  justify-content:center;
 }
 .marketPageHeader h2{
   margin:0 0 6px;
@@ -1198,15 +1260,35 @@ body.inBattle .enemyMiniMeta .muted{
   box-shadow:0 12px 24px rgba(0,0,0,0.25);
 }
 .marketItemThumb{
-  width:52px;
-  height:52px;
+  width:60px;
+  height:60px;
   border-radius:12px;
   background:var(--card);
   border:1px dashed rgba(159,178,200,0.4);
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:22px;
+  font-size:26px;
+  line-height:1;
+  position:relative;
+}
+.marketItemThumb img{
+  width:70%;
+  height:70%;
+  object-fit:contain;
+}
+.marketItemLevel{
+  position:absolute;
+  right:6px;
+  bottom:6px;
+  font-size:10px;
+  font-weight:700;
+  padding:2px 5px;
+  border-radius:999px;
+  background:rgba(15,25,44,0.85);
+  border:1px solid rgba(58,108,255,0.35);
+  color:var(--text);
+  line-height:1;
 }
 .marketItemLabel{
   display:none;
