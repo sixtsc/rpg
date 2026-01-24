@@ -278,6 +278,25 @@ function normalizeAlly(ally){
   };
 }
 
+function normalizeCharId(value){
+  const num = Number(value);
+  if (!Number.isFinite(num)) return null;
+  const intVal = Math.trunc(num);
+  if (intVal < 0) return null;
+  return intVal;
+}
+
+function hasAdminCharId(slots){
+  return Array.isArray(slots) && slots.some((slot) => slot && slot.charId === 0);
+}
+
+function allocateNextCharId(nextId, usedIds){
+  let candidate = Math.max(1, nextId || 1);
+  while (usedIds.has(candidate)) candidate += 1;
+  usedIds.add(candidate);
+  return candidate;
+}
+
 
 function normalizePlayer(p){
   if (!p) return p;
@@ -365,6 +384,7 @@ function normalizePlayer(p){
   if (typeof p.level !== "number") p.level = 1;
   if (typeof p.name !== "string") p.name = "Hero";
   if (typeof p.gems !== "number") p.gems = 0;
+  p.charId = normalizeCharId(p.charId);
 
   applyDerivedStats(p);
   applyEquipmentStats(p);
@@ -426,6 +446,7 @@ function newState(){
     // Character profiles
     slots: Array.from({ length: MAX_CHAR_SLOTS }, () => null),
     activeSlot: 0,
+    nextCharId: 1,
 
     // Current runtime
     player,
@@ -485,6 +506,7 @@ function emptyProfilePayload(){
     v: 2,
     t: Date.now(),
     activeSlot: 0,
+    nextCharId: 1,
     slots: Array.from({ length: MAX_CHAR_SLOTS }, () => null),
   };
 }
@@ -501,15 +523,28 @@ function normalizeProfilePayload(payload){
       0,
       MAX_CHAR_SLOTS - 1
     );
-
+    const usedIds = new Set();
+    const rawNext = normalizeCharId(payload.nextCharId);
+    let nextId = rawNext && rawNext >= 1 ? rawNext : 1;
     for (let i = 0; i < MAX_CHAR_SLOTS; i++){
       const slot = payload.slots[i];
       const normalized = slot ? normalizePlayer(slot) : null;
-      if (normalized && typeof normalized.charId !== "number") {
-        normalized.charId = i;
+      if (normalized) {
+        const cid = normalizeCharId(normalized.charId);
+        if (cid !== null && cid > 0 && !usedIds.has(cid)) {
+          normalized.charId = cid;
+          usedIds.add(cid);
+        } else if (cid === 0 && !usedIds.has(0)) {
+          normalized.charId = 0;
+          usedIds.add(0);
+        } else {
+          normalized.charId = allocateNextCharId(nextId, usedIds);
+          nextId = Math.max(nextId, normalized.charId + 1);
+        }
       }
       out.slots[i] = normalized;
     }
+    out.nextCharId = Math.max(nextId, 1);
     return out;
   }
 
@@ -519,6 +554,11 @@ function normalizeProfilePayload(payload){
     out.t = payload.t || Date.now();
     out.activeSlot = 0;
     out.slots[0] = normalizePlayer(payload.player);
+    if (out.slots[0]) {
+      const cid = normalizeCharId(out.slots[0].charId);
+      out.slots[0].charId = cid !== null && cid >= 0 ? cid : 1;
+      out.nextCharId = out.slots[0].charId === 0 ? 1 : out.slots[0].charId + 1;
+    }
     return out;
   }
 
@@ -532,18 +572,37 @@ function getProfilePayloadFromState(){
     0,
     MAX_CHAR_SLOTS - 1
   );
+  const usedIds = new Set();
+  out.nextCharId = Math.max(1, normalizeCharId(state.nextCharId) || 1);
   out.slots = Array.from({ length: MAX_CHAR_SLOTS }, (_, i) => {
     const slot = state.slots && state.slots[i];
     if (!slot) return null;
     const normalized = normalizePlayer(slot);
-    if (typeof normalized.charId !== "number") normalized.charId = i;
+    const cid = normalizeCharId(normalized.charId);
+    if (cid === 0 && !usedIds.has(0)) {
+      normalized.charId = 0;
+      usedIds.add(0);
+    } else if (cid !== null && cid > 0 && !usedIds.has(cid)) {
+      normalized.charId = cid;
+      usedIds.add(cid);
+    } else {
+      normalized.charId = allocateNextCharId(out.nextCharId, usedIds);
+      out.nextCharId = Math.max(out.nextCharId, normalized.charId + 1);
+    }
     return normalized;
   });
 
   // Persist current player into active slot
   if (state.player) {
     const normalized = normalizePlayer(state.player);
-    if (typeof normalized.charId !== "number") normalized.charId = out.activeSlot;
+    const cid = normalizeCharId(normalized.charId);
+    if (cid === 0 || (cid && !usedIds.has(cid))) {
+      normalized.charId = cid;
+      if (cid !== null) usedIds.add(cid);
+    } else {
+      normalized.charId = allocateNextCharId(out.nextCharId, usedIds);
+      out.nextCharId = Math.max(out.nextCharId, normalized.charId + 1);
+    }
     out.slots[out.activeSlot] = normalized;
   }
 
@@ -555,6 +614,7 @@ function resetToEmptyProfile(){
   const profile = emptyProfilePayload();
   state.slots = profile.slots;
   state.activeSlot = profile.activeSlot;
+  state.nextCharId = profile.nextCharId;
   state.player = normalizePlayer(newPlayer());
   ensureAllies();
 
@@ -3667,13 +3727,43 @@ function applyAttributeDelta(statKey, delta){
   return true;
 }
 
+function isAdminUser(){
+  return !!(cloudUserCache && cloudUserCache.isAdmin);
+}
+
+function allocateCharIdForState(){
+  const slots = state.slots || [];
+  if (isAdminUser() && !hasAdminCharId(slots)) return 0;
+  const usedIds = new Set();
+  slots.forEach((slot) => {
+    if (!slot) return;
+    const cid = normalizeCharId(slot.charId);
+    if (cid !== null) usedIds.add(cid);
+  });
+  const nextId = allocateNextCharId(state.nextCharId || 1, usedIds);
+  state.nextCharId = Math.max(state.nextCharId || 1, nextId + 1);
+  return nextId;
+}
+
+function ensureAdminCharIdForState(){
+  if (!isAdminUser()) return;
+  if (hasAdminCharId(state.slots)) return;
+  const active = state.activeSlot || 0;
+  const slot = state.slots && state.slots[active];
+  if (!slot) return;
+  slot.charId = 0;
+  state.player = normalizePlayer(slot);
+  if (Array.isArray(state.slots)) state.slots[active] = state.player;
+}
+
 function openProfileModal(){
-  const charId = (state.player && typeof state.player.charId === "number") ? state.player.charId : state.activeSlot;
-  const charMeta = charId === 0 ? "Admin" : "";
+  const rawCharId = normalizeCharId(state.player?.charId);
+  const charId = rawCharId !== null ? rawCharId : "—";
+  const charMeta = isAdminUser() ? "Admin" : "";
   modal.open(
     "Profile",
     [
-      { title: `ID: ${charId}`, desc: "ID karakter.", meta: charMeta },
+      { title: `ID: ${charId}`, desc: "ID karakter (angka, 0 = admin).", meta: charMeta },
       { title: "Equipment", desc: "Kelola gear (hand, head, pant, armor, shoes).", meta: "", value: "equip" },
       { title: "Stat", desc: "Atur stat poin.", meta: "", value: "stat" },
       { title: "Skill Slot", desc: "Pilih skill untuk slot battle.", meta: "", value: "skill_slot" },
@@ -3682,6 +3772,58 @@ function openProfileModal(){
       if (pick === "equip") return openEquipmentModal();
       if (pick === "stat") return openProfileStatModal();
       if (pick === "skill_slot") return openSkillSlotModal();
+    }
+  );
+}
+
+function openDevToolsModal(){
+  if (!isAdminUser()) {
+    addLog("WARN", "Dev tool hanya untuk admin.");
+    return;
+  }
+  const p = state.player;
+  if (!p) return;
+
+  modal.open(
+    "Dev Tools",
+    [
+      { title: "Back", desc: "Kembali ke Menu.", meta: "", value: "back", className: "subMenuBack" },
+      { title: "Gold +1000", desc: "Tambah 1000 gold.", meta: "", value: "gold" },
+      { title: "Gems +50", desc: "Tambah 50 gems.", meta: "", value: "gems" },
+      { title: "Heal penuh", desc: "Pulihkan HP/MP party.", meta: "", value: "heal" },
+      { title: "Level +1", desc: "Naikkan level karakter.", meta: "", value: "level" },
+      { title: "Stat Points +5", desc: "Tambah 5 stat points.", meta: "", value: "stat" },
+    ],
+    (pick) => {
+      if (pick === "back") return openTownMenu();
+      if (pick === "gold") {
+        p.gold = Math.max(0, (p.gold || 0) + 1000);
+        addLog("DEV", "Gold +1000.");
+      }
+      if (pick === "gems") {
+        p.gems = Math.max(0, (p.gems || 0) + 50);
+        addLog("DEV", "Gems +50.");
+      }
+      if (pick === "heal") {
+        p.hp = p.maxHp;
+        p.mp = p.maxMp;
+        restoreAllies();
+        addLog("DEV", "HP/MP party dipulihkan.");
+      }
+      if (pick === "level") {
+        levelUp();
+        addLog("DEV", "Level +1.");
+      }
+      if (pick === "stat") {
+        p.statPoints = (p.statPoints || 0) + 5;
+        addLog("DEV", "Stat points +5.");
+      }
+
+      if (Array.isArray(state.slots)) state.slots[state.activeSlot] = p;
+      autosave(state);
+      (async () => { try { await cloudTrySaveCurrentProfile(); } catch(e) {} })();
+      refresh(state);
+      openDevToolsModal();
     }
   );
 }
@@ -4010,18 +4152,30 @@ function openInventoryReadOnly() {
 
 /* ------------------------------ Town MENU ------------------------------ */
 
-function openTownMenu(){
+async function openTownMenu(){
   if (state.inBattle) return;
+
+  const me = await ensureCloudUser();
+  const isAdmin = !!me?.isAdmin;
+
+  const choices = [
+    { title: "Load Cloud", desc: "Load progress dari cloud.", meta: "", value: "cloud_load" },
+    { title: "Save Cloud", desc: "Save progress ke cloud.", meta: "", value: "cloud_save" },
+    { title: "Ganti Karakter", desc: "Pilih slot karakter lain.", meta: "", value: "switch_char" },
+  ];
+  if (isAdmin) {
+    choices.push({ title: "Dev Tools", desc: "Tool admin untuk debug.", meta: "", value: "dev_tools" });
+  }
+  choices.push({ title: "Log out", desc: "Keluar dari akun cloud dan kembali ke halaman login.", meta: "", value: "logout", className:"danger" });
 
   modal.open(
     "Menu",
-    [
-      { title: "Load Cloud", desc: "Load progress dari cloud.", meta: "", value: "cloud_load" },
-      { title: "Save Cloud", desc: "Save progress ke cloud.", meta: "", value: "cloud_save" },
-      { title: "Ganti Karakter", desc: "Pilih slot karakter lain.", meta: "", value: "switch_char" },
-      { title: "Log out", desc: "Keluar dari akun cloud dan kembali ke halaman login.", meta: "", value: "logout", className:"danger" },
-    ],
+    choices,
     (pick) => {
+      if (pick === "dev_tools") {
+        openDevToolsModal();
+        return;
+      }
       if (pick === "cloud_save") {
         (async () => {
           try {
@@ -4071,11 +4225,13 @@ function openTownMenu(){
 
                   state.slots = profile.slots;
                   state.activeSlot = profile.activeSlot;
+                  state.nextCharId = profile.nextCharId || 1;
 
                   state.player = state.slots[state.activeSlot]
                     ? normalizePlayer(state.slots[state.activeSlot])
                     : normalizePlayer(newPlayer());
                   ensureAllies();
+                  ensureAdminCharIdForState();
 
                   state.enemy = null;
                   state.inBattle = false;
@@ -4118,8 +4274,6 @@ function openTownMenu(){
       if (pick === "logout") {
         (async () => {
           try { await cloudLogout(); } catch(e) {}
-          safeRemove(SAVE_KEY);
-          resetToEmptyProfile();
           updateMailboxBadge([]);
           closeMailboxOverlay();
           // Hide any character overlays and show auth overlay
@@ -4273,11 +4427,13 @@ function applyLoaded(payload){
   const profile = normalizeProfilePayload(payload);
   state.slots = profile.slots;
   state.activeSlot = profile.activeSlot;
+  state.nextCharId = profile.nextCharId || 1;
 
   state.player = state.slots[state.activeSlot]
     ? normalizePlayer(state.slots[state.activeSlot])
     : normalizePlayer(newPlayer());
   ensureAllies();
+  ensureAdminCharIdForState();
 
   ensureAllies();
   state.enemy = null;
@@ -4306,6 +4462,7 @@ function startNewGame(slotIdx){
     if (prev.name) p.name = prev.name;
     if (prev.gender) p.gender = prev.gender;
   }
+  p.charId = allocateCharIdForState();
 
   state.slots[idx] = p;
   state.activeSlot = idx;
@@ -4553,7 +4710,7 @@ function handleCreateCharacter(){
   const p = normalizePlayer(newPlayer());
   p.name = name;
   p.gender = gender;
-  p.charId = pendingCreateSlot;
+  p.charId = allocateCharIdForState();
 
   state.slots[pendingCreateSlot] = p;
   state.activeSlot = pendingCreateSlot;
@@ -4656,12 +4813,14 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
   // Apply to runtime state
   state.slots = profile.slots;
   state.activeSlot = profile.activeSlot;
+  state.nextCharId = profile.nextCharId || 1;
 
   // Set player to active slot if exists, otherwise placeholder (will be replaced after create/select)
   state.player = state.slots[state.activeSlot]
     ? normalizePlayer(state.slots[state.activeSlot])
     : normalizePlayer(newPlayer());
   ensureAllies();
+  ensureAdminCharIdForState();
 
   state.enemy = null;
   state.inBattle = false;
