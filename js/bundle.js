@@ -1276,29 +1276,40 @@ function renderEnemyRow() {
     activeIndices.add(String(enemyIndex));
 
     let card = row.querySelector(`.enemyCard.extra[data-enemy-index="${enemyIndex}"]`);
+    const cardTemplate = `
+      <div class="damageText enemyDamage"></div>
+      <div class="sectionTitle">
+        <div><b class="enemyName"></b> <span class="pill enemyLevel"></span></div>
+      </div>
+      <div class="avatarWrap">
+        <div class="avatarBox enemyAvatarBox"></div>
+      </div>
+      <div class="bars enemyMiniMeta">
+        <div>
+          <div class="bar">
+            <div class="fill hp enemyHpFill"></div>
+            <span class="barText enemyHpText"></span>
+          </div>
+        </div>
+        <div>
+          <div class="bar">
+            <div class="fill mp enemyMpFill"></div>
+            <span class="barText enemyMpText"></span>
+          </div>
+        </div>
+      </div>
+    `;
+
     if (!card) {
       card = document.createElement("div");
       card.className = "card enemyCard extra";
       card.dataset.enemyIndex = `${enemyIndex}`;
-      card.innerHTML = `
-        <div class="damageText enemyDamage"></div>
-        <div class="sectionTitle">
-          <div><b class="enemyName"></b> <span class="pill enemyLevel"></span></div>
-        </div>
-        <div class="avatarWrap">
-          <div class="avatarBox enemyAvatarBox"></div>
-        </div>
-        <div class="enemyMiniMeta">
-          <div class="bar"><div class="fill hp enemyHpFill"></div></div>
-          <div class="muted enemyHpText"></div>
-          <div class="bar"><div class="fill mp enemyMpFill"></div></div>
-          <div class="muted enemyMpText"></div>
-        </div>
-      `;
-      row.appendChild(card);
-    } else {
-      row.appendChild(card);
     }
+    if (card.dataset.templateVersion !== "bartext") {
+      card.innerHTML = cardTemplate;
+      card.dataset.templateVersion = "bartext";
+    }
+    row.appendChild(card);
 
     const hpPct = enemy.maxHp ? clamp((enemy.hp / enemy.maxHp) * 100, 0, 100) : 0;
     const mpPct = enemy.maxMp ? clamp((enemy.mp / enemy.maxMp) * 100, 0, 100) : 0;
@@ -3232,14 +3243,14 @@ function explore() {
 }
 
 function openAdventureLevels(){
-  const stages = [1, 3, 5, 7, 10, 11];
+  const stages = [1, 3, 5, 7, 8, 10];
   modal.open(
     "Adventure - Level",
     stages.map((lv) => ({
       title: `Stage ${lv}`,
-      desc: lv === 11
+      desc: lv === 10
         ? "Stage spesial: 3 musuh."
-        : lv === 10
+        : lv === 8
           ? "Stage spesial: 2 musuh."
           : "Pilih stage petualangan",
       meta: "",
@@ -3254,8 +3265,8 @@ function openAdventureLevels(){
 
 function startAdventureBattle(targetLevel, stageName){
   state.currentStageName = stageName;
-  if (targetLevel === 10 || targetLevel === 11) {
-    const count = targetLevel === 11 ? 3 : 2;
+  if (targetLevel === 8 || targetLevel === 10) {
+    const count = targetLevel === 10 ? 3 : 2;
     state.enemyQueue = Array.from({ length: count }, () => genEnemy(targetLevel));
     state.enemy = state.enemyQueue[0];
     state.enemyTargetIndex = 0;
