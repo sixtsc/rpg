@@ -726,15 +726,19 @@ body.inBattle .allyRow,
 body.inBattle .enemyRow{
   display:grid;
   grid-auto-rows: var(--battle-card-height);
-  align-content:start;
-  gap:12px;
+  align-content:center;
 }
 body.inBattle .allyRow{
   justify-items:start;
+  --row-gap: 12px;
+  gap: var(--row-gap);
+  min-height: calc((var(--battle-card-height) * 3) + (var(--row-gap) * 2));
 }
 body.inBattle .enemyRow{
   justify-items:end;
-  gap:14px;
+  --row-gap: 14px;
+  gap: var(--row-gap);
+  min-height: calc((var(--battle-card-height) * 3) + (var(--row-gap) * 2));
 }
 body.inBattle .allyCard,
 body.inBattle .enemyCard{
