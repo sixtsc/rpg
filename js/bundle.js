@@ -1781,8 +1781,33 @@ function refresh(state) {
 
   document.body.classList.toggle("inBattle", !!inBattle);
   document.body.classList.toggle("inTown", !inBattle);
+  document.body.classList.toggle("enemySingle", inBattle && getEnemyQueue().length <= 1);
   if (inBattle) {
     closeMailboxOverlay();
+  }
+
+  const battleColumns = document.querySelector(".battleColumns");
+  const allyRow = $("allyRow");
+  const enemyRow = $("enemyRow");
+  const playerCard = $("playerCard");
+  if (battleColumns && allyRow && playerCard) {
+    let playerCenter = $("playerCenter");
+    if (inBattle) {
+      if (!playerCenter) {
+        playerCenter = document.createElement("div");
+        playerCenter.id = "playerCenter";
+        playerCenter.className = "playerCenter";
+        battleColumns.insertBefore(playerCenter, enemyRow || null);
+      }
+      if (playerCard.parentElement !== playerCenter) {
+        playerCenter.appendChild(playerCard);
+      }
+    } else {
+      if (playerCard.parentElement !== allyRow) {
+        allyRow.prepend(playerCard);
+      }
+      if (playerCenter) playerCenter.remove();
+    }
   }
 
   if (inBattle) {

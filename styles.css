@@ -699,6 +699,7 @@ body.inBattle .battleColumns{
   justify-content:space-between;
   align-items:start;
   width:100%;
+  position:relative;
 }
 body.inBattle #allyRow{
   width:var(--battle-card-width);
@@ -756,6 +757,24 @@ body.inBattle .enemyCard{
   justify-self:end;
 }
 body.inBattle #playerCard{
+  justify-self:center;
+  margin-left:auto;
+  margin-right:auto;
+}
+body.inBattle .playerCenter{
+  position:absolute;
+  left:50%;
+  top:0;
+  transform:translateX(-50%);
+  width:var(--battle-card-width);
+  display:flex;
+  justify-content:center;
+  pointer-events:none;
+}
+body.inBattle .playerCenter > *{
+  pointer-events:auto;
+}
+body.inBattle.enemySingle #enemyRow{
   justify-self:center;
   margin-left:auto;
   margin-right:auto;
@@ -844,7 +863,10 @@ body.inBattle .enemyCard.active .avatarBox{
   box-shadow: 0 0 0 2px rgba(97, 162, 255, 0.35), 0 8px 14px rgba(0,0,0,.4);
 }
 body.inBattle .actionCard .sectionTitle b{
-  display:none;
+  display:inline-block;
+  font-size:12px;
+  color:var(--muted);
+  letter-spacing:0.06em;
 }
 body.inBattle .rightPills{
   justify-content:flex-start;
