@@ -684,7 +684,7 @@ body.inBattle .grid{
 }
 body.inBattle .battleLayout{
   --battle-card-width: clamp(160px, 40vw, 200px);
-  --battle-card-height: clamp(190px, 52vw, 230px);
+  --battle-card-height: clamp(130px, 34vw, 170px);
   --battle-gap: clamp(8px, 2.5vw, 14px);
   width:min(100%, calc((var(--battle-card-width) * 2) + var(--battle-gap)));
   margin:0 auto;
@@ -736,7 +736,7 @@ body.inBattle .allyCard,
 body.inBattle .enemyCard{
   display:flex;
   flex-direction:column;
-  gap:6px;
+  gap:4px;
   font-size:13px;
   width:var(--battle-card-width);
   max-width:var(--battle-card-width);
@@ -776,18 +776,18 @@ body.inBattle .enemyMiniMeta{
 body.inBattle .sectionTitle{
   margin-bottom:4px;
   gap:6px;
-  min-height:28px;
+  min-height:24px;
 }
 body.inBattle .nameSub,
 body.inBattle .allySub{
-  min-height:18px;
+  min-height:16px;
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
 }
 body.inBattle .bars{
-  gap:6px;
-  margin-top:8px;
+  gap:5px;
+  margin-top:6px;
 }
 body.inBattle .bar{
   height:10px;
@@ -824,6 +824,14 @@ body.inBattle .enemyCard .barRow{
 body.inBattle .enemyCard.extra,
 body.inBattle .allyCard.extra{
   padding:8px;
+}
+body.inBattle #pLvl,
+body.inBattle #eLvl,
+body.inBattle .allyLvl,
+body.inBattle .enemyLevel{
+  padding:2px 6px;
+  font-size:11px;
+  line-height:1;
 }
 body.inBattle .enemyMiniMeta .muted{
   font-size:10px;

@@ -1161,7 +1161,7 @@ function renderAllyRow() {
       setBar(mpBar, ally.mp, ally.maxMp);
       card.classList.remove("empty");
       card.classList.add("active");
-      card.style.display = "block";
+      card.style.display = "flex";
       const wasAlive = card.dataset.allyAlive === "true";
       const isAlive = ally.hp > 0;
       card.classList.toggle("down", !isAlive);
