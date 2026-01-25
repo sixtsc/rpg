@@ -745,6 +745,9 @@ body.inBattle .enemyCard{
   box-sizing:border-box;
   margin:0;
   overflow:visible;
+  background:transparent;
+  border:none;
+  box-shadow:none;
 }
 body.inBattle .enemyCard{
   justify-self:end;
@@ -771,7 +774,7 @@ body.inBattle .sectionTitle .pill{
 body.inBattle .allyCard .bars,
 body.inBattle .enemyCard .bars,
 body.inBattle .enemyMiniMeta{
-  margin-top:auto;
+  margin-top:2px;
 }
 body.inBattle .sectionTitle{
   margin-bottom:4px;
@@ -787,7 +790,7 @@ body.inBattle .allySub{
 }
 body.inBattle .bars{
   gap:5px;
-  margin-top:6px;
+  margin-top:4px;
 }
 body.inBattle .bar{
   height:10px;
@@ -809,7 +812,7 @@ body.inBattle .enemyCard .avatarWrap{
 body.inBattle .allyCard .bars,
 body.inBattle .enemyCard .bars{
   order:4;
-  margin-top:6px;
+  margin-top:4px;
 }
 body.inBattle .battleActions{
   gap:8px;
@@ -824,6 +827,9 @@ body.inBattle .enemyCard .barRow{
 body.inBattle .enemyCard.extra,
 body.inBattle .allyCard.extra{
   padding:8px;
+}
+body.inBattle .allyTag{
+  display:none;
 }
 body.inBattle #pLvl,
 body.inBattle #eLvl,
