@@ -731,6 +731,7 @@ body.inBattle .allyRow{
 }
 body.inBattle .enemyRow{
   justify-items:end;
+  gap:14px;
 }
 body.inBattle .allyCard,
 body.inBattle .enemyCard{
@@ -751,6 +752,10 @@ body.inBattle .enemyCard{
 }
 body.inBattle .enemyCard{
   justify-self:end;
+}
+body.inBattle .enemyCard.active{
+  border-color: transparent;
+  box-shadow:none;
 }
 body.inBattle .sectionTitle{
   flex-wrap:nowrap;
@@ -777,7 +782,7 @@ body.inBattle .enemyMiniMeta{
   margin-top:2px;
 }
 body.inBattle .sectionTitle{
-  margin-bottom:4px;
+  margin-bottom:2px;
   gap:6px;
   min-height:24px;
 }
@@ -790,7 +795,7 @@ body.inBattle .allySub{
 }
 body.inBattle .bars{
   gap:5px;
-  margin-top:4px;
+  margin-top:2px;
 }
 body.inBattle .bar{
   height:10px;
@@ -812,7 +817,17 @@ body.inBattle .enemyCard .avatarWrap{
 body.inBattle .allyCard .bars,
 body.inBattle .enemyCard .bars{
   order:4;
-  margin-top:4px;
+  margin-top:2px;
+}
+body.inBattle .allyCard .avatarWrap{
+  justify-content:flex-start;
+}
+body.inBattle .enemyCard .avatarWrap{
+  justify-content:flex-end;
+}
+body.inBattle .enemyCard.active .avatarBox{
+  border-color: rgba(97, 162, 255, 0.85);
+  box-shadow: 0 0 0 2px rgba(97, 162, 255, 0.35), 0 8px 14px rgba(0,0,0,.4);
 }
 body.inBattle .battleActions{
   gap:8px;
