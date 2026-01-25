@@ -1786,27 +1786,21 @@ function refresh(state) {
     closeMailboxOverlay();
   }
 
-  const battleColumns = document.querySelector(".battleColumns");
   const allyRow = $("allyRow");
-  const enemyRow = $("enemyRow");
   const playerCard = $("playerCard");
-  if (battleColumns && allyRow && playerCard) {
-    let playerCenter = $("playerCenter");
+  if (allyRow && playerCard) {
     if (inBattle) {
-      if (!playerCenter) {
-        playerCenter = document.createElement("div");
-        playerCenter.id = "playerCenter";
-        playerCenter.className = "playerCenter";
-        battleColumns.insertBefore(playerCenter, enemyRow || null);
-      }
-      if (playerCard.parentElement !== playerCenter) {
-        playerCenter.appendChild(playerCard);
-      }
-    } else {
-      if (playerCard.parentElement !== allyRow) {
+      const allySlotTop = allyRow.querySelector('.allyCard.extra[data-ally-slot="1"]');
+      const allySlotBottom = allyRow.querySelector('.allyCard.extra[data-ally-slot="2"]');
+      if (allySlotBottom) {
+        allyRow.insertBefore(playerCard, allySlotBottom);
+      } else if (allySlotTop) {
+        allySlotTop.insertAdjacentElement("afterend", playerCard);
+      } else if (playerCard.parentElement !== allyRow) {
         allyRow.prepend(playerCard);
       }
-      if (playerCenter) playerCenter.remove();
+    } else if (playerCard.parentElement !== allyRow) {
+      allyRow.prepend(playerCard);
     }
   }
 

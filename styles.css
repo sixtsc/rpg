@@ -761,19 +761,6 @@ body.inBattle #playerCard{
   margin-left:auto;
   margin-right:auto;
 }
-body.inBattle .playerCenter{
-  position:absolute;
-  left:50%;
-  top:0;
-  transform:translateX(-50%);
-  width:var(--battle-card-width);
-  display:flex;
-  justify-content:center;
-  pointer-events:none;
-}
-body.inBattle .playerCenter > *{
-  pointer-events:auto;
-}
 body.inBattle.enemySingle #enemyRow{
   justify-self:center;
   margin-left:auto;
