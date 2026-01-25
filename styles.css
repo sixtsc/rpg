@@ -716,6 +716,7 @@ body.inBattle .battleActionWrap{
 }
 body.inBattle #actionCard{
   width:100%;
+  padding:10px;
 }
 body.inBattle .card{
   padding:10px;
@@ -845,12 +846,20 @@ body.inBattle .enemyCard.active .avatarBox{
 body.inBattle .actionCard .sectionTitle b{
   display:none;
 }
+body.inBattle .rightPills{
+  justify-content:flex-start;
+}
 body.inBattle .battleActions{
   gap:8px;
   margin-top:8px;
+  width:100%;
 }
 body.inBattle .battlePrimary{
   gap:8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+body.inBattle .battlePrimary button{
+  min-width:0;
 }
 body.inBattle .enemyCard .barRow{
   font-size:12px;
@@ -1142,7 +1151,7 @@ body.inBattle .enemyMiniMeta .muted{
 
 .damageText{
   position:absolute;
-  top:-14px;
+  top:-20px;
   left:12px;
   padding:6px 10px;
   border-radius:999px;
@@ -1155,6 +1164,7 @@ body.inBattle .enemyMiniMeta .muted{
   transform:translateY(6px);
   transition:opacity .25s ease, transform .25s ease;
   pointer-events:none;
+  z-index:6;
 }
 .damageText.show{
   opacity:1;
