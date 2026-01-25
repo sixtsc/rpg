@@ -1088,6 +1088,11 @@ function getEnemyQueue(){
   return state.enemy ? [state.enemy] : [];
 }
 
+function getDefaultEnemyTargetIndex(queue){
+  if (!Array.isArray(queue) || !queue.length) return 0;
+  return clamp(Math.floor(queue.length / 2), 0, queue.length - 1);
+}
+
 function getPrimaryEnemy(){
   const queue = getEnemyQueue();
   return queue[0] || null;
@@ -3288,7 +3293,7 @@ function startAdventureBattle(targetLevel, stageName){
     const count = targetLevel === 10 ? 3 : 2;
     state.enemyQueue = Array.from({ length: count }, () => genEnemy(targetLevel));
     state.enemy = state.enemyQueue[0];
-    state.enemyTargetIndex = 0;
+    state.enemyTargetIndex = getDefaultEnemyTargetIndex(state.enemyQueue);
   } else {
     state.enemyQueue = null;
     state.enemy = genEnemy(targetLevel);

@@ -845,18 +845,27 @@ body.inBattle .allyCard .avatarWrap{
 body.inBattle .enemyCard .avatarWrap{
   justify-content:flex-end;
 }
+body.inBattle .enemyCard.active{
+  position:relative;
+  border-color: transparent;
+  box-shadow:none;
+}
+body.inBattle .enemyCard.active::before{
+  content:"";
+  position:absolute;
+  left:-12px;
+  top:50%;
+  transform:translateY(-50%);
+  width:0;
+  height:0;
+  border-top:8px solid transparent;
+  border-bottom:8px solid transparent;
+  border-right:12px solid rgba(97, 162, 255, 0.9);
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.35));
+}
 body.inBattle .enemyCard.active .avatarBox{
   border-color: rgba(97, 162, 255, 0.85);
   box-shadow: 0 0 0 2px rgba(97, 162, 255, 0.35), 0 8px 14px rgba(0,0,0,.4);
-}
-body.inBattle .actionCard .sectionTitle b{
-  display:none;
-}
-body.inBattle .actionCard .sectionTitle::before{
-  content:"⚔";
-  font-size:14px;
-  color:var(--muted);
-  letter-spacing:0.06em;
 }
 body.inBattle .rightPills{
   justify-content:flex-start;
