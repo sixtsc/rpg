@@ -10,7 +10,7 @@ export function newPlayer(){
     xp:0, xpToLevel:50,
     gold:0,
     allies: [],
-    skills:[SKILLS.fireball],
+    skills: [],
     inv: { "Potion": { ...ITEMS.potion, qty:2 }, "Ether": { ...ITEMS.ether, qty:1 } }
   };
 }

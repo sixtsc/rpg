@@ -1,12 +1,4 @@
-export const SKILLS = {
-  fireball: {
-    name:"Fireball",
-    icon:"./assets/skills/fireball.svg",
-    mpCost:6,
-    power:10,
-    desc:"Serangan api (damage tinggi)."
-  }
-};
+export const SKILLS = {};
 
 export const ITEMS = {
   potion: { name:"Potion", kind:"heal_hp", amount:25, desc:"Memulihkan 25 HP" },
