@@ -2332,7 +2332,7 @@ function ensureMarketState(){
   if (!state.shopMarketCategory) state.shopMarketCategory = "equipment";
   if (!state.shopEquipCategory) state.shopEquipCategory = "weapon";
   if (!state.marketPage) state.marketPage = "market";
-  if (!state.skillCategory) state.skillCategory = "mp";
+  if (!state.skillCategory) state.skillCategory = "fire";
 }
 
 function updateMarketHeader(title, desc){
@@ -2483,9 +2483,11 @@ function renderSkillTabs(){
   categoryTabs.innerHTML = "";
   equipTabs.innerHTML = "";
   const categories = [
-    { key:"mp", label:"MP", iconSrc:"./assets/icons/mp.svg" },
-    { key:"damage", label:"Damage", iconSrc:"./assets/icons/damage.svg" },
-    { key:"cooldown", label:"Cooldown", iconSrc:"./assets/icons/cooldown.svg" },
+    { key:"fire", label:"Fire", iconSrc:"./assets/icons/fire.svg" },
+    { key:"wind", label:"Wind", iconSrc:"./assets/icons/wind.svg" },
+    { key:"water", label:"Water", iconSrc:"./assets/icons/water.svg" },
+    { key:"earth", label:"Earth", iconSrc:"./assets/icons/earth.svg" },
+    { key:"lightning", label:"Lightning", iconSrc:"./assets/icons/lightning.svg" },
   ];
   categories.forEach((c) => {
     categoryTabs.appendChild(createMarketTabButton({
