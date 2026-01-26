@@ -1363,42 +1363,49 @@ function renderEnemyRow() {
         void hpFill.offsetWidth;
         hpFill.style.transition = "";
       }
-      if (hpBar && !isAlive) {
-        hpBar.dataset.prevPct = `${hpPct}`;
-        const loss = hpBar.querySelector(".loss");
-        if (loss) {
-          loss.style.transition = "none";
-          loss.style.width = `${hpPct}%`;
-          loss.style.opacity = "0";
-        }
-      }
-      setBar(hpFill, enemy.hp, enemy.maxHp);
-      if (hpBar && isAlive && enemy.hp < prevHp) {
-        if (hpBar._hpPulseTimer) clearTimeout(hpBar._hpPulseTimer);
-        hpBar.classList.remove("hpPulse");
-        void hpBar.offsetWidth;
-        hpBar.classList.add("hpPulse");
-        hpBar._hpPulseTimer = setTimeout(() => {
+      if (!isAlive) {
+        hpFill.style.width = `${hpPct}%`;
+        if (hpBar) {
+          hpBar.dataset.prevPct = `${hpPct}`;
+          const loss = hpBar.querySelector(".loss");
+          if (loss) {
+            loss.style.transition = "none";
+            loss.style.width = `${hpPct}%`;
+            loss.style.opacity = "0";
+          }
+          if (hpBar._hpPulseTimer) clearTimeout(hpBar._hpPulseTimer);
           hpBar.classList.remove("hpPulse");
-        }, 360);
-      } else if (hpBar && !isAlive) {
-        if (hpBar._hpPulseTimer) clearTimeout(hpBar._hpPulseTimer);
-        hpBar.classList.remove("hpPulse");
+        }
+      } else {
+        setBar(hpFill, enemy.hp, enemy.maxHp);
+        if (hpBar && enemy.hp < prevHp) {
+          if (hpBar._hpPulseTimer) clearTimeout(hpBar._hpPulseTimer);
+          hpBar.classList.remove("hpPulse");
+          void hpBar.offsetWidth;
+          hpBar.classList.add("hpPulse");
+          hpBar._hpPulseTimer = setTimeout(() => {
+            hpBar.classList.remove("hpPulse");
+          }, 360);
+        }
       }
     }
     if (mpFill) {
       const mpBar = mpFill.parentElement;
-      if (mpBar && !isAlive) {
+      if (!isAlive) {
         const mpPct = enemy.maxMp ? clamp((enemy.mp / enemy.maxMp) * 100, 0, 100) : 0;
-        mpBar.dataset.prevPct = `${mpPct}`;
-        const loss = mpBar.querySelector(".loss");
-        if (loss) {
-          loss.style.transition = "none";
-          loss.style.width = `${mpPct}%`;
-          loss.style.opacity = "0";
+        mpFill.style.width = `${mpPct}%`;
+        if (mpBar) {
+          mpBar.dataset.prevPct = `${mpPct}`;
+          const loss = mpBar.querySelector(".loss");
+          if (loss) {
+            loss.style.transition = "none";
+            loss.style.width = `${mpPct}%`;
+            loss.style.opacity = "0";
+          }
         }
+      } else {
+        setBar(mpFill, enemy.mp, enemy.maxMp);
       }
-      setBar(mpFill, enemy.mp, enemy.maxMp);
     }
 
     card.classList.toggle("active", enemy === activeEnemy);
