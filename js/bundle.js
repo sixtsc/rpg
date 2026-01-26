@@ -1344,6 +1344,8 @@ function renderEnemyRow() {
     const mpFill = card.querySelector(".enemyMpFill");
     const prevHp = (typeof enemy._prevHp === "number") ? enemy._prevHp : enemy.hp;
     const prevHpPct = enemy.maxHp ? clamp((prevHp / enemy.maxHp) * 100, 0, 100) : 0;
+    const wasAlive = enemy._alive === true;
+    const isAlive = enemy.hp > 0;
 
     if (nameEl) nameEl.textContent = enemy.name || "-";
     if (lvlEl) lvlEl.textContent = `Lv${enemy.level || 1}`;
@@ -1362,7 +1364,7 @@ function renderEnemyRow() {
         hpFill.style.transition = "";
       }
       setBar(hpFill, enemy.hp, enemy.maxHp);
-      if (hpBar && enemy.hp < prevHp) {
+      if (hpBar && isAlive && enemy.hp < prevHp) {
         if (hpBar._hpPulseTimer) clearTimeout(hpBar._hpPulseTimer);
         hpBar.classList.remove("hpPulse");
         void hpBar.offsetWidth;
@@ -1370,13 +1372,14 @@ function renderEnemyRow() {
         hpBar._hpPulseTimer = setTimeout(() => {
           hpBar.classList.remove("hpPulse");
         }, 360);
+      } else if (hpBar && !isAlive) {
+        if (hpBar._hpPulseTimer) clearTimeout(hpBar._hpPulseTimer);
+        hpBar.classList.remove("hpPulse");
       }
     }
     if (mpFill) setBar(mpFill, enemy.mp, enemy.maxMp);
 
     card.classList.toggle("active", enemy === activeEnemy);
-    const wasAlive = enemy._alive === true;
-    const isAlive = enemy.hp > 0;
     card.classList.toggle("down", !isAlive);
     if (wasAlive && !isAlive) card.classList.add("enemyDown");
     if (isAlive) card.classList.remove("enemyDown");
