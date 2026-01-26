@@ -5,12 +5,15 @@ try{var _el=document.getElementById('menuSub'); if(_el && _el.textContent && _el
 
 /* ===== data.js ===== */
 const SKILLS = {
-  fireball: { name:"Fireball", icon:"./assets/skills/fireball.svg", mpCost:6, power:10, cooldown:3, desc:"Serangan api (damage tinggi)." },
-  spark: { name:"Spark", icon:"./assets/skills/spark.svg", mpCost:3, power:6, cooldown:2, desc:"Sambaran listrik ringan." },
-  frostBite: { name:"Frost Bite", icon:"./assets/skills/frost-bite.svg", mpCost:5, power:9, cooldown:2, desc:"Es tajam yang menusuk." },
-  shadowCut: { name:"Shadow Cut", icon:"./assets/skills/shadow-cut.svg", mpCost:7, power:12, cooldown:3, desc:"Tebasan gelap yang cepat." },
-  earthSpike: { name:"Earth Spike", icon:"./assets/skills/earth-spike.svg", mpCost:9, power:15, cooldown:3, desc:"Paku tanah menghantam musuh." },
-  meteor: { name:"Meteor", icon:"./assets/skills/meteor.svg", mpCost:12, power:20, cooldown:4, desc:"Pukulan meteor dengan damage besar." }
+  fireball: {
+    name:"Fireball",
+    icon:"./assets/icons/fire.svg",
+    mpCost:5,
+    power:15,
+    element:"fire",
+    damageFormula:"15 + (Stat Fire * 0.5)",
+    desc:"Shoots a small, fast-moving bolt of fire at the enemy."
+  }
 };
 const ITEMS = {
   potion: { name:"Potion", kind:"heal_hp", amount:25, desc:"Memulihkan 25 HP", level:1 },
@@ -96,11 +99,7 @@ const SHOP_GOODS = [
   { name:"Swift Boots", price:68, ref: ITEMS.swiftBoots },
 ];
 const SHOP_SKILLS = [
-  { key:"spark", level:1, price:18 },
-  { key:"frostBite", level:3, price:30 },
-  { key:"shadowCut", level:5, price:45 },
-  { key:"earthSpike", level:7, price:60 },
-  { key:"meteor", level:10, price:85 },
+  { key:"fireball", level:1, price:20 }
 ];
 
 
@@ -240,8 +239,8 @@ function newPlayer(){
     gold:0,
     gems:0,
     allies: [],
-    skills:[{ ...SKILLS.fireball, cdLeft:0 }],
-    skillSlots: ["Fireball", null, null, null, null, null, null, null],
+    skills: [],
+    skillSlots: Array.from({ length: 8 }, () => null),
     inv: { "Potion": { ...ITEMS.potion, qty:2 }, "Ether": { ...ITEMS.ether, qty:1 } }
   };
 }
@@ -339,12 +338,15 @@ function normalizePlayer(p){
     p.equipmentBonus.spd = Number(p.equipmentBonus.spd || 0);
   }
   if (!Array.isArray(p.skills)) p.skills = [];
+  const skillTemplates = Object.values(SKILLS).filter(Boolean);
+  const validSkillNames = new Set(skillTemplates.map((entry) => entry.name));
   p.skills = p.skills.map((skill) => {
     if (!skill || !skill.name) return skill;
-    const template = Object.values(SKILLS).find((entry) => entry && entry.name === skill.name);
+    const template = skillTemplates.find((entry) => entry && entry.name === skill.name);
     if (!template) return skill;
     return { ...template, ...skill, icon: skill.icon || template.icon };
-  });
+  }).filter((skill) => skill && validSkillNames.has(skill.name));
+  if (!validSkillNames.size) p.skills = [];
   if (!Array.isArray(p.skillSlots)) {
     const slots = Array.from({ length: 8 }, (_, i) => {
       const skill = p.skills[i];
@@ -355,10 +357,13 @@ function normalizePlayer(p){
     p.skillSlots = Array.from({ length: 8 }, (_, i) => {
       const entry = p.skillSlots[i];
       if (!entry) return null;
-      if (typeof entry === "string") return entry;
-      if (typeof entry === "object" && entry.name) return entry.name;
+      if (typeof entry === "string") return validSkillNames.has(entry) ? entry : null;
+      if (typeof entry === "object" && entry.name) return validSkillNames.has(entry.name) ? entry.name : null;
       return null;
     });
+  }
+  if (!validSkillNames.size) {
+    p.skillSlots = Array.from({ length: 8 }, () => null);
   }
 
   // Safety defaults (older saves)
@@ -2265,6 +2270,65 @@ function openMarketConfirm(mode, name){
   }
 }
 
+function openSkillConfirm(skillKey){
+  const p = state.player;
+  const entry = SHOP_SKILLS.find((s) => s.key === skillKey);
+  const skill = SKILLS[skillKey];
+  if (!p || !entry || !skill) return;
+  const learned = Array.isArray(p.skills) && p.skills.some((s) => s && s.name === skill.name);
+  const stats = [
+    { label: "Element", value: skill.element ? skill.element.toUpperCase() : "-" },
+    { label: "Level", value: String(entry.level) },
+    { label: "MP", value: String(skill.mpCost) },
+    { label: "Damage", value: skill.damageFormula || String(skill.power || 0) },
+    { label: "Cost", value: `${entry.price} gold` },
+    { label: "Status", value: learned ? "Learned" : "Not learned" },
+  ];
+  const statsHtml = stats.map((s) => (
+    `<div class="confirmStatRow"><span>${escapeHtml(s.label)}:</span><b>${escapeHtml(String(s.value))}</b></div>`
+  )).join("");
+  const descHtml = `
+    <div class="confirmDetailCard">
+      <div class="confirmThumb"><img src="${escapeHtml(skill.icon)}" alt="" /></div>
+      <div class="confirmStats">
+        ${statsHtml}
+      </div>
+    </div>
+    <div class="confirmDesc">${escapeHtml(skill.desc || "Skill")}</div>
+  `;
+  modal.open(
+    `Konfirmasi ${skill.name}`,
+    [
+      { title: "Detail", descHtml, meta: "", value: undefined, className: "confirmDetails" },
+      {
+        title: "",
+        desc: "",
+        meta: "",
+        value: undefined,
+        className: "confirmActions",
+        buttons: [
+          { text: "Batal", value: "back", className: "ghost wide" },
+          { text: learned ? "OWNED" : "LEARN", value: `confirm:${skillKey}`, className: "primary wide", disabled: learned },
+        ],
+      },
+    ],
+    (pick) => {
+      if (pick === "back") {
+        modal.close();
+        return;
+      }
+      if (!String(pick || "").startsWith("confirm:")) return;
+      const key = String(pick || "").replace("confirm:", "");
+      const res = learnSkill(key);
+      if (!res.ok) {
+        if (res.reason === "gold") showToast("Gold tidak cukup.", "warn");
+        if (res.reason === "learned") showToast("Skill sudah dipelajari.", "info");
+      }
+      renderMarketPage();
+    }
+  );
+}
+
 function buyItem(name){
   const p = state.player;
   const g = getShopItem(name);
@@ -2344,6 +2408,15 @@ function ensureMarketState(){
   if (!state.marketMode) state.marketMode = "buy";
   if (!state.shopMarketCategory) state.shopMarketCategory = "equipment";
   if (!state.shopEquipCategory) state.shopEquipCategory = "weapon";
+  if (!state.marketPage) state.marketPage = "market";
+  if (!state.skillCategory) state.skillCategory = "fire";
+}
+
+function updateMarketHeader(title, desc){
+  const titleEl = byId("marketPageTitle");
+  const descEl = byId("marketPageDesc");
+  if (titleEl) titleEl.textContent = title;
+  if (descEl) descEl.textContent = desc;
 }
 
 function createMarketToggleButton(label, isActive, onClick){
@@ -2355,13 +2428,13 @@ function createMarketToggleButton(label, isActive, onClick){
   return btn;
 }
 
-function createMarketTabButton({ label, desc, icon, iconSrc, isActive, onClick, onlyIcon }){
+function createMarketTabButton({ label, desc, icon, iconSrc, isActive, onClick, onlyIcon, showLabel }){
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = `marketTabBtn${isActive ? " active" : ""}${onlyIcon ? " iconOnly" : ""}`;
   if (label) btn.setAttribute("aria-label", label);
   if (iconSrc) {
-    btn.innerHTML = `<img class="marketTabIcon" src="${escapeHtml(iconSrc)}" alt="" />`;
+    btn.innerHTML = `<img class="marketTabIcon" src="${escapeHtml(iconSrc)}" alt="" />${showLabel && label ? `<span>${label}</span>` : ""}`;
   } else {
     btn.innerHTML = `${icon ? `${icon} ` : ""}${label}${desc ? `<small>${desc}</small>` : ""}`;
   }
@@ -2433,6 +2506,7 @@ function renderMarketItems(){
   const grid = byId("marketItemsGrid");
   if (!grid) return;
   grid.innerHTML = "";
+  grid.classList.remove("skillList");
   const mode = state.marketMode || "buy";
   const emptyState = () => {
     const empty = document.createElement("div");
@@ -2480,8 +2554,95 @@ function renderMarketItems(){
   });
 }
 
+function renderSkillTabs(){
+  const categoryTabs = byId("marketCategoryTabs");
+  const equipTabs = byId("marketEquipTabs");
+  if (!categoryTabs || !equipTabs) return;
+  categoryTabs.innerHTML = "";
+  equipTabs.innerHTML = "";
+  categoryTabs.classList.add("skillTabs");
+  equipTabs.classList.remove("skillTabs");
+  const categories = [
+    { key:"fire", label:"Fire", iconSrc:"./assets/icons/fire.svg" },
+    { key:"wind", label:"Wind", iconSrc:"./assets/icons/wind.svg" },
+    { key:"water", label:"Water", iconSrc:"./assets/icons/water.svg" },
+    { key:"earth", label:"Earth", iconSrc:"./assets/icons/earth.svg" },
+    { key:"lightning", label:"Lightning", iconSrc:"./assets/icons/lightning.svg" },
+  ];
+  categories.forEach((c) => {
+    categoryTabs.appendChild(createMarketTabButton({
+      label: c.label,
+      iconSrc: c.iconSrc,
+      showLabel: true,
+      isActive: state.skillCategory === c.key,
+      onClick: () => {
+        state.skillCategory = c.key;
+        renderMarketPage();
+      },
+    }));
+  });
+}
+
+function renderSkillItems(){
+  const grid = byId("marketItemsGrid");
+  if (!grid) return;
+  grid.innerHTML = "";
+  grid.classList.add("skillList");
+  const p = state.player;
+  const rows = SHOP_SKILLS.map((entry) => {
+    const skill = SKILLS[entry.key];
+    if (!skill) return null;
+    if (skill.element && state.skillCategory && skill.element !== state.skillCategory) return null;
+    const learned = Array.isArray(p?.skills) && p.skills.some((s) => s && s.name === skill.name);
+    return { entry, skill, learned };
+  }).filter(Boolean);
+  if (!rows.length) {
+    const empty = document.createElement("div");
+    empty.className = "marketEmptyState";
+    empty.innerHTML = "<h3>Skill coming soon</h3><p>Skill baru akan hadir di kategori ini. Pantau update berikutnya!</p>";
+    grid.appendChild(empty);
+    return;
+  }
+  rows.forEach(({ entry, skill }) => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "marketItemCard skillShopCard";
+    card.innerHTML = `
+      <div class="skillShopMain">
+        <span class="skillShopIcon">
+          <img src="${escapeHtml(skill.icon)}" alt="" />
+        </span>
+        <div class="skillShopInfo">
+          <span class="skillShopName">${escapeHtml(skill.name)}</span>
+        </div>
+        <div class="skillShopMeta">
+          <span>Lv ${entry.level}</span>
+          <span>${entry.price} gold</span>
+        </div>
+      </div>
+    `;
+    card.onclick = () => openSkillConfirm(entry.key);
+    grid.appendChild(card);
+  });
+}
+
+function renderSkillPage(){
+  updateMarketHeader("Skill", "Kategori skill dengan ikon stat. (Coming soon)");
+  const toggle = byId("marketModeToggle");
+  if (toggle) toggle.style.display = "none";
+  renderSkillTabs();
+  renderSkillItems();
+}
+
 function renderMarketPage(){
   ensureMarketState();
+  if (state.marketPage === "skill") {
+    renderSkillPage();
+    return;
+  }
+  updateMarketHeader("Market", "Halaman khusus untuk transaksi di Market.");
+  const toggle = byId("marketModeToggle");
+  if (toggle) toggle.style.display = "";
   renderMarketToggle();
   renderMarketTabs();
   renderMarketItems();
@@ -2491,7 +2652,16 @@ function openMarketPage(){
   if (state.inBattle) return;
   modal.close();
   setMarketPageVisible(true);
+  state.marketPage = "market";
   state.shopMarketCategory = "equipment";
+  renderMarketPage();
+}
+
+function openSkillPage(){
+  if (state.inBattle) return;
+  modal.close();
+  setMarketPageVisible(true);
+  state.marketPage = "skill";
   renderMarketPage();
 }
 
@@ -2502,44 +2672,19 @@ function openShopModal(mode = "menu"){
       "Shop",
       [
         { title: "Market", desc: "Beli / jual item.", meta: "", value: "market" },
-        { title: "Learn Skill", desc: "Pelajari skill baru.", meta: "", value: "learn" },
+        { title: "Skill", desc: "Coming soon.", meta: "", value: "skill" },
       ],
       (pick) => {
         if (pick === "market") return openMarketPage();
+        if (pick === "skill") return openSkillPage();
         openShopModal(String(pick || "menu"));
       }
     );
     return;
   }
 
-  if (mode === "learn"){
-    const p = state.player;
-    const header = [{ title: "Back", desc: "Kembali ke menu Shop.", meta: "", value: "back", className: "subMenuBack" }];
-    const rows = SHOP_SKILLS.map((entry) => {
-      const skill = SKILLS[entry.key];
-      const learned = Array.isArray(p.skills) && p.skills.some((s) => s.name === skill.name);
-      const meta = learned ? "Learned" : `${entry.price} gold`;
-      const title = `${learned ? "✓ " : ""}${skill.name}`;
-      return {
-        title,
-        icon: skill.icon,
-        desc: `Lv ${entry.level}`,
-        meta,
-        value: `detail:${entry.key}`,
-        className: learned ? "skillLearned" : "",
-      };
-    });
-    modal.open(
-      "Shop - Learn Skill",
-      header.concat(rows.length ? rows : [
-        { title: "Skill belum tersedia", desc: "Trainer belum membuka skill baru.", meta: "", value: undefined, className:"readonly" },
-      ]),
-      (pick) => {
-        if (pick === "back") return openShopModal("menu");
-        const key = String(pick || "").replace(/^detail:/, "");
-        openSkillLearnDetail(key);
-      }
-    );
+  if (mode === "skill"){
+    openSkillPage();
     return;
   }
 

@@ -1,10 +1,12 @@
 export const SKILLS = {
   fireball: {
     name:"Fireball",
-    icon:"./assets/skills/fireball.svg",
-    mpCost:6,
-    power:10,
-    desc:"Serangan api (damage tinggi)."
+    icon:"./assets/icons/fire.svg",
+    mpCost:5,
+    power:15,
+    element:"fire",
+    damageFormula:"15 + (Stat Fire * 0.5)",
+    desc:"Shoots a small, fast-moving bolt of fire at the enemy."
   }
 };
 
