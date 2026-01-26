@@ -3546,16 +3546,8 @@ function runAway() {
   const e = getTargetEnemy();
   if (!e) return false;
 
-  const chance = escapeChance(p, e);
-  const roll = randInt(1, 100);
-
-  if (roll <= chance) {
-    endBattle(`Berhasil kabur! (Chance ${chance}%, Roll ${roll})`);
-    return true;
-  }
-
-  addLog("YOU", `Gagal kabur. (Chance ${chance}%, Roll ${roll})`);
-  return false;
+  endBattle("Berhasil kabur!");
+  return true;
 }
 
 function useItem(name) {
@@ -4341,6 +4333,7 @@ function bind() {
 
   byId("btnRun").onclick = () => {
     if (!state.inBattle || state.turn !== "player") return;
+    if (!window.confirm("Kabur dari pertarungan?")) return;
     const ok = runAway();
     if (!ok) afterPlayerAction();
   };

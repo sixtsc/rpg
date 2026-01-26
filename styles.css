@@ -609,11 +609,24 @@ body.inBattle .playerCurrency{
 .btnRow{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
 
 /* Battle UI */
-.battleActions{ display:flex; flex-direction:column; gap:10px; margin-top:12px; }
-.battlePrimary{ display:grid; gap:10px; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+.battleActions{ display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+.battlePrimary{ display:grid; gap:8px; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
 .battlePrimary button{ width:100%; }
 /* Full-width actions */
 #btnStatsBattle, #btnRun{ grid-column: 1 / -1; }
+.actionTitle{ display:none; }
+.actionLabel{ display:none; }
+.battlePrimary .iconBtn{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:8px;
+  gap:6px;
+}
+.battlePrimary .iconBtn .actionIcon{
+  width:22px;
+  height:22px;
+}
 .skillGrid{
   display:grid;
   grid-template-columns: repeat(4, minmax(0,1fr));
@@ -857,7 +870,7 @@ body.inBattle .enemyCard.active{
 body.inBattle .enemyCard.active::before{
   content:"";
   position:absolute;
-  left:-12px;
+  right:-12px;
   top:50%;
   transform:translateY(-50%);
   width:0;
