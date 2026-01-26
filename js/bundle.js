@@ -1421,6 +1421,7 @@ function showDamageText(target, text){
 
 function showEnemyDamageText(text, enemyIndex){
   const idx = Number.isFinite(enemyIndex) ? enemyIndex : (state.enemyTargetIndex || 0);
+  if (!isEnemyAliveByIndex(idx)) return;
   let el = null;
   if (idx === 0) {
     el = $("enemyDamage");
