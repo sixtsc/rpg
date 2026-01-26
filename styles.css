@@ -1646,6 +1646,66 @@ body.inBattle .enemyMiniMeta .muted{
   transform:translateY(-2px);
   box-shadow:0 12px 24px rgba(0,0,0,0.25);
 }
+.skillShopCard{
+  text-align:left;
+  padding:12px 14px;
+  gap:10px;
+  grid-auto-rows:auto;
+}
+.skillShopMain{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  gap:12px;
+  align-items:center;
+}
+.skillShopIcon{
+  width:44px;
+  height:44px;
+  border-radius:12px;
+  background:rgba(255,255,255,0.08);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.skillShopIcon img{
+  width:24px;
+  height:24px;
+}
+.skillShopName{
+  font-weight:700;
+  letter-spacing:0.2px;
+}
+.skillShopMeta{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  font-size:12px;
+  color:var(--muted);
+  text-align:right;
+}
+.skillShopDetails{
+  display:none;
+  padding-top:8px;
+  border-top:1px dashed var(--line);
+  font-size:13px;
+  color:var(--text);
+}
+.skillShopCard.expanded .skillShopDetails{
+  display:block;
+}
+.skillShopDetailTitle{
+  font-weight:700;
+  margin-bottom:6px;
+}
+.skillShopDetailDesc{
+  color:var(--muted);
+  margin-bottom:8px;
+}
+.skillShopDetailMeta{
+  display:grid;
+  gap:4px;
+  color:var(--text);
+}
 .marketItemThumb{
   width:60px;
   height:60px;

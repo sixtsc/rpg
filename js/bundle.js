@@ -4,7 +4,17 @@ window.__BUNDLE_LOADED__=true;
 try{var _el=document.getElementById('menuSub'); if(_el && _el.textContent && _el.textContent.indexOf('JS')===0){ _el.textContent='Pilih opsi:'; }}catch(e){}
 
 /* ===== data.js ===== */
-const SKILLS = {};
+const SKILLS = {
+  fireball: {
+    name:"Fireball",
+    icon:"./assets/icons/fire.svg",
+    mpCost:5,
+    power:15,
+    element:"fire",
+    damageFormula:"15 + (Stat Fire * 0.5)",
+    desc:"Shoots a small, fast-moving bolt of fire at the enemy."
+  }
+};
 const ITEMS = {
   potion: { name:"Potion", kind:"heal_hp", amount:25, desc:"Memulihkan 25 HP", level:1 },
   ether:  { name:"Ether",  kind:"heal_mp", amount:10, desc:"Memulihkan 10 MP", level:1 },
@@ -88,7 +98,9 @@ const SHOP_GOODS = [
   { name:"Iron Greaves", price:90, ref: ITEMS.ironGreaves },
   { name:"Swift Boots", price:68, ref: ITEMS.swiftBoots },
 ];
-const SHOP_SKILLS = [];
+const SHOP_SKILLS = [
+  { key:"fireball", level:1, price:20 }
+];
 
 
 /* ===== engine.js ===== */
@@ -2507,10 +2519,57 @@ function renderSkillItems(){
   const grid = byId("marketItemsGrid");
   if (!grid) return;
   grid.innerHTML = "";
-  const empty = document.createElement("div");
-  empty.className = "marketEmptyState";
-  empty.innerHTML = "<h3>Skill coming soon</h3><p>Skill baru akan hadir di kategori ini. Pantau update berikutnya!</p>";
-  grid.appendChild(empty);
+  const p = state.player;
+  const rows = SHOP_SKILLS.map((entry) => {
+    const skill = SKILLS[entry.key];
+    if (!skill) return null;
+    if (skill.element && state.skillCategory && skill.element !== state.skillCategory) return null;
+    const learned = Array.isArray(p?.skills) && p.skills.some((s) => s && s.name === skill.name);
+    return { entry, skill, learned };
+  }).filter(Boolean);
+  if (!rows.length) {
+    const empty = document.createElement("div");
+    empty.className = "marketEmptyState";
+    empty.innerHTML = "<h3>Skill coming soon</h3><p>Skill baru akan hadir di kategori ini. Pantau update berikutnya!</p>";
+    grid.appendChild(empty);
+    return;
+  }
+  rows.forEach(({ entry, skill, learned }) => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "marketItemCard skillShopCard";
+    card.setAttribute("aria-expanded", "false");
+    card.innerHTML = `
+      <div class="skillShopMain">
+        <span class="skillShopIcon">
+          <img src="${escapeHtml(skill.icon)}" alt="" />
+        </span>
+        <div class="skillShopInfo">
+          <span class="skillShopName">${escapeHtml(skill.name)}</span>
+        </div>
+        <div class="skillShopMeta">
+          <span>Lv ${entry.level}</span>
+          <span>${entry.price} gold</span>
+        </div>
+      </div>
+      <div class="skillShopDetails">
+        <div class="skillShopDetailTitle">${escapeHtml(skill.name)}</div>
+        <div class="skillShopDetailDesc">${escapeHtml(skill.desc)}</div>
+        <div class="skillShopDetailMeta">
+          <span>Damage: ${escapeHtml(skill.damageFormula || String(skill.power || 0))}</span>
+          <span>MP: ${skill.mpCost}</span>
+          <span>Level: ${entry.level}</span>
+          <span>Cost: ${entry.price} gold</span>
+          <span>Status: ${learned ? "Learned" : "Not learned"}</span>
+        </div>
+      </div>
+    `;
+    card.onclick = () => {
+      const isExpanded = card.classList.toggle("expanded");
+      card.setAttribute("aria-expanded", isExpanded ? "true" : "false");
+    };
+    grid.appendChild(card);
+  });
 }
 
 function renderSkillPage(){
