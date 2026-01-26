@@ -1363,6 +1363,15 @@ function renderEnemyRow() {
         void hpFill.offsetWidth;
         hpFill.style.transition = "";
       }
+      if (hpBar && !isAlive) {
+        hpBar.dataset.prevPct = `${hpPct}`;
+        const loss = hpBar.querySelector(".loss");
+        if (loss) {
+          loss.style.transition = "none";
+          loss.style.width = `${hpPct}%`;
+          loss.style.opacity = "0";
+        }
+      }
       setBar(hpFill, enemy.hp, enemy.maxHp);
       if (hpBar && isAlive && enemy.hp < prevHp) {
         if (hpBar._hpPulseTimer) clearTimeout(hpBar._hpPulseTimer);
@@ -1377,7 +1386,20 @@ function renderEnemyRow() {
         hpBar.classList.remove("hpPulse");
       }
     }
-    if (mpFill) setBar(mpFill, enemy.mp, enemy.maxMp);
+    if (mpFill) {
+      const mpBar = mpFill.parentElement;
+      if (mpBar && !isAlive) {
+        const mpPct = enemy.maxMp ? clamp((enemy.mp / enemy.maxMp) * 100, 0, 100) : 0;
+        mpBar.dataset.prevPct = `${mpPct}`;
+        const loss = mpBar.querySelector(".loss");
+        if (loss) {
+          loss.style.transition = "none";
+          loss.style.width = `${mpPct}%`;
+          loss.style.opacity = "0";
+        }
+      }
+      setBar(mpFill, enemy.mp, enemy.maxMp);
+    }
 
     card.classList.toggle("active", enemy === activeEnemy);
     card.classList.toggle("down", !isAlive);
