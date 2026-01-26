@@ -1319,6 +1319,11 @@ body.inBattle .enemyMiniMeta .muted{
   justify-content:center;
   font-size:28px;
 }
+.confirmThumb img{
+  width:60%;
+  height:60%;
+  object-fit:contain;
+}
 .confirmStats{
   display:flex;
   flex-direction:column;
@@ -1651,12 +1656,14 @@ body.inBattle .enemyMiniMeta .muted{
   padding:12px 14px;
   gap:10px;
   grid-auto-rows:auto;
+  height:110px;
 }
 .skillShopMain{
   display:grid;
   grid-template-columns:auto 1fr auto;
   gap:12px;
   align-items:center;
+  height:100%;
 }
 .skillShopIcon{
   width:44px;
@@ -1685,26 +1692,6 @@ body.inBattle .enemyMiniMeta .muted{
 }
 .skillShopDetails{
   display:none;
-  padding-top:8px;
-  border-top:1px dashed var(--line);
-  font-size:13px;
-  color:var(--text);
-}
-.skillShopCard.expanded .skillShopDetails{
-  display:block;
-}
-.skillShopDetailTitle{
-  font-weight:700;
-  margin-bottom:6px;
-}
-.skillShopDetailDesc{
-  color:var(--muted);
-  margin-bottom:8px;
-}
-.skillShopDetailMeta{
-  display:grid;
-  gap:4px;
-  color:var(--text);
 }
 .marketItemThumb{
   width:60px;

@@ -2270,6 +2270,65 @@ function openMarketConfirm(mode, name){
   }
 }
 
+function openSkillConfirm(skillKey){
+  const p = state.player;
+  const entry = SHOP_SKILLS.find((s) => s.key === skillKey);
+  const skill = SKILLS[skillKey];
+  if (!p || !entry || !skill) return;
+  const learned = Array.isArray(p.skills) && p.skills.some((s) => s && s.name === skill.name);
+  const stats = [
+    { label: "Element", value: skill.element ? skill.element.toUpperCase() : "-" },
+    { label: "Level", value: String(entry.level) },
+    { label: "MP", value: String(skill.mpCost) },
+    { label: "Damage", value: skill.damageFormula || String(skill.power || 0) },
+    { label: "Cost", value: `${entry.price} gold` },
+    { label: "Status", value: learned ? "Learned" : "Not learned" },
+  ];
+  const statsHtml = stats.map((s) => (
+    `<div class="confirmStatRow"><span>${escapeHtml(s.label)}:</span><b>${escapeHtml(String(s.value))}</b></div>`
+  )).join("");
+  const descHtml = `
+    <div class="confirmDetailCard">
+      <div class="confirmThumb"><img src="${escapeHtml(skill.icon)}" alt="" /></div>
+      <div class="confirmStats">
+        ${statsHtml}
+      </div>
+    </div>
+    <div class="confirmDesc">${escapeHtml(skill.desc || "Skill")}</div>
+  `;
+  modal.open(
+    `Konfirmasi ${skill.name}`,
+    [
+      { title: "Detail", descHtml, meta: "", value: undefined, className: "confirmDetails" },
+      {
+        title: "",
+        desc: "",
+        meta: "",
+        value: undefined,
+        className: "confirmActions",
+        buttons: [
+          { text: "Batal", value: "back", className: "ghost wide" },
+          { text: learned ? "OWNED" : "LEARN", value: `confirm:${skillKey}`, className: "primary wide", disabled: learned },
+        ],
+      },
+    ],
+    (pick) => {
+      if (pick === "back") {
+        modal.close();
+        return;
+      }
+      if (!String(pick || "").startsWith("confirm:")) return;
+      const key = String(pick || "").replace("confirm:", "");
+      const res = learnSkill(key);
+      if (!res.ok) {
+        if (res.reason === "gold") showToast("Gold tidak cukup.", "warn");
+        if (res.reason === "learned") showToast("Skill sudah dipelajari.", "info");
+      }
+      renderMarketPage();
+    }
+  );
+}
+
 function buyItem(name){
   const p = state.player;
   const g = getShopItem(name);
@@ -2540,11 +2599,10 @@ function renderSkillItems(){
     grid.appendChild(empty);
     return;
   }
-  rows.forEach(({ entry, skill, learned }) => {
+  rows.forEach(({ entry, skill }) => {
     const card = document.createElement("button");
     card.type = "button";
     card.className = "marketItemCard skillShopCard";
-    card.setAttribute("aria-expanded", "false");
     card.innerHTML = `
       <div class="skillShopMain">
         <span class="skillShopIcon">
@@ -2558,22 +2616,8 @@ function renderSkillItems(){
           <span>${entry.price} gold</span>
         </div>
       </div>
-      <div class="skillShopDetails">
-        <div class="skillShopDetailTitle">${escapeHtml(skill.name)}</div>
-        <div class="skillShopDetailDesc">${escapeHtml(skill.desc)}</div>
-        <div class="skillShopDetailMeta">
-          <span>Damage: ${escapeHtml(skill.damageFormula || String(skill.power || 0))}</span>
-          <span>MP: ${skill.mpCost}</span>
-          <span>Level: ${entry.level}</span>
-          <span>Cost: ${entry.price} gold</span>
-          <span>Status: ${learned ? "Learned" : "Not learned"}</span>
-        </div>
-      </div>
     `;
-    card.onclick = () => {
-      const isExpanded = card.classList.toggle("expanded");
-      card.setAttribute("aria-expanded", isExpanded ? "true" : "false");
-    };
+    card.onclick = () => openSkillConfirm(entry.key);
     grid.appendChild(card);
   });
 }
