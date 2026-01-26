@@ -1410,6 +1410,7 @@ function renderEnemyRow() {
 
     card.classList.toggle("active", enemy === activeEnemy);
     card.classList.toggle("down", !isAlive);
+    card.classList.toggle("noFx", !isAlive);
     if (wasAlive && !isAlive) card.classList.add("enemyDown");
     if (isAlive) card.classList.remove("enemyDown");
     enemy._alive = isAlive;
