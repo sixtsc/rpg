@@ -338,12 +338,15 @@ function normalizePlayer(p){
     p.equipmentBonus.spd = Number(p.equipmentBonus.spd || 0);
   }
   if (!Array.isArray(p.skills)) p.skills = [];
+  const skillTemplates = Object.values(SKILLS).filter(Boolean);
+  const validSkillNames = new Set(skillTemplates.map((entry) => entry.name));
   p.skills = p.skills.map((skill) => {
     if (!skill || !skill.name) return skill;
-    const template = Object.values(SKILLS).find((entry) => entry && entry.name === skill.name);
+    const template = skillTemplates.find((entry) => entry && entry.name === skill.name);
     if (!template) return skill;
     return { ...template, ...skill, icon: skill.icon || template.icon };
-  });
+  }).filter((skill) => skill && validSkillNames.has(skill.name));
+  if (!validSkillNames.size) p.skills = [];
   if (!Array.isArray(p.skillSlots)) {
     const slots = Array.from({ length: 8 }, (_, i) => {
       const skill = p.skills[i];
@@ -354,10 +357,13 @@ function normalizePlayer(p){
     p.skillSlots = Array.from({ length: 8 }, (_, i) => {
       const entry = p.skillSlots[i];
       if (!entry) return null;
-      if (typeof entry === "string") return entry;
-      if (typeof entry === "object" && entry.name) return entry.name;
+      if (typeof entry === "string") return validSkillNames.has(entry) ? entry : null;
+      if (typeof entry === "object" && entry.name) return validSkillNames.has(entry.name) ? entry.name : null;
       return null;
     });
+  }
+  if (!validSkillNames.size) {
+    p.skillSlots = Array.from({ length: 8 }, () => null);
   }
 
   // Safety defaults (older saves)
