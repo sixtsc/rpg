@@ -2506,6 +2506,7 @@ function renderMarketItems(){
   const grid = byId("marketItemsGrid");
   if (!grid) return;
   grid.innerHTML = "";
+  grid.classList.remove("skillList");
   const mode = state.marketMode || "buy";
   const emptyState = () => {
     const empty = document.createElement("div");
@@ -2559,6 +2560,8 @@ function renderSkillTabs(){
   if (!categoryTabs || !equipTabs) return;
   categoryTabs.innerHTML = "";
   equipTabs.innerHTML = "";
+  categoryTabs.classList.add("skillTabs");
+  equipTabs.classList.remove("skillTabs");
   const categories = [
     { key:"fire", label:"Fire", iconSrc:"./assets/icons/fire.svg" },
     { key:"wind", label:"Wind", iconSrc:"./assets/icons/wind.svg" },
@@ -2584,6 +2587,7 @@ function renderSkillItems(){
   const grid = byId("marketItemsGrid");
   if (!grid) return;
   grid.innerHTML = "";
+  grid.classList.add("skillList");
   const p = state.player;
   const rows = SHOP_SKILLS.map((entry) => {
     const skill = SKILLS[entry.key];

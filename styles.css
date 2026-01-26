@@ -1586,6 +1586,17 @@ body.inBattle .enemyMiniMeta .muted{
   flex-wrap:wrap;
   gap:10px;
 }
+.marketTabRow.skillTabs .marketTabBtn{
+  flex:1 1 120px;
+  justify-content:center;
+}
+.marketTabRow.skillTabs .marketTabBtn span{
+  display:block;
+  margin-top:6px;
+  font-size:12px;
+  color:var(--muted);
+  font-weight:600;
+}
 .marketTabRow.sub{
   padding-left:8px;
   border-left:2px solid var(--line);
@@ -1626,6 +1637,11 @@ body.inBattle .enemyMiniMeta .muted{
   max-width:540px;
   margin:0 auto;
 }
+.marketItemsGrid.skillList{
+  grid-template-columns:1fr;
+  grid-auto-rows:auto;
+  max-width:720px;
+}
 .marketItemCard{
   display:flex;
   flex-direction:column;
@@ -1657,6 +1673,10 @@ body.inBattle .enemyMiniMeta .muted{
   gap:10px;
   grid-auto-rows:auto;
   height:110px;
+}
+.marketItemsGrid.skillList .skillShopCard{
+  height:auto;
+  padding:14px 18px;
 }
 .skillShopMain{
   display:grid;
