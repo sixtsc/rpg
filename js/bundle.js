@@ -907,7 +907,22 @@ function getEnemyAvatarBoxByIndex(index){
   return document.querySelector(`.enemyCard.extra[data-enemy-index="${index}"] .enemyAvatarBox`);
 }
 
+function isEnemyAliveByIndex(enemyIndex){
+  const idx = Number(enemyIndex);
+  if (!Number.isFinite(idx)) return false;
+  if (idx !== 0) {
+    const card = document.querySelector(`.enemyCard.extra[data-enemy-index="${idx}"]`);
+    if (card && (card.classList.contains("down") || card.classList.contains("enemyDown"))) {
+      return false;
+    }
+  }
+  const queue = getEnemyQueue();
+  const enemy = queue[idx];
+  return !!(enemy && enemy.hp > 0);
+}
+
 function playEnemySlash(enemyIndex, delay = 0){
+  if (!isEnemyAliveByIndex(enemyIndex)) return;
   const el = getEnemyAvatarBoxByIndex(enemyIndex);
   if (!el) return;
   const spawn = () => {
@@ -923,6 +938,7 @@ function playEnemySlash(enemyIndex, delay = 0){
 }
 
 function playEnemyDodgeFade(enemyIndex){
+  if (!isEnemyAliveByIndex(enemyIndex)) return;
   const el = getEnemyAvatarBoxByIndex(enemyIndex);
   if (!el) return;
   el.classList.remove("dodgeFade");
@@ -932,6 +948,7 @@ function playEnemyDodgeFade(enemyIndex){
 }
 
 function playEnemyCritShake(enemyIndex){
+  if (!isEnemyAliveByIndex(enemyIndex)) return;
   const el = getEnemyAvatarBoxByIndex(enemyIndex);
   if (!el) return;
   el.classList.remove("critShake");
