@@ -265,9 +265,13 @@
         </div>
 
         <div class="battleActionWrap">
+          <div class="turnIndicator" id="turnIndicator" style="display:none;">
+            <span class="turnNow">Now: -</span>
+            <span class="turnNext">Next: -</span>
+          </div>
           <div class="card actionCard" id="actionCard" style="display:none;">
             <div class="sectionTitle">
-              <div><b>ACTION</b></div>
+              <div class="actionTitle" aria-hidden="true"></div>
               <div class="rightPills">
                 <div class="pill muted" id="turnCount">Turn: 0</div>
                 <div class="pill muted" id="actionHint">—</div>
@@ -310,6 +314,15 @@
         </div>
       </div>
 
+    </div>
+  </div>
+  <div id="runConfirmBackdrop" class="confirmBackdrop" style="display:none;">
+    <div class="confirmCard">
+      <div class="confirmTitle">Kabur dari pertarungan?</div>
+      <div class="confirmActions">
+        <button class="confirmBtn" id="btnRunCancel">Batal</button>
+        <button class="confirmBtn warn" id="btnRunConfirm">Kabur</button>
+      </div>
     </div>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>

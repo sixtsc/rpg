@@ -907,7 +907,22 @@ function getEnemyAvatarBoxByIndex(index){
   return document.querySelector(`.enemyCard.extra[data-enemy-index="${index}"] .enemyAvatarBox`);
 }
 
+function isEnemyAliveByIndex(enemyIndex){
+  const idx = Number(enemyIndex);
+  if (!Number.isFinite(idx)) return false;
+  if (idx !== 0) {
+    const card = document.querySelector(`.enemyCard.extra[data-enemy-index="${idx}"]`);
+    if (card && (card.classList.contains("down") || card.classList.contains("enemyDown"))) {
+      return false;
+    }
+  }
+  const queue = getEnemyQueue();
+  const enemy = queue[idx];
+  return !!(enemy && enemy.hp > 0);
+}
+
 function playEnemySlash(enemyIndex, delay = 0){
+  if (!isEnemyAliveByIndex(enemyIndex)) return;
   const el = getEnemyAvatarBoxByIndex(enemyIndex);
   if (!el) return;
   const spawn = () => {
@@ -923,6 +938,7 @@ function playEnemySlash(enemyIndex, delay = 0){
 }
 
 function playEnemyDodgeFade(enemyIndex){
+  if (!isEnemyAliveByIndex(enemyIndex)) return;
   const el = getEnemyAvatarBoxByIndex(enemyIndex);
   if (!el) return;
   el.classList.remove("dodgeFade");
@@ -932,6 +948,7 @@ function playEnemyDodgeFade(enemyIndex){
 }
 
 function playEnemyCritShake(enemyIndex){
+  if (!isEnemyAliveByIndex(enemyIndex)) return;
   const el = getEnemyAvatarBoxByIndex(enemyIndex);
   if (!el) return;
   el.classList.remove("critShake");
@@ -1086,6 +1103,11 @@ function getDefeatedEnemies(){
 function getEnemyQueue(){
   if (Array.isArray(state.enemyQueue) && state.enemyQueue.length) return normalizeEnemyQueue();
   return state.enemy ? [state.enemy] : [];
+}
+
+function getDefaultEnemyTargetIndex(queue){
+  if (!Array.isArray(queue) || !queue.length) return 0;
+  return clamp(Math.floor(queue.length / 2), 0, queue.length - 1);
 }
 
 function getPrimaryEnemy(){
@@ -1322,6 +1344,8 @@ function renderEnemyRow() {
     const mpFill = card.querySelector(".enemyMpFill");
     const prevHp = (typeof enemy._prevHp === "number") ? enemy._prevHp : enemy.hp;
     const prevHpPct = enemy.maxHp ? clamp((prevHp / enemy.maxHp) * 100, 0, 100) : 0;
+    const wasAlive = enemy._alive === true;
+    const isAlive = enemy.hp > 0;
 
     if (nameEl) nameEl.textContent = enemy.name || "-";
     if (lvlEl) lvlEl.textContent = `Lv${enemy.level || 1}`;
@@ -1339,23 +1363,54 @@ function renderEnemyRow() {
         void hpFill.offsetWidth;
         hpFill.style.transition = "";
       }
-      setBar(hpFill, enemy.hp, enemy.maxHp);
-      if (hpBar && enemy.hp < prevHp) {
-        if (hpBar._hpPulseTimer) clearTimeout(hpBar._hpPulseTimer);
-        hpBar.classList.remove("hpPulse");
-        void hpBar.offsetWidth;
-        hpBar.classList.add("hpPulse");
-        hpBar._hpPulseTimer = setTimeout(() => {
+      if (!isAlive) {
+        hpFill.style.width = `${hpPct}%`;
+        if (hpBar) {
+          hpBar.dataset.prevPct = `${hpPct}`;
+          const loss = hpBar.querySelector(".loss");
+          if (loss) {
+            loss.style.transition = "none";
+            loss.style.width = `${hpPct}%`;
+            loss.style.opacity = "0";
+          }
+          if (hpBar._hpPulseTimer) clearTimeout(hpBar._hpPulseTimer);
           hpBar.classList.remove("hpPulse");
-        }, 360);
+        }
+      } else {
+        setBar(hpFill, enemy.hp, enemy.maxHp);
+        if (hpBar && enemy.hp < prevHp) {
+          if (hpBar._hpPulseTimer) clearTimeout(hpBar._hpPulseTimer);
+          hpBar.classList.remove("hpPulse");
+          void hpBar.offsetWidth;
+          hpBar.classList.add("hpPulse");
+          hpBar._hpPulseTimer = setTimeout(() => {
+            hpBar.classList.remove("hpPulse");
+          }, 360);
+        }
       }
     }
-    if (mpFill) setBar(mpFill, enemy.mp, enemy.maxMp);
+    if (mpFill) {
+      const mpBar = mpFill.parentElement;
+      if (!isAlive) {
+        const mpPct = enemy.maxMp ? clamp((enemy.mp / enemy.maxMp) * 100, 0, 100) : 0;
+        mpFill.style.width = `${mpPct}%`;
+        if (mpBar) {
+          mpBar.dataset.prevPct = `${mpPct}`;
+          const loss = mpBar.querySelector(".loss");
+          if (loss) {
+            loss.style.transition = "none";
+            loss.style.width = `${mpPct}%`;
+            loss.style.opacity = "0";
+          }
+        }
+      } else {
+        setBar(mpFill, enemy.mp, enemy.maxMp);
+      }
+    }
 
     card.classList.toggle("active", enemy === activeEnemy);
-    const wasAlive = enemy._alive === true;
-    const isAlive = enemy.hp > 0;
     card.classList.toggle("down", !isAlive);
+    card.classList.toggle("noFx", !isAlive);
     if (wasAlive && !isAlive) card.classList.add("enemyDown");
     if (isAlive) card.classList.remove("enemyDown");
     enemy._alive = isAlive;
@@ -1399,6 +1454,7 @@ function showDamageText(target, text){
 
 function showEnemyDamageText(text, enemyIndex){
   const idx = Number.isFinite(enemyIndex) ? enemyIndex : (state.enemyTargetIndex || 0);
+  if (!isEnemyAliveByIndex(idx)) return;
   let el = null;
   if (idx === 0) {
     el = $("enemyDamage");
@@ -1783,30 +1839,39 @@ function refresh(state) {
   document.body.classList.toggle("inTown", !inBattle);
   document.body.classList.toggle("enemySingle", inBattle && getEnemyQueue().length <= 1);
   if (inBattle) {
+    const turnIndicator = $("turnIndicator");
+    if (turnIndicator) {
+      const nowEl = turnIndicator.querySelector(".turnNow");
+      const nextEl = turnIndicator.querySelector(".turnNext");
+      const turnLabels = {
+        player: "Player",
+        enemy: "Enemy",
+        town: "Town",
+      };
+      const current = state.turn || "player";
+      const next = current === "enemy" ? "player" : "enemy";
+      if (nowEl) nowEl.textContent = `Now: ${turnLabels[current] || current}`;
+      if (nextEl) nextEl.textContent = `Next: ${turnLabels[next] || next}`;
+      turnIndicator.style.display = "flex";
+    }
     closeMailboxOverlay();
   }
 
-  const battleColumns = document.querySelector(".battleColumns");
   const allyRow = $("allyRow");
-  const enemyRow = $("enemyRow");
   const playerCard = $("playerCard");
-  if (battleColumns && allyRow && playerCard) {
-    let playerCenter = $("playerCenter");
+  if (allyRow && playerCard) {
     if (inBattle) {
-      if (!playerCenter) {
-        playerCenter = document.createElement("div");
-        playerCenter.id = "playerCenter";
-        playerCenter.className = "playerCenter";
-        battleColumns.insertBefore(playerCenter, enemyRow || null);
-      }
-      if (playerCard.parentElement !== playerCenter) {
-        playerCenter.appendChild(playerCard);
-      }
-    } else {
-      if (playerCard.parentElement !== allyRow) {
+      const allySlotTop = allyRow.querySelector('.allyCard.extra[data-ally-slot="1"]');
+      const allySlotBottom = allyRow.querySelector('.allyCard.extra[data-ally-slot="2"]');
+      if (allySlotBottom) {
+        allyRow.insertBefore(playerCard, allySlotBottom);
+      } else if (allySlotTop) {
+        allySlotTop.insertAdjacentElement("afterend", playerCard);
+      } else if (playerCard.parentElement !== allyRow) {
         allyRow.prepend(playerCard);
       }
-      if (playerCenter) playerCenter.remove();
+    } else if (playerCard.parentElement !== allyRow) {
+      allyRow.prepend(playerCard);
     }
   }
 
@@ -1932,6 +1997,8 @@ function refresh(state) {
       };
     }
   } else {
+    const turnIndicator = $("turnIndicator");
+    if (turnIndicator) turnIndicator.style.display = "none";
     $("modePill").textContent = "Town";
     // turnCount/actionHint/battleHint hidden globally above
 
@@ -3294,7 +3361,7 @@ function startAdventureBattle(targetLevel, stageName){
     const count = targetLevel === 10 ? 3 : 2;
     state.enemyQueue = Array.from({ length: count }, () => genEnemy(targetLevel));
     state.enemy = state.enemyQueue[0];
-    state.enemyTargetIndex = 0;
+    state.enemyTargetIndex = getDefaultEnemyTargetIndex(state.enemyQueue);
   } else {
     state.enemyQueue = null;
     state.enemy = genEnemy(targetLevel);
@@ -3496,16 +3563,8 @@ function runAway() {
   const e = getTargetEnemy();
   if (!e) return false;
 
-  const chance = escapeChance(p, e);
-  const roll = randInt(1, 100);
-
-  if (roll <= chance) {
-    endBattle(`Berhasil kabur! (Chance ${chance}%, Roll ${roll})`);
-    return true;
-  }
-
-  addLog("YOU", `Gagal kabur. (Chance ${chance}%, Roll ${roll})`);
-  return false;
+  endBattle("Berhasil kabur!");
+  return true;
 }
 
 function useItem(name) {
@@ -4289,11 +4348,37 @@ function bind() {
     afterPlayerAction();
   };
 
+  const runBackdrop = byId("runConfirmBackdrop");
+  const runConfirm = byId("btnRunConfirm");
+  const runCancel = byId("btnRunCancel");
+
+  const openRunConfirm = () => {
+    if (runBackdrop) runBackdrop.style.display = "flex";
+  };
+  const closeRunConfirm = () => {
+    if (runBackdrop) runBackdrop.style.display = "none";
+  };
+
+  if (runCancel) runCancel.onclick = closeRunConfirm;
+  if (runBackdrop) {
+    runBackdrop.onclick = (event) => {
+      if (event.target === runBackdrop) closeRunConfirm();
+    };
+  }
+
   byId("btnRun").onclick = () => {
     if (!state.inBattle || state.turn !== "player") return;
-    const ok = runAway();
-    if (!ok) afterPlayerAction();
+    openRunConfirm();
   };
+
+  if (runConfirm) {
+    runConfirm.onclick = () => {
+      if (!state.inBattle || state.turn !== "player") return;
+      closeRunConfirm();
+      const ok = runAway();
+      if (!ok) afterPlayerAction();
+    };
+  }
 
   byId("btnItem").onclick = () => {
     if (!state.inBattle || state.turn !== "player") return;

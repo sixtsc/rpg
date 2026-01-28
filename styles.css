@@ -614,6 +614,7 @@ body.inBattle .playerCurrency{
 .battlePrimary button{ width:100%; }
 /* Full-width actions */
 #btnStatsBattle, #btnRun{ grid-column: 1 / -1; }
+.actionTitle{ display:none; }
 .skillGrid{
   display:grid;
   grid-template-columns: repeat(4, minmax(0,1fr));
@@ -685,7 +686,7 @@ body.inBattle .grid{
 body.inBattle .battleLayout{
   --battle-card-width: clamp(160px, 40vw, 200px);
   --battle-card-height: clamp(130px, 34vw, 170px);
-  --battle-gap: clamp(8px, 2.5vw, 14px);
+  --battle-gap: clamp(20px, 4vw, 32px);
   width:min(100%, calc((var(--battle-card-width) * 2) + var(--battle-gap)));
   margin:0 auto;
   display:flex;
@@ -719,6 +720,11 @@ body.inBattle #actionCard{
   width:100%;
   padding:10px;
 }
+body.inBattle #actionCard .sectionTitle{
+  min-height:0;
+  margin-bottom:0;
+  padding:0;
+}
 body.inBattle .card{
   padding:10px;
 }
@@ -726,15 +732,19 @@ body.inBattle .allyRow,
 body.inBattle .enemyRow{
   display:grid;
   grid-auto-rows: var(--battle-card-height);
-  align-content:start;
-  gap:12px;
+  align-content:center;
 }
 body.inBattle .allyRow{
   justify-items:start;
+  --row-gap: 12px;
+  gap: var(--row-gap);
+  min-height: calc((var(--battle-card-height) * 3) + (var(--row-gap) * 2));
 }
 body.inBattle .enemyRow{
   justify-items:end;
-  gap:14px;
+  --row-gap: 14px;
+  gap: var(--row-gap);
+  min-height: calc((var(--battle-card-height) * 3) + (var(--row-gap) * 2));
 }
 body.inBattle .allyCard,
 body.inBattle .enemyCard{
@@ -760,19 +770,6 @@ body.inBattle #playerCard{
   justify-self:center;
   margin-left:auto;
   margin-right:auto;
-}
-body.inBattle .playerCenter{
-  position:absolute;
-  left:50%;
-  top:0;
-  transform:translateX(-50%);
-  width:var(--battle-card-width);
-  display:flex;
-  justify-content:center;
-  pointer-events:none;
-}
-body.inBattle .playerCenter > *{
-  pointer-events:auto;
 }
 body.inBattle.enemySingle #enemyRow{
   justify-self:center;
@@ -823,6 +820,13 @@ body.inBattle .bars{
   gap:5px;
   margin-top:2px;
 }
+body.inBattle .allyCard .bars,
+body.inBattle .enemyCard .bars{
+  width:120px;
+}
+body.inBattle .enemyCard .bars{
+  margin-left:auto;
+}
 body.inBattle .bar{
   height:10px;
 }
@@ -843,6 +847,55 @@ body.inBattle .allyCard .allySub,
 body.inBattle .enemyCard .nameSub{
   order:2;
 }
+
+body.inBattle .turnIndicator{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:6px 10px;
+  margin:2px 0 6px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background: rgba(12, 18, 28, 0.6);
+  font-size:12px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:0.4px;
+}
+body.inBattle .turnIndicator span{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+body.inBattle .turnIndicator .turnNow::before{
+  content:"●";
+  color: rgba(74, 163, 255, 0.9);
+}
+body.inBattle .turnIndicator .turnNext::before{
+  content:"▶";
+  color: rgba(255, 190, 90, 0.9);
+}
+
+body.inBattle .battleActions{
+  gap:6px;
+  margin-top:6px;
+}
+body.inBattle .battlePrimary{
+  gap:6px;
+}
+body.inBattle .battlePrimary button{
+  padding:6px 8px;
+  font-size:12px;
+}
+body.inBattle .skillGrid{
+  gap:6px;
+}
+body.inBattle .skillSlot{
+  min-height:44px;
+  padding:4px;
+  font-size:12px;
+}
 body.inBattle .allyCard .avatarWrap,
 body.inBattle .enemyCard .avatarWrap{
   order:1;
@@ -858,18 +911,28 @@ body.inBattle .allyCard .avatarWrap{
 body.inBattle .enemyCard .avatarWrap{
   justify-content:flex-end;
 }
+body.inBattle .enemyCard.active{
+  position:relative;
+  border-color: transparent;
+  box-shadow:none;
+}
+body.inBattle .enemyCard.active::before{
+  content:"";
+  position:absolute;
+  right:-12px;
+  top:50%;
+  transform:translateY(-50%);
+  width:0;
+  height:0;
+  border-top:8px solid transparent;
+  border-bottom:8px solid transparent;
+  border-right:12px solid rgba(97, 162, 255, 0.9);
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.35));
+  z-index:5;
+}
 body.inBattle .enemyCard.active .avatarBox{
   border-color: rgba(97, 162, 255, 0.85);
   box-shadow: 0 0 0 2px rgba(97, 162, 255, 0.35), 0 8px 14px rgba(0,0,0,.4);
-}
-body.inBattle .actionCard .sectionTitle b{
-  display:none;
-}
-body.inBattle .actionCard .sectionTitle::before{
-  content:"⚔";
-  font-size:14px;
-  color:var(--muted);
-  letter-spacing:0.06em;
 }
 body.inBattle .rightPills{
   justify-content:flex-start;
@@ -1972,6 +2035,51 @@ select.authInput{
 }
 .enemyCard.enemyDown{
   animation: enemyDown 320ms ease-out;
+}
+.enemyCard.noFx,
+.enemyCard.noFx *{
+  animation: none !important;
+  transition: none !important;
+}
+
+.confirmBackdrop{
+  position:fixed;
+  inset:0;
+  background: rgba(3, 6, 12, 0.72);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+  padding:16px;
+}
+.confirmCard{
+  width:min(320px, 92vw);
+  background: rgba(12, 18, 28, 0.95);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:16px;
+  box-shadow: 0 12px 28px rgba(0,0,0,.45);
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.confirmTitle{
+  font-weight:900;
+  text-align:center;
+}
+.confirmActions{
+  display:flex;
+  gap:10px;
+}
+.confirmBtn{
+  flex:1;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background: rgba(255,255,255,0.05);
+  color:var(--text);
+  font-weight:800;
+  cursor:pointer;
 }
 @keyframes enemyDown{
   from{ transform: scale(1); opacity:1; }
