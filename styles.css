@@ -877,9 +877,9 @@ body.inBattle .enemyCard .nameSub{
 
 body.inBattle .turnIndicator{
   display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:6px;
   padding:8px 10px;
   margin:2px 0 6px;
   border-radius:12px;
@@ -900,8 +900,8 @@ body.inBattle .turnIndicatorList{
   display:flex;
   align-items:center;
   gap:6px;
-  flex-wrap:wrap;
-  justify-content:flex-end;
+  flex-wrap:nowrap;
+  width:100%;
 }
 body.inBattle .turnBadge{
   display:inline-flex;
