@@ -639,10 +639,26 @@ body.inBattle .playerCurrency{
   background:rgba(16, 28, 44, 0.75);
   border-color:rgba(120, 160, 220, 0.5);
   font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:0.6px;
 }
 .actionSlot.primary{
   border-color:var(--accent);
   background:rgba(25, 48, 90, 0.65);
+}
+.actionSlot.warn{
+  border-color: rgba(255, 190, 90, 0.75);
+  background: rgba(56, 36, 14, 0.75);
+  color:#ffd3a8;
+}
+.actionSlot::after{
+  content:"";
+  position:absolute;
+  inset:4px;
+  border-radius:10px;
+  border:1px dashed rgba(255,255,255,0.2);
+  opacity:0.6;
+  pointer-events:none;
 }
 .skillSlot .skillIcon{
   width:28px;

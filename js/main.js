@@ -38,7 +38,6 @@ function endBattle(reason) {
   state.inBattle = false;
   state.enemy = null;
   state.playerDefending = false;
-  state.playerDodging = false;
   setTurn("town");
   state.battleTurn = 0;
 
@@ -132,7 +131,6 @@ function enemyTurn() {
   }
 
   state.playerDefending = false;
-  state.playerDodging = false;
 
   if (p.hp <= 0) {
     loseBattle();
@@ -212,7 +210,6 @@ function explore() {
   state.inBattle = true;
   state._animateEnemyIn = true;
   state.playerDefending = false;
-  state.playerDodging = false;
   state.battleTurn = 0;
 addLog("INFO", `Musuh muncul: ${state.enemy.name} (Lv${state.enemy.level})`);
 
@@ -379,12 +376,6 @@ function openRecruitModal() {
       }
     }
   );
-}
-
-function dodge(){
-  setTurn("player");
-  state.playerDodging = true;
-  addLog("YOU","Dodge! Chance menghindar meningkat (1 turn).");
 }
 
 function runAway() {
@@ -587,7 +578,6 @@ function openTownMenu(){
         state.enemy = null;
         state.inBattle = false;
         state.playerDefending = false;
-  state.playerDodging = false;
         setTurn("town");
   state.battleTurn = 0;
 
@@ -603,7 +593,6 @@ function openTownMenu(){
         state.enemy = null;
         state.inBattle = false;
         state.playerDefending = false;
-  state.playerDodging = false;
         setTurn("town");
   state.battleTurn = 0;
 
@@ -655,12 +644,6 @@ function bind() {
     afterPlayerAction();
   };
 
-  byId("btnDefend").onclick = () => {
-    if (!state.inBattle || state.turn !== "player") return;
-    dodge();
-    afterPlayerAction();
-  };
-
   byId("btnRun").onclick = () => {
     if (!state.inBattle || state.turn !== "player") return;
     const ok = runAway();
@@ -689,7 +672,6 @@ function applyLoaded(payload){
     state.enemy = null;
     state.inBattle = false;
     state.playerDefending = false;
-  state.playerDodging = false;
     setTurn("town");
   state.battleTurn = 0;
     byId("log").innerHTML = "";
@@ -706,7 +688,6 @@ function startNewGame(){
   state.enemy = null;
   state.inBattle = false;
   state.playerDefending = false;
-  state.playerDodging = false;
   setTurn("town");
   state.battleTurn = 0;
   byId("log").innerHTML = "";

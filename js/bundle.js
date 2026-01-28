@@ -441,7 +441,6 @@ function newState(){
     shopEquipCategory: "weapon",
     inventoryCategory: "item",
     playerDefending: false,
-    playerDodging: false,
     turn: "town",
     battleTurn: 0 // "town" | "player" | "enemy"
   };
@@ -564,7 +563,6 @@ function resetToEmptyProfile(){
   state.enemy = null;
   state.inBattle = false;
   state.playerDefending = false;
-  state.playerDodging = false;
   setTurn("town");
   state.battleTurn = 0;
   refresh(state);
@@ -1947,7 +1945,7 @@ function refresh(state) {
 
     // Buttons visibility
     $("townBtns").style.display = "none";
-    $("battleBtns").style.display = "flex";
+    $("battleBtns").style.display = state.turn === "player" ? "flex" : "none";
     if (state.battleResult) {
       $("battleBtns").classList.add("disabled");
       $("battleBtns").querySelectorAll("button").forEach((b) => { b.disabled = true; });
@@ -2916,7 +2914,6 @@ function beginEnemyTurn(){
     addLog("INFO", `${state.enemy?.name || "Musuh"} sedang stun! Giliran mereka hilang.`);
     tickStatuses(state.enemy);
     state.playerDefending = false;
-    state.playerDodging = false;
     state.battleTurn = (state.battleTurn || 0) + 1;
     beginPlayerTurn();
     return false;
@@ -2944,7 +2941,6 @@ function finalizeBattle(reason){
   clearStatuses(state.enemy);
   state.enemy = null;
   state.playerDefending = false;
-  state.playerDodging = false;
   clearStatuses(state.player);
   setTurn("town");
   state.battleTurn = 0;
@@ -3059,7 +3055,6 @@ function winBattle() {
     state.enemy = state.enemyQueue[0];
     state._animateEnemyIn = true;
     state.playerDefending = false;
-    state.playerDodging = false;
     state.battleTurn = 0;
     clearStatuses(state.enemy);
     ensureStatuses(state.enemy);
@@ -3108,7 +3103,6 @@ function enemyTurn() {
   const endTurnAfter = (waitMs = 0) => {
     setTimeout(() => {
       state.playerDefending = false;
-      state.playerDodging = false;
 
       if (p.hp <= 0) {
         loseBattle();
@@ -3146,7 +3140,7 @@ function enemyTurn() {
       enemy,
       target,
       isRage ? 8 : 2,
-      { dodgeBonus: (isPlayer && state.playerDodging) ? 30 : 0 }
+      { dodgeBonus: 0 }
     );
     if (res.missed) {
       if (isPlayer) showDamageText("player", "MISS");
@@ -3387,7 +3381,6 @@ function startAdventureBattle(targetLevel, stageName){
   state.inBattle = true;
   state._animateEnemyIn = true;
   state.playerDefending = false;
-  state.playerDodging = false;
   state.battleTurn = 0;
   clearStatuses(state.enemy);
   ensureStatuses(state.enemy);
@@ -3565,12 +3558,6 @@ function charge(){
   p.mp = clamp(p.mp + gain, 0, p.maxMp);
   addLog("INFO", `Charge! MP ${before}→${p.mp} (+${gain})`);
   afterPlayerAction();
-}
-
-function dodge() {
-  setTurn("player");
-  state.playerDodging = true;
-  addLog("YOU", "Dodge! Chance menghindar meningkat (1 turn).");
 }
 
 function runAway() {
@@ -4192,7 +4179,6 @@ function openTownMenu(){
                   state.enemy = null;
                   state.inBattle = false;
                   state.playerDefending = false;
-                  state.playerDodging = false;
                   setTurn("town");
                   state.battleTurn = 0;
 
@@ -4359,12 +4345,6 @@ function bind() {
     charge();
   };
 
-  byId("btnDefend").onclick = () => {
-    if (!state.inBattle || state.turn !== "player") return;
-    dodge();
-    afterPlayerAction();
-  };
-
   const runBackdrop = byId("runConfirmBackdrop");
   const runConfirm = byId("btnRunConfirm");
   const runCancel = byId("btnRunCancel");
@@ -4422,7 +4402,6 @@ function applyLoaded(payload){
   state.enemyTargetIndex = 0;
   state.inBattle = false;
   state.playerDefending = false;
-  state.playerDodging = false;
   setTurn("town");
   state.battleTurn = 0;
 
@@ -4455,7 +4434,6 @@ function startNewGame(slotIdx){
   state.enemyTargetIndex = 0;
   state.inBattle = false;
   state.playerDefending = false;
-  state.playerDodging = false;
   setTurn("town");
   state.battleTurn = 0;
 
@@ -4658,7 +4636,6 @@ function deleteCharacter(slotIdx){
     state.enemy = null;
     state.inBattle = false;
     state.playerDefending = false;
-    state.playerDodging = false;
     setTurn("town");
     state.battleTurn = 0;
   }
@@ -4702,7 +4679,6 @@ function handleCreateCharacter(){
   state.enemy = null;
   state.inBattle = false;
   state.playerDefending = false;
-  state.playerDodging = false;
   setTurn("town");
   state.battleTurn = 0;
 
@@ -4731,7 +4707,6 @@ function enterTownWithSlot(slotIdx){
   state.enemy = null;
   state.inBattle = false;
   state.playerDefending = false;
-  state.playerDodging = false;
   setTurn("town");
   state.battleTurn = 0;
 
@@ -4804,7 +4779,6 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
   state.enemy = null;
   state.inBattle = false;
   state.playerDefending = false;
-  state.playerDodging = false;
   setTurn("town");
   state.battleTurn = 0;
 

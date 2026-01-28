@@ -208,7 +208,7 @@ export function refresh(state) {
 
     // Buttons visibility
     $("townBtns").style.display = "none";
-    $("battleBtns").style.display = "flex";
+    $("battleBtns").style.display = state.turn === "player" ? "flex" : "none";
 
     const enemyBtns = $("enemyBtns");
     if (enemyBtns) enemyBtns.style.display = "flex";
