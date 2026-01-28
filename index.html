@@ -266,8 +266,8 @@
 
         <div class="battleActionWrap">
           <div class="turnIndicator" id="turnIndicator" style="display:none;">
-            <span class="turnNow">Now: -</span>
-            <span class="turnNext">Next: -</span>
+            <div class="turnIndicatorLabel">Turn Order</div>
+            <div class="turnIndicatorList" id="turnIndicatorList"></div>
           </div>
           <div class="card actionCard" id="actionCard" style="display:none;">
             <div class="sectionTitle">
@@ -281,21 +281,20 @@
             <!-- Battle buttons -->
             <div class="battleActions" id="battleBtns" style="display:none;">
               <div class="battlePrimary">
-                <button class="primary" id="btnAttack">Attack</button>
-                <button id="btnCharge">Charge</button>
-                <button id="btnItem">Item</button>
-                <button id="btnDefend">Dodge</button>
                 <div id="skillSlots" class="skillGrid">
                   <button class="skillSlot" data-slot="0">-</button>
                   <button class="skillSlot" data-slot="1">-</button>
-                  <button class="skillSlot" data-slot="2">-</button>
-                  <button class="skillSlot" data-slot="3">-</button>
+                  <button class="skillSlot actionSlot primary" id="btnAttack">Attack</button>
+                  <button class="skillSlot actionSlot" id="btnCharge">Charge</button>
                   <button class="skillSlot" data-slot="4">-</button>
                   <button class="skillSlot" data-slot="5">-</button>
+                  <button class="skillSlot" data-slot="2">-</button>
+                  <button class="skillSlot" data-slot="3">-</button>
+                  <button class="skillSlot actionSlot" id="btnItem">Item</button>
+                  <button class="skillSlot actionSlot warn" id="btnRun">Run</button>
                   <button class="skillSlot" data-slot="6">-</button>
                   <button class="skillSlot" data-slot="7">-</button>
                 </div>
-                <button class="warn" id="btnRun">Run</button>
               </div>
             </div>
 

@@ -8,6 +8,8 @@ const byId = (id) => document.getElementById(id);
 
 const state = newState();
 const MAX_ALLIES = 2;
+const TURN_DELAY_MS = 650;
+const ALLY_ACTION_GAP_MS = 420;
 
 /* ----------------------------- Core helpers ----------------------------- */
 
@@ -36,7 +38,6 @@ function endBattle(reason) {
   state.inBattle = false;
   state.enemy = null;
   state.playerDefending = false;
-  state.playerDodging = false;
   setTurn("town");
   state.battleTurn = 0;
 
@@ -130,7 +131,6 @@ function enemyTurn() {
   }
 
   state.playerDefending = false;
-  state.playerDodging = false;
 
   if (p.hp <= 0) {
     loseBattle();
@@ -153,12 +153,34 @@ function afterPlayerAction() {
 
   if (state.inBattle) {
     const allies = ensureAllies();
-    allies.forEach((ally) => {
-      if (!ally || ally.hp <= 0 || !state.enemy) return;
-      const dmg = calcDamage(ally.atk, state.enemy.def, 2, false);
-      state.enemy.hp = clamp(state.enemy.hp - dmg, 0, state.enemy.maxHp);
-      addLog("ALLY", `${ally.name} menyerang! Damage ${dmg}.`);
-    });
+    setTurn("enemy");
+    refresh(state);
+    setTimeout(() => {
+      const aliveAllies = allies.filter((ally) => ally && ally.hp > 0);
+      aliveAllies.forEach((ally, idx) => {
+        setTimeout(() => {
+          if (!ally || ally.hp <= 0 || !state.enemy) return;
+          const dmg = calcDamage(ally.atk, state.enemy.def, 2, false);
+          state.enemy.hp = clamp(state.enemy.hp - dmg, 0, state.enemy.maxHp);
+          addLog("ALLY", `${ally.name} menyerang! Damage ${dmg}.`);
+          refresh(state);
+          if (state.enemy && state.enemy.hp <= 0) {
+            winBattle();
+          }
+        }, idx * ALLY_ACTION_GAP_MS);
+      });
+
+      const totalAllyDelay = aliveAllies.length ? (aliveAllies.length - 1) * ALLY_ACTION_GAP_MS : 0;
+      setTimeout(() => {
+        if (!state.enemy || state.enemy.hp <= 0) return;
+        setTimeout(() => {
+          if (!state.enemy || state.enemy.hp <= 0) return;
+          enemyTurn();
+          refresh(state);
+        }, TURN_DELAY_MS);
+      }, totalAllyDelay + TURN_DELAY_MS);
+    }, TURN_DELAY_MS);
+    return;
   }
 
   if (e.hp <= 0) {
@@ -174,7 +196,7 @@ function afterPlayerAction() {
   setTimeout(() => {
     enemyTurn();
     refresh(state);
-  }, 450);
+  }, TURN_DELAY_MS);
 }
 
 /* ----------------------------- Town actions ----------------------------- */
@@ -186,7 +208,6 @@ function explore() {
   state.inBattle = true;
   state._animateEnemyIn = true;
   state.playerDefending = false;
-  state.playerDodging = false;
   state.battleTurn = 0;
 addLog("INFO", `Musuh muncul: ${state.enemy.name} (Lv${state.enemy.level})`);
 
@@ -198,7 +219,7 @@ addLog("INFO", `Musuh muncul: ${state.enemy.name} (Lv${state.enemy.level})`);
     setTimeout(() => {
       enemyTurn();
       refresh(state);
-    }, 450);
+    }, TURN_DELAY_MS);
     return;
   } else {
     state.battleTurn = (state.battleTurn||0)+1;
@@ -353,12 +374,6 @@ function openRecruitModal() {
       }
     }
   );
-}
-
-function dodge(){
-  setTurn("player");
-  state.playerDodging = true;
-  addLog("YOU","Dodge! Chance menghindar meningkat (1 turn).");
 }
 
 function runAway() {
@@ -561,7 +576,6 @@ function openTownMenu(){
         state.enemy = null;
         state.inBattle = false;
         state.playerDefending = false;
-  state.playerDodging = false;
         setTurn("town");
   state.battleTurn = 0;
 
@@ -577,7 +591,6 @@ function openTownMenu(){
         state.enemy = null;
         state.inBattle = false;
         state.playerDefending = false;
-  state.playerDodging = false;
         setTurn("town");
   state.battleTurn = 0;
 
@@ -629,12 +642,6 @@ function bind() {
     afterPlayerAction();
   };
 
-  byId("btnDefend").onclick = () => {
-    if (!state.inBattle || state.turn !== "player") return;
-    dodge();
-    afterPlayerAction();
-  };
-
   byId("btnRun").onclick = () => {
     if (!state.inBattle || state.turn !== "player") return;
     const ok = runAway();
@@ -663,7 +670,6 @@ function applyLoaded(payload){
     state.enemy = null;
     state.inBattle = false;
     state.playerDefending = false;
-  state.playerDodging = false;
     setTurn("town");
   state.battleTurn = 0;
     byId("log").innerHTML = "";
@@ -680,7 +686,6 @@ function startNewGame(){
   state.enemy = null;
   state.inBattle = false;
   state.playerDefending = false;
-  state.playerDodging = false;
   setTurn("town");
   state.battleTurn = 0;
   byId("log").innerHTML = "";

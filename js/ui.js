@@ -208,7 +208,7 @@ export function refresh(state) {
 
     // Buttons visibility
     $("townBtns").style.display = "none";
-    $("battleBtns").style.display = "flex";
+    $("battleBtns").style.display = state.turn === "player" ? "flex" : "none";
 
     const enemyBtns = $("enemyBtns");
     if (enemyBtns) enemyBtns.style.display = "flex";
@@ -230,6 +230,38 @@ export function refresh(state) {
 
     const enemyBtns = $("enemyBtns");
     if (enemyBtns) enemyBtns.style.display = "none";
+  }
+
+  const turnIndicator = $("turnIndicator");
+  if (turnIndicator) {
+    if (inBattle) {
+      const listEl = $("turnIndicatorList");
+      const aliveAllies = (state.allies || []).filter((ally) => ally && ally.hp > 0);
+      const cycle = [
+        { kind: "player", label: "Kamu" },
+        ...aliveAllies.map((ally) => ({ kind: "ally", label: ally.name })),
+        { kind: "enemy", label: "Musuh" },
+      ];
+      const currentKind = state.turn === "enemy" ? "enemy" : "player";
+      const currentIndex = cycle.findIndex((entry) => entry.kind === currentKind);
+      const startIndex = currentIndex >= 0 ? currentIndex : 0;
+      const slots = Math.min(3, cycle.length);
+
+      if (listEl) {
+        listEl.innerHTML = "";
+        for (let i = 0; i < slots; i += 1) {
+          const entry = cycle[(startIndex + i) % cycle.length];
+          if (!entry) continue;
+          const badge = document.createElement("span");
+          badge.className = `turnBadge ${entry.kind}${i === 0 ? " current" : ""}`;
+          badge.textContent = `${i === 0 ? "Now" : "Next"}: ${entry.label}`;
+          listEl.appendChild(badge);
+        }
+      }
+      turnIndicator.style.display = "flex";
+    } else {
+      turnIndicator.style.display = "none";
+    }
   }
 
   const metaEl = $("meta");
