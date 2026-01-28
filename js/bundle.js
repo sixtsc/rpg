@@ -1839,6 +1839,21 @@ function refresh(state) {
   document.body.classList.toggle("inTown", !inBattle);
   document.body.classList.toggle("enemySingle", inBattle && getEnemyQueue().length <= 1);
   if (inBattle) {
+    const turnIndicator = $("turnIndicator");
+    if (turnIndicator) {
+      const nowEl = turnIndicator.querySelector(".turnNow");
+      const nextEl = turnIndicator.querySelector(".turnNext");
+      const turnLabels = {
+        player: "Player",
+        enemy: "Enemy",
+        town: "Town",
+      };
+      const current = state.turn || "player";
+      const next = current === "enemy" ? "player" : "enemy";
+      if (nowEl) nowEl.textContent = `Now: ${turnLabels[current] || current}`;
+      if (nextEl) nextEl.textContent = `Next: ${turnLabels[next] || next}`;
+      turnIndicator.style.display = "flex";
+    }
     closeMailboxOverlay();
   }
 
@@ -1982,6 +1997,8 @@ function refresh(state) {
       };
     }
   } else {
+    const turnIndicator = $("turnIndicator");
+    if (turnIndicator) turnIndicator.style.display = "none";
     $("modePill").textContent = "Town";
     // turnCount/actionHint/battleHint hidden globally above
 

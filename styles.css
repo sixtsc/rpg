@@ -720,6 +720,11 @@ body.inBattle #actionCard{
   width:100%;
   padding:10px;
 }
+body.inBattle #actionCard .sectionTitle{
+  min-height:0;
+  margin-bottom:0;
+  padding:0;
+}
 body.inBattle .card{
   padding:10px;
 }
@@ -842,6 +847,55 @@ body.inBattle .allyCard .allySub,
 body.inBattle .enemyCard .nameSub{
   order:2;
 }
+
+body.inBattle .turnIndicator{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:6px 10px;
+  margin:2px 0 6px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background: rgba(12, 18, 28, 0.6);
+  font-size:12px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:0.4px;
+}
+body.inBattle .turnIndicator span{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+body.inBattle .turnIndicator .turnNow::before{
+  content:"●";
+  color: rgba(74, 163, 255, 0.9);
+}
+body.inBattle .turnIndicator .turnNext::before{
+  content:"▶";
+  color: rgba(255, 190, 90, 0.9);
+}
+
+body.inBattle .battleActions{
+  gap:6px;
+  margin-top:6px;
+}
+body.inBattle .battlePrimary{
+  gap:6px;
+}
+body.inBattle .battlePrimary button{
+  padding:6px 8px;
+  font-size:12px;
+}
+body.inBattle .skillGrid{
+  gap:6px;
+}
+body.inBattle .skillSlot{
+  min-height:44px;
+  padding:4px;
+  font-size:12px;
+}
 body.inBattle .allyCard .avatarWrap,
 body.inBattle .enemyCard .avatarWrap{
   order:1;
@@ -874,7 +928,7 @@ body.inBattle .enemyCard.active::before{
   border-bottom:8px solid transparent;
   border-right:12px solid rgba(97, 162, 255, 0.9);
   filter: drop-shadow(0 2px 6px rgba(0,0,0,.35));
-  z-index:3;
+  z-index:5;
 }
 body.inBattle .enemyCard.active .avatarBox{
   border-color: rgba(97, 162, 255, 0.85);
