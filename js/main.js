@@ -153,6 +153,8 @@ function afterPlayerAction() {
 
   if (state.inBattle) {
     const allies = ensureAllies();
+    setTurn("enemy");
+    refresh(state);
     setTimeout(() => {
       const aliveAllies = allies.filter((ally) => ally && ally.hp > 0);
       aliveAllies.forEach((ally, idx) => {
@@ -171,10 +173,6 @@ function afterPlayerAction() {
       const totalAllyDelay = aliveAllies.length ? (aliveAllies.length - 1) * ALLY_ACTION_GAP_MS : 0;
       setTimeout(() => {
         if (!state.enemy || state.enemy.hp <= 0) return;
-        // Lock ke giliran musuh dulu supaya player tidak bisa spam tombol
-        setTurn("enemy");
-        refresh(state);
-
         setTimeout(() => {
           if (!state.enemy || state.enemy.hp <= 0) return;
           enemyTurn();

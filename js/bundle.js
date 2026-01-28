@@ -3310,6 +3310,8 @@ function afterPlayerAction() {
   const e = getTargetEnemy();
   if (!e) return;
 
+  setTurn("enemy");
+  refresh(state);
   setTimeout(() => {
     alliesAct(() => {
       if (!state.inBattle) return;
@@ -3323,10 +3325,6 @@ function afterPlayerAction() {
       }
 
     tickStatuses(state.player);
-
-    // Lock ke giliran musuh dulu supaya player tidak bisa spam tombol
-      setTurn("enemy");
-      refresh(state);
 
       // Small delay sebelum enemy acts, biar terasa lebih seperti RPG turn-based
       setTimeout(() => {
