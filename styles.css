@@ -609,24 +609,11 @@ body.inBattle .playerCurrency{
 .btnRow{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
 
 /* Battle UI */
-.battleActions{ display:flex; flex-direction:column; gap:8px; margin-top:8px; }
-.battlePrimary{ display:grid; gap:8px; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+.battleActions{ display:flex; flex-direction:column; gap:10px; margin-top:12px; }
+.battlePrimary{ display:grid; gap:10px; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
 .battlePrimary button{ width:100%; }
 /* Full-width actions */
 #btnStatsBattle, #btnRun{ grid-column: 1 / -1; }
-.actionTitle{ display:none; }
-.actionLabel{ display:none; }
-.battlePrimary .iconBtn{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:8px;
-  gap:6px;
-}
-.battlePrimary .iconBtn .actionIcon{
-  width:22px;
-  height:22px;
-}
 .skillGrid{
   display:grid;
   grid-template-columns: repeat(4, minmax(0,1fr));
@@ -698,7 +685,7 @@ body.inBattle .grid{
 body.inBattle .battleLayout{
   --battle-card-width: clamp(160px, 40vw, 200px);
   --battle-card-height: clamp(130px, 34vw, 170px);
-  --battle-gap: clamp(8px, 2.5vw, 14px);
+  --battle-gap: clamp(14px, 3vw, 22px);
   width:min(100%, calc((var(--battle-card-width) * 2) + var(--battle-gap)));
   margin:0 auto;
   display:flex;
@@ -879,6 +866,7 @@ body.inBattle .enemyCard.active::before{
   border-bottom:8px solid transparent;
   border-right:12px solid rgba(97, 162, 255, 0.9);
   filter: drop-shadow(0 2px 6px rgba(0,0,0,.35));
+  z-index:3;
 }
 body.inBattle .enemyCard.active .avatarBox{
   border-color: rgba(97, 162, 255, 0.85);

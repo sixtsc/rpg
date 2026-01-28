@@ -267,7 +267,7 @@
         <div class="battleActionWrap">
           <div class="card actionCard" id="actionCard" style="display:none;">
             <div class="sectionTitle">
-              <div class="actionTitle" aria-hidden="true"></div>
+              <div><b>ACTION</b></div>
               <div class="rightPills">
                 <div class="pill muted" id="turnCount">Turn: 0</div>
                 <div class="pill muted" id="actionHint">—</div>
@@ -277,22 +277,10 @@
             <!-- Battle buttons -->
             <div class="battleActions" id="battleBtns" style="display:none;">
               <div class="battlePrimary">
-                <button class="primary iconBtn" id="btnAttack" aria-label="Attack">
-                  <img class="actionIcon" src="./assets/icons/weapon.svg" alt="" />
-                  <span class="actionLabel">Attack</span>
-                </button>
-                <button class="iconBtn" id="btnCharge" aria-label="Charge">
-                  <img class="actionIcon" src="./assets/icons/lightning.svg" alt="" />
-                  <span class="actionLabel">Charge</span>
-                </button>
-                <button class="iconBtn" id="btnItem" aria-label="Item">
-                  <img class="actionIcon" src="./assets/icons/gem.svg" alt="" />
-                  <span class="actionLabel">Item</span>
-                </button>
-                <button class="iconBtn" id="btnDefend" aria-label="Dodge">
-                  <img class="actionIcon" src="./assets/icons/wind.svg" alt="" />
-                  <span class="actionLabel">Dodge</span>
-                </button>
+                <button class="primary" id="btnAttack">Attack</button>
+                <button id="btnCharge">Charge</button>
+                <button id="btnItem">Item</button>
+                <button id="btnDefend">Dodge</button>
                 <div id="skillSlots" class="skillGrid">
                   <button class="skillSlot" data-slot="0">-</button>
                   <button class="skillSlot" data-slot="1">-</button>
