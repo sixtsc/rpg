@@ -113,6 +113,9 @@ const MAX_CHAR_SLOTS = 6;
 const STAT_POINTS_PER_LEVEL = 1;
 const MAX_LEVEL = 10;
 const MAX_ALLIES = 2;
+const TURN_DELAY_MS = 650;
+const ALLY_ACTION_GAP_MS = 420;
+const ENEMY_ACTION_GAP_MS = 360;
 function genEnemy(plv){
   const lvl = clamp(plv + pick([-1,0,0,1]), 1, MAX_LEVEL);
   const name = pick(ENEMY_NAMES);
@@ -1841,17 +1844,29 @@ function refresh(state) {
   if (inBattle) {
     const turnIndicator = $("turnIndicator");
     if (turnIndicator) {
-      const nowEl = turnIndicator.querySelector(".turnNow");
-      const nextEl = turnIndicator.querySelector(".turnNext");
-      const turnLabels = {
-        player: "Player",
-        enemy: "Enemy",
-        town: "Town",
-      };
-      const current = state.turn || "player";
-      const next = current === "enemy" ? "player" : "enemy";
-      if (nowEl) nowEl.textContent = `Now: ${turnLabels[current] || current}`;
-      if (nextEl) nextEl.textContent = `Next: ${turnLabels[next] || next}`;
+      const listEl = $("turnIndicatorList");
+      const aliveAllies = getAliveAllies();
+      const cycle = [
+        { kind: "player", label: "Kamu" },
+        ...aliveAllies.map((ally) => ({ kind: "ally", label: ally.name })),
+        { kind: "enemy", label: "Musuh" },
+      ];
+      const currentKind = state.turn === "enemy" ? "enemy" : "player";
+      const currentIndex = cycle.findIndex((entry) => entry.kind === currentKind);
+      const startIndex = currentIndex >= 0 ? currentIndex : 0;
+      const slots = Math.min(3, cycle.length);
+
+      if (listEl) {
+        listEl.innerHTML = "";
+        for (let i = 0; i < slots; i += 1) {
+          const entry = cycle[(startIndex + i) % cycle.length];
+          if (!entry) continue;
+          const badge = document.createElement("span");
+          badge.className = `turnBadge ${entry.kind}${i === 0 ? " current" : ""}`;
+          badge.textContent = `${i === 0 ? "Now" : "Next"}: ${entry.label}`;
+          listEl.appendChild(badge);
+        }
+      }
       turnIndicator.style.display = "flex";
     }
     closeMailboxOverlay();
@@ -3058,7 +3073,7 @@ function winBattle() {
       setTimeout(() => {
         enemyTurn();
         refresh(state);
-      }, 450);
+      }, TURN_DELAY_MS);
       return;
     }
     state.battleTurn = (state.battleTurn || 0) + 1;
@@ -3176,7 +3191,7 @@ function enemyTurn() {
       addLog("ALLY", `${target.name} tumbang!`);
     }
     const wait = delays.length ? Math.max(...delays, 180) + 40 : 0;
-    done(wait);
+    done(wait + ENEMY_ACTION_GAP_MS);
   };
 
   let idx = 0;
@@ -3230,7 +3245,7 @@ function handleEnemyDefeat(){
       setTimeout(() => {
         enemyTurn();
         refresh(state);
-      }, 450);
+      }, TURN_DELAY_MS);
       return true;
     }
   }
@@ -3248,7 +3263,7 @@ function alliesAct(done){
   }
   const maxSpd = Math.max(...allies.map((ally) => Number(ally.spd) || 0), 0);
   const baseDelay = 260;
-  const orderGap = 220;
+  const orderGap = ALLY_ACTION_GAP_MS;
   let lastDelay = 0;
   allies.forEach((ally, index) => {
     const spd = Number(ally.spd) || 0;
@@ -3280,7 +3295,7 @@ function alliesAct(done){
       refresh(state);
     }, delay);
   });
-  if (done) setTimeout(done, lastDelay + 240);
+  if (done) setTimeout(done, lastDelay + ALLY_ACTION_GAP_MS);
 }
 
 function afterPlayerAction() {
@@ -3301,29 +3316,31 @@ function afterPlayerAction() {
   const e = getTargetEnemy();
   if (!e) return;
 
-  alliesAct(() => {
-    if (!state.inBattle) return;
-    const target = getTargetEnemy();
-    const defeated = getDefeatedEnemies();
-    if (defeated.length || (target && target.hp <= 0)) {
-      defeated.forEach((enemy) => { enemy._defeated = true; });
-      refresh(state);
-      handleEnemyDefeat();
-      return;
-    }
+  setTimeout(() => {
+    alliesAct(() => {
+      if (!state.inBattle) return;
+      const target = getTargetEnemy();
+      const defeated = getDefeatedEnemies();
+      if (defeated.length || (target && target.hp <= 0)) {
+        defeated.forEach((enemy) => { enemy._defeated = true; });
+        refresh(state);
+        handleEnemyDefeat();
+        return;
+      }
 
     tickStatuses(state.player);
 
     // Lock ke giliran musuh dulu supaya player tidak bisa spam tombol
-    setTurn("enemy");
-    refresh(state);
-
-    // Small delay sebelum enemy acts, biar terasa lebih seperti RPG turn-based
-    setTimeout(() => {
-      enemyTurn();
+      setTurn("enemy");
       refresh(state);
-    }, 450);
-  });
+
+      // Small delay sebelum enemy acts, biar terasa lebih seperti RPG turn-based
+      setTimeout(() => {
+        enemyTurn();
+        refresh(state);
+      }, TURN_DELAY_MS);
+    });
+  }, TURN_DELAY_MS);
 }
 
 /* ----------------------------- Town actions ----------------------------- */
@@ -3384,7 +3401,7 @@ function startAdventureBattle(targetLevel, stageName){
     setTimeout(() => {
       enemyTurn();
       refresh(state);
-    }, 450);
+    }, TURN_DELAY_MS);
     return;
   } else {
     state.battleTurn = (state.battleTurn||0)+1;

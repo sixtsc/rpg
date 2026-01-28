@@ -8,6 +8,8 @@ const byId = (id) => document.getElementById(id);
 
 const state = newState();
 const MAX_ALLIES = 2;
+const TURN_DELAY_MS = 650;
+const ALLY_ACTION_GAP_MS = 420;
 
 /* ----------------------------- Core helpers ----------------------------- */
 
@@ -153,12 +155,36 @@ function afterPlayerAction() {
 
   if (state.inBattle) {
     const allies = ensureAllies();
-    allies.forEach((ally) => {
-      if (!ally || ally.hp <= 0 || !state.enemy) return;
-      const dmg = calcDamage(ally.atk, state.enemy.def, 2, false);
-      state.enemy.hp = clamp(state.enemy.hp - dmg, 0, state.enemy.maxHp);
-      addLog("ALLY", `${ally.name} menyerang! Damage ${dmg}.`);
-    });
+    setTimeout(() => {
+      const aliveAllies = allies.filter((ally) => ally && ally.hp > 0);
+      aliveAllies.forEach((ally, idx) => {
+        setTimeout(() => {
+          if (!ally || ally.hp <= 0 || !state.enemy) return;
+          const dmg = calcDamage(ally.atk, state.enemy.def, 2, false);
+          state.enemy.hp = clamp(state.enemy.hp - dmg, 0, state.enemy.maxHp);
+          addLog("ALLY", `${ally.name} menyerang! Damage ${dmg}.`);
+          refresh(state);
+          if (state.enemy && state.enemy.hp <= 0) {
+            winBattle();
+          }
+        }, idx * ALLY_ACTION_GAP_MS);
+      });
+
+      const totalAllyDelay = aliveAllies.length ? (aliveAllies.length - 1) * ALLY_ACTION_GAP_MS : 0;
+      setTimeout(() => {
+        if (!state.enemy || state.enemy.hp <= 0) return;
+        // Lock ke giliran musuh dulu supaya player tidak bisa spam tombol
+        setTurn("enemy");
+        refresh(state);
+
+        setTimeout(() => {
+          if (!state.enemy || state.enemy.hp <= 0) return;
+          enemyTurn();
+          refresh(state);
+        }, TURN_DELAY_MS);
+      }, totalAllyDelay + TURN_DELAY_MS);
+    }, TURN_DELAY_MS);
+    return;
   }
 
   if (e.hp <= 0) {
@@ -174,7 +200,7 @@ function afterPlayerAction() {
   setTimeout(() => {
     enemyTurn();
     refresh(state);
-  }, 450);
+  }, TURN_DELAY_MS);
 }
 
 /* ----------------------------- Town actions ----------------------------- */
@@ -198,7 +224,7 @@ addLog("INFO", `Musuh muncul: ${state.enemy.name} (Lv${state.enemy.level})`);
     setTimeout(() => {
       enemyTurn();
       refresh(state);
-    }, 450);
+    }, TURN_DELAY_MS);
     return;
   } else {
     state.battleTurn = (state.battleTurn||0)+1;
