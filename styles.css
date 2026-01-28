@@ -613,7 +613,7 @@ body.inBattle .playerCurrency{
 .battlePrimary{ display:grid; gap:10px; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
 .battlePrimary button{ width:100%; }
 /* Full-width actions */
-#btnStatsBattle, #btnRun{ grid-column: 1 / -1; }
+#btnStatsBattle{ grid-column: 1 / -1; }
 .actionTitle{ display:none; }
 .skillGrid{
   display:grid;
