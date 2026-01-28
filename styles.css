@@ -614,6 +614,7 @@ body.inBattle .playerCurrency{
 .battlePrimary button{ width:100%; }
 /* Full-width actions */
 #btnStatsBattle, #btnRun{ grid-column: 1 / -1; }
+.actionTitle{ display:none; }
 .skillGrid{
   display:grid;
   grid-template-columns: repeat(4, minmax(0,1fr));
@@ -685,7 +686,7 @@ body.inBattle .grid{
 body.inBattle .battleLayout{
   --battle-card-width: clamp(160px, 40vw, 200px);
   --battle-card-height: clamp(130px, 34vw, 170px);
-  --battle-gap: clamp(14px, 3vw, 22px);
+  --battle-gap: clamp(20px, 4vw, 32px);
   width:min(100%, calc((var(--battle-card-width) * 2) + var(--battle-gap)));
   margin:0 auto;
   display:flex;
@@ -813,6 +814,13 @@ body.inBattle .allySub{
 body.inBattle .bars{
   gap:5px;
   margin-top:2px;
+}
+body.inBattle .allyCard .bars,
+body.inBattle .enemyCard .bars{
+  width:120px;
+}
+body.inBattle .enemyCard .bars{
+  margin-left:auto;
 }
 body.inBattle .bar{
   height:10px;
@@ -1978,6 +1986,46 @@ select.authInput{
 .enemyCard.noFx *{
   animation: none !important;
   transition: none !important;
+}
+
+.confirmBackdrop{
+  position:fixed;
+  inset:0;
+  background: rgba(3, 6, 12, 0.72);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+  padding:16px;
+}
+.confirmCard{
+  width:min(320px, 92vw);
+  background: rgba(12, 18, 28, 0.95);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:16px;
+  box-shadow: 0 12px 28px rgba(0,0,0,.45);
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.confirmTitle{
+  font-weight:900;
+  text-align:center;
+}
+.confirmActions{
+  display:flex;
+  gap:10px;
+}
+.confirmBtn{
+  flex:1;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background: rgba(255,255,255,0.05);
+  color:var(--text);
+  font-weight:800;
+  cursor:pointer;
 }
 @keyframes enemyDown{
   from{ transform: scale(1); opacity:1; }

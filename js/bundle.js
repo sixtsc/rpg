@@ -4331,12 +4331,37 @@ function bind() {
     afterPlayerAction();
   };
 
+  const runBackdrop = byId("runConfirmBackdrop");
+  const runConfirm = byId("btnRunConfirm");
+  const runCancel = byId("btnRunCancel");
+
+  const openRunConfirm = () => {
+    if (runBackdrop) runBackdrop.style.display = "flex";
+  };
+  const closeRunConfirm = () => {
+    if (runBackdrop) runBackdrop.style.display = "none";
+  };
+
+  if (runCancel) runCancel.onclick = closeRunConfirm;
+  if (runBackdrop) {
+    runBackdrop.onclick = (event) => {
+      if (event.target === runBackdrop) closeRunConfirm();
+    };
+  }
+
   byId("btnRun").onclick = () => {
     if (!state.inBattle || state.turn !== "player") return;
-    if (!window.confirm("Kabur dari pertarungan?")) return;
-    const ok = runAway();
-    if (!ok) afterPlayerAction();
+    openRunConfirm();
   };
+
+  if (runConfirm) {
+    runConfirm.onclick = () => {
+      if (!state.inBattle || state.turn !== "player") return;
+      closeRunConfirm();
+      const ok = runAway();
+      if (!ok) afterPlayerAction();
+    };
+  }
 
   byId("btnItem").onclick = () => {
     if (!state.inBattle || state.turn !== "player") return;
