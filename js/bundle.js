@@ -114,6 +114,8 @@ const STAT_POINTS_PER_LEVEL = 1;
 const MAX_LEVEL = 10;
 const MAX_ALLIES = 2;
 const TURN_DELAY_MS = 650;
+const ALLY_ACTION_GAP_MS = 420;
+const ENEMY_ACTION_GAP_MS = 360;
 function genEnemy(plv){
   const lvl = clamp(plv + pick([-1,0,0,1]), 1, MAX_LEVEL);
   const name = pick(ENEMY_NAMES);
@@ -1852,7 +1854,7 @@ function refresh(state) {
       const currentKind = state.turn === "enemy" ? "enemy" : "player";
       const currentIndex = cycle.findIndex((entry) => entry.kind === currentKind);
       const startIndex = currentIndex >= 0 ? currentIndex : 0;
-      const slots = Math.min(4, cycle.length);
+      const slots = Math.min(3, cycle.length);
 
       if (listEl) {
         listEl.innerHTML = "";
@@ -3189,7 +3191,7 @@ function enemyTurn() {
       addLog("ALLY", `${target.name} tumbang!`);
     }
     const wait = delays.length ? Math.max(...delays, 180) + 40 : 0;
-    done(wait);
+    done(wait + ENEMY_ACTION_GAP_MS);
   };
 
   let idx = 0;
@@ -3261,7 +3263,7 @@ function alliesAct(done){
   }
   const maxSpd = Math.max(...allies.map((ally) => Number(ally.spd) || 0), 0);
   const baseDelay = 260;
-  const orderGap = 220;
+  const orderGap = ALLY_ACTION_GAP_MS;
   let lastDelay = 0;
   allies.forEach((ally, index) => {
     const spd = Number(ally.spd) || 0;
@@ -3293,7 +3295,7 @@ function alliesAct(done){
       refresh(state);
     }, delay);
   });
-  if (done) setTimeout(done, lastDelay + 240);
+  if (done) setTimeout(done, lastDelay + ALLY_ACTION_GAP_MS);
 }
 
 function afterPlayerAction() {

@@ -245,7 +245,7 @@ export function refresh(state) {
       const currentKind = state.turn === "enemy" ? "enemy" : "player";
       const currentIndex = cycle.findIndex((entry) => entry.kind === currentKind);
       const startIndex = currentIndex >= 0 ? currentIndex : 0;
-      const slots = Math.min(4, cycle.length);
+      const slots = Math.min(3, cycle.length);
 
       if (listEl) {
         listEl.innerHTML = "";

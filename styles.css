@@ -621,7 +621,8 @@ body.inBattle .playerCurrency{
   gap:8px;
   grid-column: 1 / -1;
 }
-.skillSlot{
+.skillSlot,
+.actionSlot{
   background:transparent;
   border:1px solid rgba(74, 163, 255, 0.45);
   padding:6px;
@@ -632,6 +633,16 @@ body.inBattle .playerCurrency{
   justify-content:center;
   min-height:52px;
   position:relative;
+  aspect-ratio:1 / 1;
+}
+.actionSlot{
+  background:rgba(16, 28, 44, 0.75);
+  border-color:rgba(120, 160, 220, 0.5);
+  font-size:11px;
+}
+.actionSlot.primary{
+  border-color:var(--accent);
+  background:rgba(25, 48, 90, 0.65);
 }
 .skillSlot .skillIcon{
   width:28px;
@@ -922,6 +933,7 @@ body.inBattle .battlePrimary button{
 }
 body.inBattle .skillGrid{
   gap:6px;
+  grid-template-columns: repeat(12, minmax(0,1fr));
 }
 body.inBattle .skillSlot{
   min-height:44px;
