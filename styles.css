@@ -617,7 +617,7 @@ body.inBattle .playerCurrency{
 .actionTitle{ display:none; }
 .skillGrid{
   display:grid;
-  grid-template-columns: repeat(4, minmax(0,1fr));
+  grid-template-columns: repeat(6, minmax(0,1fr));
   gap:8px;
   grid-column: 1 / -1;
 }
@@ -933,7 +933,7 @@ body.inBattle .battlePrimary button{
 }
 body.inBattle .skillGrid{
   gap:6px;
-  grid-template-columns: repeat(12, minmax(0,1fr));
+  grid-template-columns: repeat(6, minmax(0,1fr));
 }
 body.inBattle .skillSlot{
   min-height:44px;
