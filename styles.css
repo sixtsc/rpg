@@ -2060,9 +2060,9 @@ select.authInput{
 .avatarBox{
   width:110px;
   height:110px;
-  border:2px solid #2a3c52;
-  border-radius:16px;
-  background:rgba(255,255,255,0.03);
+  border:none;
+  border-radius:0;
+  background:transparent;
   position:relative;
   overflow:hidden;
   display:flex;
@@ -2071,6 +2071,14 @@ select.authInput{
   font-size:44px;
   color:#e9f2ff;
   text-shadow:0 3px 10px rgba(0,0,0,0.55);
+  box-shadow:none;
+}
+.avatarImg{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  image-rendering:pixelated;
+  display:block;
 }
 .allyCard.down{
   opacity:0.55;

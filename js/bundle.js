@@ -33,11 +33,11 @@ const ITEMS = {
 };
 const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton"];
 const ENEMY_AVATARS = {
-  Slime: { icon: "🟢", bg: "linear-gradient(135deg, #5de28d, #1a6b3c)" },
+  Slime: { image: "./assets/enemies/slime.png" },
   Goblin: { icon: "👺", bg: "linear-gradient(135deg, #7de86a, #2f6b1f)" },
   Bandit: { icon: "🗡️", bg: "linear-gradient(135deg, #f1b06b, #6b3a1a)" },
-  Wolf: { icon: "🐺", bg: "linear-gradient(135deg, #9bb7ff, #2a3f7a)" },
-  Skeleton: { icon: "💀", bg: "linear-gradient(135deg, #f1f1f1, #7a7a7a)" }
+  Wolf: { image: "./assets/enemies/wolf.png" },
+  Skeleton: { image: "./assets/enemies/skeleton.png" }
 };
 const ALLY_AVATARS = {
   Guardian: { icon: "🛡️", bg: "linear-gradient(135deg, #7ad5ff, #1f4b78)" },
@@ -1238,22 +1238,41 @@ function applyEnemyAvatar(box, enemy) {
   if (!enemy) {
     const iconEl = box.querySelector(".avatarIcon");
     if (iconEl) iconEl.textContent = "";
-    box.style.background = "rgba(255,255,255,0.03)";
+    box.style.background = "transparent";
+    const imgEl = box.querySelector(".avatarImg");
+    if (imgEl) imgEl.remove();
     box.removeAttribute("title");
     return;
   }
   const config = ENEMY_AVATARS[enemy.name] || {};
-  const fallback = enemy.name ? enemy.name.slice(0, 1).toUpperCase() : "?";
-  const icon = config.icon || fallback;
-  let iconEl = box.querySelector(".avatarIcon");
-  if (!iconEl) {
-    iconEl = document.createElement("span");
-    iconEl.className = "avatarIcon";
-    box.appendChild(iconEl);
+  const imgSrc = config.image;
+  if (imgSrc) {
+    const iconEl = box.querySelector(".avatarIcon");
+    if (iconEl) iconEl.remove();
+    let imgEl = box.querySelector(".avatarImg");
+    if (!imgEl) {
+      imgEl = document.createElement("img");
+      imgEl.className = "avatarImg";
+      box.appendChild(imgEl);
+    }
+    if (imgEl.getAttribute("src") !== imgSrc) imgEl.setAttribute("src", imgSrc);
+    imgEl.setAttribute("alt", enemy.name);
+    box.style.background = "transparent";
+  } else {
+    const fallback = enemy.name ? enemy.name.slice(0, 1).toUpperCase() : "?";
+    const icon = config.icon || fallback;
+    let iconEl = box.querySelector(".avatarIcon");
+    if (!iconEl) {
+      iconEl = document.createElement("span");
+      iconEl.className = "avatarIcon";
+      box.appendChild(iconEl);
+    }
+    if (iconEl.textContent !== icon) iconEl.textContent = icon;
+    const bg = config.bg || "linear-gradient(135deg, #4b5c6e, #202934)";
+    if (box.style.background !== bg) box.style.background = bg;
+    const imgEl = box.querySelector(".avatarImg");
+    if (imgEl) imgEl.remove();
   }
-  if (iconEl.textContent !== icon) iconEl.textContent = icon;
-  const bg = config.bg || "linear-gradient(135deg, #4b5c6e, #202934)";
-  if (box.style.background !== bg) box.style.background = bg;
   box.setAttribute("title", enemy.name);
 }
 
