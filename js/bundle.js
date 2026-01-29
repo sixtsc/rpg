@@ -2726,7 +2726,7 @@ function openShopModal(mode = "menu"){
     const equipChoices = (state.shopMarketCategory === "equipment")
       ? equipCategories.map((c) => ({
           title: c.icon || c.label,
-          desc: "",
+          desc: c.label || "",
           meta: "",
           value: `equipcat:${c.key}`,
           className: `marketCategory marketSub ${state.shopEquipCategory === c.key ? "active" : ""}`.trim(),
@@ -2790,7 +2790,7 @@ function openShopModal(mode = "menu"){
     const equipChoices = (state.shopMarketCategory === "equipment")
       ? equipCategories.map((c) => ({
           title: c.icon || c.label,
-          desc: "",
+          desc: c.label || "",
           meta: "",
           value: `equipcat:${c.key}`,
           className: `marketCategory marketSub ${state.shopEquipCategory === c.key ? "active" : ""}`.trim(),

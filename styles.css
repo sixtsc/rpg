@@ -1124,6 +1124,19 @@ body.inBattle .enemyMiniMeta .muted{
   overflow:hidden;
   transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease;
 }
+.modalBody.marketGrid .choice.marketCategory .titleRow{
+  flex-direction:column;
+  gap:8px;
+  text-align:center;
+}
+.modalBody.marketGrid .choice.marketCategory .desc{
+  margin-top:4px;
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:0.6px;
+  color:rgba(180,197,214,0.9);
+  text-align:center;
+}
 .modalBody.marketGrid .choice.marketCategory::after{
   content:"";
   position:absolute;
