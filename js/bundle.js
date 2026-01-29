@@ -33,11 +33,11 @@ const ITEMS = {
 };
 const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton"];
 const ENEMY_AVATARS = {
-  Slime: { icon: "🟢", bg: "linear-gradient(135deg, #5de28d, #1a6b3c)" },
+  Slime: { image: "./assets/enemies/slime.png" },
   Goblin: { icon: "👺", bg: "linear-gradient(135deg, #7de86a, #2f6b1f)" },
   Bandit: { icon: "🗡️", bg: "linear-gradient(135deg, #f1b06b, #6b3a1a)" },
-  Wolf: { icon: "🐺", bg: "linear-gradient(135deg, #9bb7ff, #2a3f7a)" },
-  Skeleton: { icon: "💀", bg: "linear-gradient(135deg, #f1f1f1, #7a7a7a)" }
+  Wolf: { image: "./assets/enemies/wolf.png" },
+  Skeleton: { image: "./assets/enemies/skeleton.png" }
 };
 const ALLY_AVATARS = {
   Guardian: { icon: "🛡️", bg: "linear-gradient(135deg, #7ad5ff, #1f4b78)" },
@@ -113,6 +113,9 @@ const MAX_CHAR_SLOTS = 6;
 const STAT_POINTS_PER_LEVEL = 1;
 const MAX_LEVEL = 10;
 const MAX_ALLIES = 2;
+const TURN_DELAY_MS = 650;
+const ALLY_ACTION_GAP_MS = 420;
+const ENEMY_ACTION_GAP_MS = 360;
 function genEnemy(plv){
   const lvl = clamp(plv + pick([-1,0,0,1]), 1, MAX_LEVEL);
   const name = pick(ENEMY_NAMES);
@@ -438,7 +441,6 @@ function newState(){
     shopEquipCategory: "weapon",
     inventoryCategory: "item",
     playerDefending: false,
-    playerDodging: false,
     turn: "town",
     battleTurn: 0 // "town" | "player" | "enemy"
   };
@@ -561,7 +563,6 @@ function resetToEmptyProfile(){
   state.enemy = null;
   state.inBattle = false;
   state.playerDefending = false;
-  state.playerDodging = false;
   setTurn("town");
   state.battleTurn = 0;
   refresh(state);
@@ -907,7 +908,22 @@ function getEnemyAvatarBoxByIndex(index){
   return document.querySelector(`.enemyCard.extra[data-enemy-index="${index}"] .enemyAvatarBox`);
 }
 
+function isEnemyAliveByIndex(enemyIndex){
+  const idx = Number(enemyIndex);
+  if (!Number.isFinite(idx)) return false;
+  if (idx !== 0) {
+    const card = document.querySelector(`.enemyCard.extra[data-enemy-index="${idx}"]`);
+    if (card && (card.classList.contains("down") || card.classList.contains("enemyDown"))) {
+      return false;
+    }
+  }
+  const queue = getEnemyQueue();
+  const enemy = queue[idx];
+  return !!(enemy && enemy.hp > 0);
+}
+
 function playEnemySlash(enemyIndex, delay = 0){
+  if (!isEnemyAliveByIndex(enemyIndex)) return;
   const el = getEnemyAvatarBoxByIndex(enemyIndex);
   if (!el) return;
   const spawn = () => {
@@ -923,6 +939,7 @@ function playEnemySlash(enemyIndex, delay = 0){
 }
 
 function playEnemyDodgeFade(enemyIndex){
+  if (!isEnemyAliveByIndex(enemyIndex)) return;
   const el = getEnemyAvatarBoxByIndex(enemyIndex);
   if (!el) return;
   el.classList.remove("dodgeFade");
@@ -932,6 +949,7 @@ function playEnemyDodgeFade(enemyIndex){
 }
 
 function playEnemyCritShake(enemyIndex){
+  if (!isEnemyAliveByIndex(enemyIndex)) return;
   const el = getEnemyAvatarBoxByIndex(enemyIndex);
   if (!el) return;
   el.classList.remove("critShake");
@@ -1088,6 +1106,11 @@ function getEnemyQueue(){
   return state.enemy ? [state.enemy] : [];
 }
 
+function getDefaultEnemyTargetIndex(queue){
+  if (!Array.isArray(queue) || !queue.length) return 0;
+  return clamp(Math.floor(queue.length / 2), 0, queue.length - 1);
+}
+
 function getPrimaryEnemy(){
   const queue = getEnemyQueue();
   return queue[0] || null;
@@ -1161,7 +1184,7 @@ function renderAllyRow() {
       setBar(mpBar, ally.mp, ally.maxMp);
       card.classList.remove("empty");
       card.classList.add("active");
-      card.style.display = "block";
+      card.style.display = "flex";
       const wasAlive = card.dataset.allyAlive === "true";
       const isAlive = ally.hp > 0;
       card.classList.toggle("down", !isAlive);
@@ -1215,22 +1238,41 @@ function applyEnemyAvatar(box, enemy) {
   if (!enemy) {
     const iconEl = box.querySelector(".avatarIcon");
     if (iconEl) iconEl.textContent = "";
-    box.style.background = "rgba(255,255,255,0.03)";
+    box.style.background = "transparent";
+    const imgEl = box.querySelector(".avatarImg");
+    if (imgEl) imgEl.remove();
     box.removeAttribute("title");
     return;
   }
   const config = ENEMY_AVATARS[enemy.name] || {};
-  const fallback = enemy.name ? enemy.name.slice(0, 1).toUpperCase() : "?";
-  const icon = config.icon || fallback;
-  let iconEl = box.querySelector(".avatarIcon");
-  if (!iconEl) {
-    iconEl = document.createElement("span");
-    iconEl.className = "avatarIcon";
-    box.appendChild(iconEl);
+  const imgSrc = config.image;
+  if (imgSrc) {
+    const iconEl = box.querySelector(".avatarIcon");
+    if (iconEl) iconEl.remove();
+    let imgEl = box.querySelector(".avatarImg");
+    if (!imgEl) {
+      imgEl = document.createElement("img");
+      imgEl.className = "avatarImg";
+      box.appendChild(imgEl);
+    }
+    if (imgEl.getAttribute("src") !== imgSrc) imgEl.setAttribute("src", imgSrc);
+    imgEl.setAttribute("alt", enemy.name);
+    box.style.background = "transparent";
+  } else {
+    const fallback = enemy.name ? enemy.name.slice(0, 1).toUpperCase() : "?";
+    const icon = config.icon || fallback;
+    let iconEl = box.querySelector(".avatarIcon");
+    if (!iconEl) {
+      iconEl = document.createElement("span");
+      iconEl.className = "avatarIcon";
+      box.appendChild(iconEl);
+    }
+    if (iconEl.textContent !== icon) iconEl.textContent = icon;
+    const bg = config.bg || "linear-gradient(135deg, #4b5c6e, #202934)";
+    if (box.style.background !== bg) box.style.background = bg;
+    const imgEl = box.querySelector(".avatarImg");
+    if (imgEl) imgEl.remove();
   }
-  if (iconEl.textContent !== icon) iconEl.textContent = icon;
-  const bg = config.bg || "linear-gradient(135deg, #4b5c6e, #202934)";
-  if (box.style.background !== bg) box.style.background = bg;
   box.setAttribute("title", enemy.name);
 }
 
@@ -1276,29 +1318,40 @@ function renderEnemyRow() {
     activeIndices.add(String(enemyIndex));
 
     let card = row.querySelector(`.enemyCard.extra[data-enemy-index="${enemyIndex}"]`);
+    const cardTemplate = `
+      <div class="damageText enemyDamage"></div>
+      <div class="sectionTitle">
+        <div><b class="enemyName"></b> <span class="pill enemyLevel"></span></div>
+      </div>
+      <div class="avatarWrap">
+        <div class="avatarBox enemyAvatarBox"></div>
+      </div>
+      <div class="bars enemyMiniMeta">
+        <div>
+          <div class="bar">
+            <div class="fill hp enemyHpFill"></div>
+            <span class="barText enemyHpText"></span>
+          </div>
+        </div>
+        <div>
+          <div class="bar">
+            <div class="fill mp enemyMpFill"></div>
+            <span class="barText enemyMpText"></span>
+          </div>
+        </div>
+      </div>
+    `;
+
     if (!card) {
       card = document.createElement("div");
       card.className = "card enemyCard extra";
       card.dataset.enemyIndex = `${enemyIndex}`;
-      card.innerHTML = `
-        <div class="damageText enemyDamage"></div>
-        <div class="sectionTitle">
-          <div><b class="enemyName"></b> <span class="pill enemyLevel"></span></div>
-        </div>
-        <div class="avatarWrap">
-          <div class="avatarBox enemyAvatarBox"></div>
-        </div>
-        <div class="enemyMiniMeta">
-          <div class="bar"><div class="fill hp enemyHpFill"></div></div>
-          <div class="muted enemyHpText"></div>
-          <div class="bar"><div class="fill mp enemyMpFill"></div></div>
-          <div class="muted enemyMpText"></div>
-        </div>
-      `;
-      row.appendChild(card);
-    } else {
-      row.appendChild(card);
     }
+    if (card.dataset.templateVersion !== "bartext") {
+      card.innerHTML = cardTemplate;
+      card.dataset.templateVersion = "bartext";
+    }
+    row.appendChild(card);
 
     const hpPct = enemy.maxHp ? clamp((enemy.hp / enemy.maxHp) * 100, 0, 100) : 0;
     const mpPct = enemy.maxMp ? clamp((enemy.mp / enemy.maxMp) * 100, 0, 100) : 0;
@@ -1311,6 +1364,8 @@ function renderEnemyRow() {
     const mpFill = card.querySelector(".enemyMpFill");
     const prevHp = (typeof enemy._prevHp === "number") ? enemy._prevHp : enemy.hp;
     const prevHpPct = enemy.maxHp ? clamp((prevHp / enemy.maxHp) * 100, 0, 100) : 0;
+    const wasAlive = enemy._alive === true;
+    const isAlive = enemy.hp > 0;
 
     if (nameEl) nameEl.textContent = enemy.name || "-";
     if (lvlEl) lvlEl.textContent = `Lv${enemy.level || 1}`;
@@ -1328,23 +1383,54 @@ function renderEnemyRow() {
         void hpFill.offsetWidth;
         hpFill.style.transition = "";
       }
-      setBar(hpFill, enemy.hp, enemy.maxHp);
-      if (hpBar && enemy.hp < prevHp) {
-        if (hpBar._hpPulseTimer) clearTimeout(hpBar._hpPulseTimer);
-        hpBar.classList.remove("hpPulse");
-        void hpBar.offsetWidth;
-        hpBar.classList.add("hpPulse");
-        hpBar._hpPulseTimer = setTimeout(() => {
+      if (!isAlive) {
+        hpFill.style.width = `${hpPct}%`;
+        if (hpBar) {
+          hpBar.dataset.prevPct = `${hpPct}`;
+          const loss = hpBar.querySelector(".loss");
+          if (loss) {
+            loss.style.transition = "none";
+            loss.style.width = `${hpPct}%`;
+            loss.style.opacity = "0";
+          }
+          if (hpBar._hpPulseTimer) clearTimeout(hpBar._hpPulseTimer);
           hpBar.classList.remove("hpPulse");
-        }, 360);
+        }
+      } else {
+        setBar(hpFill, enemy.hp, enemy.maxHp);
+        if (hpBar && enemy.hp < prevHp) {
+          if (hpBar._hpPulseTimer) clearTimeout(hpBar._hpPulseTimer);
+          hpBar.classList.remove("hpPulse");
+          void hpBar.offsetWidth;
+          hpBar.classList.add("hpPulse");
+          hpBar._hpPulseTimer = setTimeout(() => {
+            hpBar.classList.remove("hpPulse");
+          }, 360);
+        }
       }
     }
-    if (mpFill) setBar(mpFill, enemy.mp, enemy.maxMp);
+    if (mpFill) {
+      const mpBar = mpFill.parentElement;
+      if (!isAlive) {
+        const mpPct = enemy.maxMp ? clamp((enemy.mp / enemy.maxMp) * 100, 0, 100) : 0;
+        mpFill.style.width = `${mpPct}%`;
+        if (mpBar) {
+          mpBar.dataset.prevPct = `${mpPct}`;
+          const loss = mpBar.querySelector(".loss");
+          if (loss) {
+            loss.style.transition = "none";
+            loss.style.width = `${mpPct}%`;
+            loss.style.opacity = "0";
+          }
+        }
+      } else {
+        setBar(mpFill, enemy.mp, enemy.maxMp);
+      }
+    }
 
     card.classList.toggle("active", enemy === activeEnemy);
-    const wasAlive = enemy._alive === true;
-    const isAlive = enemy.hp > 0;
     card.classList.toggle("down", !isAlive);
+    card.classList.toggle("noFx", !isAlive);
     if (wasAlive && !isAlive) card.classList.add("enemyDown");
     if (isAlive) card.classList.remove("enemyDown");
     enemy._alive = isAlive;
@@ -1388,6 +1474,7 @@ function showDamageText(target, text){
 
 function showEnemyDamageText(text, enemyIndex){
   const idx = Number.isFinite(enemyIndex) ? enemyIndex : (state.enemyTargetIndex || 0);
+  if (!isEnemyAliveByIndex(idx)) return;
   let el = null;
   if (idx === 0) {
     el = $("enemyDamage");
@@ -1770,8 +1857,54 @@ function refresh(state) {
 
   document.body.classList.toggle("inBattle", !!inBattle);
   document.body.classList.toggle("inTown", !inBattle);
+  document.body.classList.toggle("enemySingle", inBattle && getEnemyQueue().length <= 1);
   if (inBattle) {
+    const turnIndicator = $("turnIndicator");
+    if (turnIndicator) {
+      const listEl = $("turnIndicatorList");
+      const aliveAllies = getAliveAllies();
+      const cycle = [
+        { kind: "player", label: "Kamu" },
+        ...aliveAllies.map((ally) => ({ kind: "ally", label: ally.name })),
+        { kind: "enemy", label: "Musuh" },
+      ];
+      const currentKind = state.turn === "enemy" ? "enemy" : "player";
+      const currentIndex = cycle.findIndex((entry) => entry.kind === currentKind);
+      const startIndex = currentIndex >= 0 ? currentIndex : 0;
+      const slots = Math.min(3, cycle.length);
+
+      if (listEl) {
+        listEl.innerHTML = "";
+        for (let i = 0; i < slots; i += 1) {
+          const entry = cycle[(startIndex + i) % cycle.length];
+          if (!entry) continue;
+          const badge = document.createElement("span");
+          badge.className = `turnBadge ${entry.kind}${i === 0 ? " current" : ""}`;
+          badge.textContent = `${i === 0 ? "Now" : "Next"}: ${entry.label}`;
+          listEl.appendChild(badge);
+        }
+      }
+      turnIndicator.style.display = "flex";
+    }
     closeMailboxOverlay();
+  }
+
+  const allyRow = $("allyRow");
+  const playerCard = $("playerCard");
+  if (allyRow && playerCard) {
+    if (inBattle) {
+      const allySlotTop = allyRow.querySelector('.allyCard.extra[data-ally-slot="1"]');
+      const allySlotBottom = allyRow.querySelector('.allyCard.extra[data-ally-slot="2"]');
+      if (allySlotBottom) {
+        allyRow.insertBefore(playerCard, allySlotBottom);
+      } else if (allySlotTop) {
+        allySlotTop.insertAdjacentElement("afterend", playerCard);
+      } else if (playerCard.parentElement !== allyRow) {
+        allyRow.prepend(playerCard);
+      }
+    } else if (playerCard.parentElement !== allyRow) {
+      allyRow.prepend(playerCard);
+    }
   }
 
   if (inBattle) {
@@ -1831,7 +1964,7 @@ function refresh(state) {
 
     // Buttons visibility
     $("townBtns").style.display = "none";
-    $("battleBtns").style.display = "flex";
+    $("battleBtns").style.display = state.turn === "player" ? "flex" : "none";
     if (state.battleResult) {
       $("battleBtns").classList.add("disabled");
       $("battleBtns").querySelectorAll("button").forEach((b) => { b.disabled = true; });
@@ -1896,6 +2029,8 @@ function refresh(state) {
       };
     }
   } else {
+    const turnIndicator = $("turnIndicator");
+    if (turnIndicator) turnIndicator.style.display = "none";
     $("modePill").textContent = "Town";
     // turnCount/actionHint/battleHint hidden globally above
 
@@ -2798,7 +2933,6 @@ function beginEnemyTurn(){
     addLog("INFO", `${state.enemy?.name || "Musuh"} sedang stun! Giliran mereka hilang.`);
     tickStatuses(state.enemy);
     state.playerDefending = false;
-    state.playerDodging = false;
     state.battleTurn = (state.battleTurn || 0) + 1;
     beginPlayerTurn();
     return false;
@@ -2826,7 +2960,6 @@ function finalizeBattle(reason){
   clearStatuses(state.enemy);
   state.enemy = null;
   state.playerDefending = false;
-  state.playerDodging = false;
   clearStatuses(state.player);
   setTurn("town");
   state.battleTurn = 0;
@@ -2941,7 +3074,6 @@ function winBattle() {
     state.enemy = state.enemyQueue[0];
     state._animateEnemyIn = true;
     state.playerDefending = false;
-    state.playerDodging = false;
     state.battleTurn = 0;
     clearStatuses(state.enemy);
     ensureStatuses(state.enemy);
@@ -2955,7 +3087,7 @@ function winBattle() {
       setTimeout(() => {
         enemyTurn();
         refresh(state);
-      }, 450);
+      }, TURN_DELAY_MS);
       return;
     }
     state.battleTurn = (state.battleTurn || 0) + 1;
@@ -2990,7 +3122,6 @@ function enemyTurn() {
   const endTurnAfter = (waitMs = 0) => {
     setTimeout(() => {
       state.playerDefending = false;
-      state.playerDodging = false;
 
       if (p.hp <= 0) {
         loseBattle();
@@ -3028,7 +3159,7 @@ function enemyTurn() {
       enemy,
       target,
       isRage ? 8 : 2,
-      { dodgeBonus: (isPlayer && state.playerDodging) ? 30 : 0 }
+      { dodgeBonus: 0 }
     );
     if (res.missed) {
       if (isPlayer) showDamageText("player", "MISS");
@@ -3073,7 +3204,7 @@ function enemyTurn() {
       addLog("ALLY", `${target.name} tumbang!`);
     }
     const wait = delays.length ? Math.max(...delays, 180) + 40 : 0;
-    done(wait);
+    done(wait + ENEMY_ACTION_GAP_MS);
   };
 
   let idx = 0;
@@ -3127,7 +3258,7 @@ function handleEnemyDefeat(){
       setTimeout(() => {
         enemyTurn();
         refresh(state);
-      }, 450);
+      }, TURN_DELAY_MS);
       return true;
     }
   }
@@ -3145,7 +3276,7 @@ function alliesAct(done){
   }
   const maxSpd = Math.max(...allies.map((ally) => Number(ally.spd) || 0), 0);
   const baseDelay = 260;
-  const orderGap = 220;
+  const orderGap = ALLY_ACTION_GAP_MS;
   let lastDelay = 0;
   allies.forEach((ally, index) => {
     const spd = Number(ally.spd) || 0;
@@ -3177,7 +3308,7 @@ function alliesAct(done){
       refresh(state);
     }, delay);
   });
-  if (done) setTimeout(done, lastDelay + 240);
+  if (done) setTimeout(done, lastDelay + ALLY_ACTION_GAP_MS);
 }
 
 function afterPlayerAction() {
@@ -3198,29 +3329,29 @@ function afterPlayerAction() {
   const e = getTargetEnemy();
   if (!e) return;
 
-  alliesAct(() => {
-    if (!state.inBattle) return;
-    const target = getTargetEnemy();
-    const defeated = getDefeatedEnemies();
-    if (defeated.length || (target && target.hp <= 0)) {
-      defeated.forEach((enemy) => { enemy._defeated = true; });
-      refresh(state);
-      handleEnemyDefeat();
-      return;
-    }
+  setTurn("enemy");
+  refresh(state);
+  setTimeout(() => {
+    alliesAct(() => {
+      if (!state.inBattle) return;
+      const target = getTargetEnemy();
+      const defeated = getDefeatedEnemies();
+      if (defeated.length || (target && target.hp <= 0)) {
+        defeated.forEach((enemy) => { enemy._defeated = true; });
+        refresh(state);
+        handleEnemyDefeat();
+        return;
+      }
 
     tickStatuses(state.player);
 
-    // Lock ke giliran musuh dulu supaya player tidak bisa spam tombol
-    setTurn("enemy");
-    refresh(state);
-
-    // Small delay sebelum enemy acts, biar terasa lebih seperti RPG turn-based
-    setTimeout(() => {
-      enemyTurn();
-      refresh(state);
-    }, 450);
-  });
+      // Small delay sebelum enemy acts, biar terasa lebih seperti RPG turn-based
+      setTimeout(() => {
+        enemyTurn();
+        refresh(state);
+      }, TURN_DELAY_MS);
+    });
+  }, TURN_DELAY_MS);
 }
 
 /* ----------------------------- Town actions ----------------------------- */
@@ -3232,14 +3363,14 @@ function explore() {
 }
 
 function openAdventureLevels(){
-  const stages = [1, 3, 5, 7, 10, 11];
+  const stages = [1, 3, 5, 7, 8, 10];
   modal.open(
     "Adventure - Level",
     stages.map((lv) => ({
       title: `Stage ${lv}`,
-      desc: lv === 11
+      desc: lv === 10
         ? "Stage spesial: 3 musuh."
-        : lv === 10
+        : lv === 8
           ? "Stage spesial: 2 musuh."
           : "Pilih stage petualangan",
       meta: "",
@@ -3254,11 +3385,11 @@ function openAdventureLevels(){
 
 function startAdventureBattle(targetLevel, stageName){
   state.currentStageName = stageName;
-  if (targetLevel === 10 || targetLevel === 11) {
-    const count = targetLevel === 11 ? 3 : 2;
+  if (targetLevel === 8 || targetLevel === 10) {
+    const count = targetLevel === 10 ? 3 : 2;
     state.enemyQueue = Array.from({ length: count }, () => genEnemy(targetLevel));
     state.enemy = state.enemyQueue[0];
-    state.enemyTargetIndex = 0;
+    state.enemyTargetIndex = getDefaultEnemyTargetIndex(state.enemyQueue);
   } else {
     state.enemyQueue = null;
     state.enemy = genEnemy(targetLevel);
@@ -3267,7 +3398,6 @@ function startAdventureBattle(targetLevel, stageName){
   state.inBattle = true;
   state._animateEnemyIn = true;
   state.playerDefending = false;
-  state.playerDodging = false;
   state.battleTurn = 0;
   clearStatuses(state.enemy);
   ensureStatuses(state.enemy);
@@ -3281,7 +3411,7 @@ function startAdventureBattle(targetLevel, stageName){
     setTimeout(() => {
       enemyTurn();
       refresh(state);
-    }, 450);
+    }, TURN_DELAY_MS);
     return;
   } else {
     state.battleTurn = (state.battleTurn||0)+1;
@@ -3447,12 +3577,6 @@ function charge(){
   afterPlayerAction();
 }
 
-function dodge() {
-  setTurn("player");
-  state.playerDodging = true;
-  addLog("YOU", "Dodge! Chance menghindar meningkat (1 turn).");
-}
-
 function runAway() {
   setTurn("player");
 
@@ -3460,16 +3584,8 @@ function runAway() {
   const e = getTargetEnemy();
   if (!e) return false;
 
-  const chance = escapeChance(p, e);
-  const roll = randInt(1, 100);
-
-  if (roll <= chance) {
-    endBattle(`Berhasil kabur! (Chance ${chance}%, Roll ${roll})`);
-    return true;
-  }
-
-  addLog("YOU", `Gagal kabur. (Chance ${chance}%, Roll ${roll})`);
-  return false;
+  endBattle("Berhasil kabur!");
+  return true;
 }
 
 function useItem(name) {
@@ -4080,7 +4196,6 @@ function openTownMenu(){
                   state.enemy = null;
                   state.inBattle = false;
                   state.playerDefending = false;
-                  state.playerDodging = false;
                   setTurn("town");
                   state.battleTurn = 0;
 
@@ -4247,17 +4362,37 @@ function bind() {
     charge();
   };
 
-  byId("btnDefend").onclick = () => {
-    if (!state.inBattle || state.turn !== "player") return;
-    dodge();
-    afterPlayerAction();
+  const runBackdrop = byId("runConfirmBackdrop");
+  const runConfirm = byId("btnRunConfirm");
+  const runCancel = byId("btnRunCancel");
+
+  const openRunConfirm = () => {
+    if (runBackdrop) runBackdrop.style.display = "flex";
   };
+  const closeRunConfirm = () => {
+    if (runBackdrop) runBackdrop.style.display = "none";
+  };
+
+  if (runCancel) runCancel.onclick = closeRunConfirm;
+  if (runBackdrop) {
+    runBackdrop.onclick = (event) => {
+      if (event.target === runBackdrop) closeRunConfirm();
+    };
+  }
 
   byId("btnRun").onclick = () => {
     if (!state.inBattle || state.turn !== "player") return;
-    const ok = runAway();
-    if (!ok) afterPlayerAction();
+    openRunConfirm();
   };
+
+  if (runConfirm) {
+    runConfirm.onclick = () => {
+      if (!state.inBattle || state.turn !== "player") return;
+      closeRunConfirm();
+      const ok = runAway();
+      if (!ok) afterPlayerAction();
+    };
+  }
 
   byId("btnItem").onclick = () => {
     if (!state.inBattle || state.turn !== "player") return;
@@ -4284,7 +4419,6 @@ function applyLoaded(payload){
   state.enemyTargetIndex = 0;
   state.inBattle = false;
   state.playerDefending = false;
-  state.playerDodging = false;
   setTurn("town");
   state.battleTurn = 0;
 
@@ -4317,7 +4451,6 @@ function startNewGame(slotIdx){
   state.enemyTargetIndex = 0;
   state.inBattle = false;
   state.playerDefending = false;
-  state.playerDodging = false;
   setTurn("town");
   state.battleTurn = 0;
 
@@ -4520,7 +4653,6 @@ function deleteCharacter(slotIdx){
     state.enemy = null;
     state.inBattle = false;
     state.playerDefending = false;
-    state.playerDodging = false;
     setTurn("town");
     state.battleTurn = 0;
   }
@@ -4564,7 +4696,6 @@ function handleCreateCharacter(){
   state.enemy = null;
   state.inBattle = false;
   state.playerDefending = false;
-  state.playerDodging = false;
   setTurn("town");
   state.battleTurn = 0;
 
@@ -4593,7 +4724,6 @@ function enterTownWithSlot(slotIdx){
   state.enemy = null;
   state.inBattle = false;
   state.playerDefending = false;
-  state.playerDodging = false;
   setTurn("town");
   state.battleTurn = 0;
 
@@ -4666,7 +4796,6 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
   state.enemy = null;
   state.inBattle = false;
   state.playerDefending = false;
-  state.playerDodging = false;
   setTurn("town");
   state.battleTurn = 0;
 

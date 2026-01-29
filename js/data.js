@@ -14,6 +14,11 @@ export const ITEMS = {
 };
 
 export const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton"];
+export const ENEMY_AVATARS = {
+  Slime: { image: "./assets/enemies/slime.png" },
+  Wolf: { image: "./assets/enemies/wolf.png" },
+  Skeleton: { image: "./assets/enemies/skeleton.png" },
+};
 
 export const RECRUIT_TEMPLATES = [
   {
