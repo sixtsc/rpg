@@ -613,15 +613,16 @@ body.inBattle .playerCurrency{
 .battlePrimary{ display:grid; gap:10px; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
 .battlePrimary button{ width:100%; }
 /* Full-width actions */
-#btnStatsBattle, #btnRun{ grid-column: 1 / -1; }
+#btnStatsBattle{ grid-column: 1 / -1; }
 .actionTitle{ display:none; }
 .skillGrid{
   display:grid;
-  grid-template-columns: repeat(4, minmax(0,1fr));
+  grid-template-columns: repeat(6, minmax(0,1fr));
   gap:8px;
   grid-column: 1 / -1;
 }
-.skillSlot{
+.skillSlot,
+.actionSlot{
   background:transparent;
   border:1px solid rgba(74, 163, 255, 0.45);
   padding:6px;
@@ -632,6 +633,32 @@ body.inBattle .playerCurrency{
   justify-content:center;
   min-height:52px;
   position:relative;
+  aspect-ratio:1 / 1;
+}
+.actionSlot{
+  background:rgba(16, 28, 44, 0.75);
+  border-color:rgba(120, 160, 220, 0.5);
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:0.6px;
+}
+.actionSlot.primary{
+  border-color:var(--accent);
+  background:rgba(25, 48, 90, 0.65);
+}
+.actionSlot.warn{
+  border-color: rgba(255, 190, 90, 0.75);
+  background: rgba(56, 36, 14, 0.75);
+  color:#ffd3a8;
+}
+.actionSlot::after{
+  content:"";
+  position:absolute;
+  inset:4px;
+  border-radius:10px;
+  border:1px dashed rgba(255,255,255,0.2);
+  opacity:0.6;
+  pointer-events:none;
 }
 .skillSlot .skillIcon{
   width:28px;
@@ -850,31 +877,63 @@ body.inBattle .enemyCard .nameSub{
 
 body.inBattle .turnIndicator{
   display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  padding:6px 10px;
-  margin:2px 0 6px;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:4px;
+  padding:6px 8px;
+  margin:2px 0 4px;
   border-radius:12px;
   border:1px solid var(--line);
   background: rgba(12, 18, 28, 0.6);
-  font-size:12px;
+  font-size:11px;
   font-weight:800;
   text-transform:uppercase;
   letter-spacing:0.4px;
 }
-body.inBattle .turnIndicator span{
+body.inBattle .turnIndicatorLabel{
+  font-size:10px;
+  color:rgba(210, 226, 255, 0.75);
+  letter-spacing:0.6px;
+  white-space:nowrap;
+}
+body.inBattle .turnIndicatorList{
   display:flex;
   align-items:center;
-  gap:6px;
+  gap:5px;
+  flex-wrap:nowrap;
+  width:100%;
 }
-body.inBattle .turnIndicator .turnNow::before{
+body.inBattle .turnBadge{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  padding:3px 6px;
+  border-radius:999px;
+  border:1px solid rgba(90, 120, 160, 0.35);
+  background: rgba(10, 16, 26, 0.7);
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:0.3px;
+}
+body.inBattle .turnBadge::before{
   content:"●";
-  color: rgba(74, 163, 255, 0.9);
+  color: rgba(255, 200, 120, 0.85);
 }
-body.inBattle .turnIndicator .turnNext::before{
-  content:"▶";
-  color: rgba(255, 190, 90, 0.9);
+body.inBattle .turnBadge.current{
+  border-color: rgba(90, 170, 255, 0.6);
+  background: rgba(12, 20, 34, 0.85);
+  box-shadow: 0 0 0 1px rgba(90, 170, 255, 0.25);
+}
+body.inBattle .turnBadge.current::before{
+  color: rgba(90, 170, 255, 0.95);
+}
+body.inBattle .turnBadge.enemy::before{
+  content:"▲";
+  color: rgba(255, 140, 140, 0.9);
+}
+body.inBattle .turnBadge.ally::before{
+  content:"◆";
+  color: rgba(130, 255, 190, 0.85);
 }
 
 body.inBattle .battleActions{
@@ -890,6 +949,7 @@ body.inBattle .battlePrimary button{
 }
 body.inBattle .skillGrid{
   gap:6px;
+  grid-template-columns: repeat(6, minmax(0,1fr));
 }
 body.inBattle .skillSlot{
   min-height:44px;
@@ -919,16 +979,16 @@ body.inBattle .enemyCard.active{
 body.inBattle .enemyCard.active::before{
   content:"";
   position:absolute;
-  right:-12px;
+  left:-12px;
   top:50%;
   transform:translateY(-50%);
   width:0;
   height:0;
   border-top:8px solid transparent;
   border-bottom:8px solid transparent;
-  border-right:12px solid rgba(97, 162, 255, 0.9);
+  border-left:12px solid rgba(97, 162, 255, 0.9);
   filter: drop-shadow(0 2px 6px rgba(0,0,0,.35));
-  z-index:5;
+  z-index:6;
 }
 body.inBattle .enemyCard.active .avatarBox{
   border-color: rgba(97, 162, 255, 0.85);
@@ -2000,9 +2060,9 @@ select.authInput{
 .avatarBox{
   width:110px;
   height:110px;
-  border:2px solid #2a3c52;
-  border-radius:16px;
-  background:rgba(255,255,255,0.03);
+  border:none;
+  border-radius:0;
+  background:transparent;
   position:relative;
   overflow:hidden;
   display:flex;
@@ -2011,6 +2071,14 @@ select.authInput{
   font-size:44px;
   color:#e9f2ff;
   text-shadow:0 3px 10px rgba(0,0,0,0.55);
+  box-shadow:none;
+}
+.avatarImg{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  image-rendering:pixelated;
+  display:block;
 }
 .allyCard.down{
   opacity:0.55;
