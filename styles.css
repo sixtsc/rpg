@@ -672,6 +672,32 @@ body.inBattle .playerCurrency{
 .skillSlot.cooldown .skillIconWrap{
   opacity:0.45;
 }
+.skillSlot--fireball:not(.cooldown):not(:disabled) .skillIcon{
+  animation: fireballFlicker 1.1s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px rgba(255, 120, 70, 0.45));
+}
+.skillSlot--fireball:not(.cooldown):not(:disabled) .skillIconWrap{
+  position:relative;
+}
+.skillSlot--fireball:not(.cooldown):not(:disabled) .skillIconWrap::after{
+  content:"";
+  position:absolute;
+  inset:-6px;
+  border-radius:50%;
+  background: radial-gradient(circle, rgba(255, 120, 70, 0.25), rgba(255, 120, 70, 0) 70%);
+  opacity:0.75;
+  pointer-events:none;
+  animation: fireballPulse 1.4s ease-in-out infinite;
+}
+@keyframes fireballFlicker{
+  0%, 100%{ transform: scale(1); }
+  40%{ transform: scale(1.05); }
+  70%{ transform: scale(0.97); }
+}
+@keyframes fireballPulse{
+  0%, 100%{ transform: scale(0.95); opacity:0.6; }
+  50%{ transform: scale(1.1); opacity:0.9; }
+}
 .skillCooldown{
   position:absolute;
   bottom:6px;

@@ -1537,6 +1537,8 @@ function renderSkillSlots(){
     }
     const slotName = p.skillSlots ? p.skillSlots[i] : null;
     const skill = slotName ? getSkillByName(p, slotName) : null;
+    btn.classList.remove("skillSlot--fireball");
+    btn.removeAttribute("data-skill");
     if (skill) {
       const cdLeft = skill.cdLeft || 0;
       const icon = skillIconHtml(skill);
@@ -1544,6 +1546,10 @@ function renderSkillSlots(){
       btn.innerHTML = `${icon}${cdBadge}`;
       btn.disabled = (state.turn !== "player") || p.mp < skill.mpCost || cdLeft > 0;
       btn.classList.toggle("cooldown", cdLeft > 0);
+      btn.setAttribute("data-skill", skill.name);
+      if (skill.name === "Fireball") {
+        btn.classList.add("skillSlot--fireball");
+      }
       btn.onclick = () => useSkillAtIndex(i);
     } else {
       btn.textContent = "-";
