@@ -959,6 +959,7 @@ body.inBattle .skillSlot{
 body.inBattle .allyCard .avatarWrap,
 body.inBattle .enemyCard .avatarWrap{
   order:1;
+  margin:8px 0 2px;
 }
 body.inBattle .allyCard .bars,
 body.inBattle .enemyCard .bars{
@@ -989,10 +990,6 @@ body.inBattle .enemyCard.active::before{
   border-left:12px solid rgba(97, 162, 255, 0.9);
   filter: drop-shadow(0 2px 6px rgba(0,0,0,.35));
   z-index:6;
-}
-body.inBattle .enemyCard.active .avatarBox{
-  border-color: rgba(97, 162, 255, 0.85);
-  box-shadow: 0 0 0 2px rgba(97, 162, 255, 0.35), 0 8px 14px rgba(0,0,0,.4);
 }
 body.inBattle .rightPills{
   justify-content:flex-start;
