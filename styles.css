@@ -971,6 +971,12 @@ body.inBattle .allyCard .avatarWrap{
 body.inBattle .enemyCard .avatarWrap{
   justify-content:flex-end;
 }
+@media (min-width: 521px){
+  body.inBattle .enemyCard .avatarBox{
+    width:130px;
+    height:130px;
+  }
+}
 body.inBattle .enemyCard.active{
   position:relative;
   border-color: transparent;
