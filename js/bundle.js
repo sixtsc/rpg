@@ -34,7 +34,7 @@ const ITEMS = {
 const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton"];
 const ENEMY_AVATARS = {
   Slime: { image: "./assets/enemies/slime.png" },
-  Goblin: { icon: "👺", bg: "linear-gradient(135deg, #7de86a, #2f6b1f)" },
+  Goblin: { image: "./assets/enemies/goblin.png" },
   Bandit: { icon: "🗡️", bg: "linear-gradient(135deg, #f1b06b, #6b3a1a)" },
   Wolf: { image: "./assets/enemies/wolf.png" },
   Skeleton: { image: "./assets/enemies/skeleton.png" }
