@@ -34,7 +34,7 @@ const ITEMS = {
 const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton"];
 const ENEMY_AVATARS = {
   Slime: { image: "./assets/enemies/slime.png" },
-  Goblin: { icon: "👺", bg: "linear-gradient(135deg, #7de86a, #2f6b1f)" },
+  Goblin: { image: "./assets/enemies/goblin.png" },
   Bandit: { icon: "🗡️", bg: "linear-gradient(135deg, #f1b06b, #6b3a1a)" },
   Wolf: { image: "./assets/enemies/wolf.png" },
   Skeleton: { image: "./assets/enemies/skeleton.png" }
@@ -1537,6 +1537,8 @@ function renderSkillSlots(){
     }
     const slotName = p.skillSlots ? p.skillSlots[i] : null;
     const skill = slotName ? getSkillByName(p, slotName) : null;
+    btn.classList.remove("skillSlot--fireball");
+    btn.removeAttribute("data-skill");
     if (skill) {
       const cdLeft = skill.cdLeft || 0;
       const icon = skillIconHtml(skill);
@@ -1544,6 +1546,10 @@ function renderSkillSlots(){
       btn.innerHTML = `${icon}${cdBadge}`;
       btn.disabled = (state.turn !== "player") || p.mp < skill.mpCost || cdLeft > 0;
       btn.classList.toggle("cooldown", cdLeft > 0);
+      btn.setAttribute("data-skill", skill.name);
+      if (skill.name === "Fireball") {
+        btn.classList.add("skillSlot--fireball");
+      }
       btn.onclick = () => useSkillAtIndex(i);
     } else {
       btn.textContent = "-";
