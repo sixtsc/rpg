@@ -2,6 +2,7 @@ export const SKILLS = {
   fireball: {
     name:"Fireball",
     icon:"./assets/skills/fireball.svg",
+    element:"fire",
     mpCost:6,
     power:10,
     desc:"Serangan api (damage tinggi)."
