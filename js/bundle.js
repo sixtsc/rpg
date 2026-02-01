@@ -3394,8 +3394,8 @@ function startAdventureBattle(targetLevel, stageName){
   if (targetLevel === 8 || targetLevel === 10) {
     if (targetLevel === 10) {
       state.enemyQueue = [
-        genEnemyWithName(targetLevel, "Leader Bandit"),
         genEnemyWithName(targetLevel, "Bandit"),
+        genEnemyWithName(targetLevel, "Leader Bandit"),
         genEnemyWithName(targetLevel, "Bandit")
       ];
     } else {
