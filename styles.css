@@ -1629,6 +1629,10 @@ body.inBattle .enemyMiniMeta .muted{
   justify-content:center;
   position:relative;
   overflow:hidden;
+  min-width:96px;
+  min-height:96px;
+  aspect-ratio:1 / 1;
+  padding:12px;
 }
 .marketTabRow.skillTabs .marketTabBtn span{
   display:block;
