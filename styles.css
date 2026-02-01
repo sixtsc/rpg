@@ -635,6 +635,13 @@ body.inBattle .playerCurrency{
   position:relative;
   aspect-ratio:1 / 1;
 }
+.skillSlot{
+  background-image:url("./assets/ui/skill-frame.png");
+  background-size:100% 100%;
+  background-position:center;
+  background-repeat:no-repeat;
+  border-color:transparent;
+}
 .actionSlot{
   background:rgba(16, 28, 44, 0.75);
   border-color:rgba(120, 160, 220, 0.5);
