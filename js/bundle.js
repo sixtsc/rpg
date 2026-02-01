@@ -35,8 +35,8 @@ const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton"];
 const ENEMY_AVATARS = {
   Slime: { image: "./assets/enemies/slime.png" },
   Goblin: { image: "./assets/enemies/goblin.png" },
-  Bandit: { icon: "🗡️", bg: "linear-gradient(135deg, #f1b06b, #6b3a1a)" },
-  "Leader Bandit": { icon: "🗡️", bg: "linear-gradient(135deg, #f1b06b, #6b3a1a)" },
+  Bandit: { image: "./assets/enemies/bandit1.png" },
+  "Leader Bandit": { image: "./assets/enemies/leaderbandit.png" },
   Wolf: { image: "./assets/enemies/wolf.png" },
   Skeleton: { image: "./assets/enemies/skeleton.png" }
 };
@@ -1864,6 +1864,7 @@ function refresh(state) {
   document.body.classList.toggle("inBattle", !!inBattle);
   document.body.classList.toggle("inTown", !inBattle);
   document.body.classList.toggle("enemySingle", inBattle && getEnemyQueue().length <= 1);
+  document.body.classList.toggle("enemyTriple", inBattle && getEnemyQueue().length === 3);
   if (inBattle) {
     const turnIndicator = $("turnIndicator");
     if (turnIndicator) {
@@ -2243,6 +2244,11 @@ function equipItem(slot, itemName){
   if (!it || (it.qty || 0) <= 0) return false;
   if (it.kind !== "gear") return false;
   if (it.slot !== slot) return false;
+  const requiredLevel = Number(it.level || 1);
+  if (Number.isFinite(requiredLevel) && (p.level || 1) < requiredLevel) {
+    addLog("WARN", `Butuh Lv${requiredLevel} untuk memakai ${itemName}.`);
+    return false;
+  }
   p.equipment[slot] = itemName;
   applyEquipmentStats(p);
   autosave(state);
@@ -2451,10 +2457,11 @@ function learnSkill(skillKey){
   if (!p || !skill || !entry) return { ok:false, reason:"not_found" };
   const already = Array.isArray(p.skills) && p.skills.some((s) => s.name === skill.name);
   if (already) return { ok:false, reason:"learned" };
+  if ((p.level || 1) < entry.level) return { ok:false, reason:"level" };
   if ((p.gold || 0) < entry.price) return { ok:false, reason:"gold" };
   p.gold -= entry.price;
   if (!Array.isArray(p.skills)) p.skills = [];
-  p.skills.push({ ...skill, cdLeft:0 });
+  p.skills.push({ ...skill, cdLeft:0, level: entry.level });
   if (!Array.isArray(p.skillSlots)) {
     p.skillSlots = Array.from({ length: 8 }, () => null);
   }
@@ -2838,6 +2845,7 @@ function openSkillLearnDetail(skillKey){
     return;
   }
   const learned = Array.isArray(p.skills) && p.skills.some((s) => s.name === skill.name);
+  const levelBlocked = (p.level || 1) < entry.level;
   const detailDesc = `
     <div class="skillDetailStats">
       <div class="statRow"><img class="statIcon" src="./assets/icons/mp.svg" alt="" /><span>MP ${skill.mpCost}</span></div>
@@ -2861,10 +2869,10 @@ function openSkillLearnDetail(skillKey){
       },
       {
         title: learned ? "Sudah dimiliki" : "Learn Skill",
-        desc: learned ? "Skill sudah dipelajari." : "",
-        meta: learned ? "Learned" : `${price} gold`,
+        desc: learned ? "Skill sudah dipelajari." : levelBlocked ? `Butuh Lv ${entry.level}.` : "",
+        meta: learned ? "Learned" : levelBlocked ? `Lv ${entry.level}` : `${price} gold`,
         buttons: [
-          { text: learned ? "Owned" : "Learn", value: `learn:${skillKey}`, disabled: learned },
+          { text: learned ? "Owned" : "Learn", value: `learn:${skillKey}`, disabled: learned || levelBlocked },
         ],
         keepOpen: true,
       },
@@ -2877,6 +2885,7 @@ function openSkillLearnDetail(skillKey){
       if (!res.ok) {
         if (res.reason === "gold") addLog("WARN", "Gold tidak cukup.");
         if (res.reason === "learned") addLog("INFO", "Skill sudah dipelajari.");
+        if (res.reason === "level") addLog("WARN", `Butuh Lv${entry.level} untuk belajar skill ini.`);
       }
       openSkillLearnDetail(key);
     }
@@ -4021,12 +4030,22 @@ function openEquipSelect(slot){
   modal.open(
     `Pilih item untuk ${slot}`,
     [{ title: "Back", desc: "Kembali ke Equipment.", meta: "", value: "back", className: "subMenuBack" }]
-      .concat(keys.map((k) => ({
-        title: `${k} x${p.inv[k].qty}`,
-        desc: p.inv[k].desc || "Perlengkapan",
-        meta: formatItemStats(p.inv[k]) || `Equip (${p.inv[k].slot || "-"})`,
-        value: k,
-      }))),
+      .concat(keys.map((k) => {
+        const entry = p.inv[k];
+        const requiredLevel = Number(entry.level || 1);
+        const isLocked = Number.isFinite(requiredLevel) && (p.level || 1) < requiredLevel;
+        const stats = formatItemStats(entry);
+        const metaParts = [];
+        if (Number.isFinite(requiredLevel)) metaParts.push(`Lv ${requiredLevel}`);
+        if (stats) metaParts.push(stats);
+        return {
+          title: `${k} x${entry.qty}`,
+          desc: entry.desc || "Perlengkapan",
+          meta: metaParts.join(" • ") || `Equip (${entry.slot || "-"})`,
+          value: isLocked ? undefined : k,
+          className: isLocked ? "readonly" : "",
+        };
+      })),
     (name) => {
       if (name === "back") return openEquipmentModal();
       const ok = equipItem(slot, name);

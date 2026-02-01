@@ -635,6 +635,13 @@ body.inBattle .playerCurrency{
   position:relative;
   aspect-ratio:1 / 1;
 }
+.skillSlot{
+  background-image:url("./assets/ui/skill-frame.png");
+  background-size:100% 100%;
+  background-position:center;
+  background-repeat:no-repeat;
+  border-color:transparent;
+}
 .actionSlot{
   background:rgba(16, 28, 44, 0.75);
   border-color:rgba(120, 160, 220, 0.5);
@@ -806,6 +813,15 @@ body.inBattle.enemySingle #enemyRow{
   justify-self:center;
   margin-left:auto;
   margin-right:auto;
+}
+body.inBattle.enemyTriple #enemyCard{
+  grid-row:2;
+}
+body.inBattle.enemyTriple .enemyCard.extra[data-enemy-index="1"]{
+  grid-row:1;
+}
+body.inBattle.enemyTriple .enemyCard.extra[data-enemy-index="2"]{
+  grid-row:3;
 }
 body.inBattle .enemyCard.active{
   border-color: transparent;
@@ -2074,7 +2090,7 @@ select.authInput{
   border-radius:0;
   background:transparent;
   position:relative;
-  overflow:hidden;
+  overflow:visible;
   display:flex;
   align-items:center;
   justify-content:center;
