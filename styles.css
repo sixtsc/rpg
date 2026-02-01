@@ -1570,6 +1570,11 @@ body.inBattle .enemyMiniMeta .muted{
   justify-content:center;
   font-size:28px;
 }
+.confirmThumb img{
+  width:70%;
+  height:70%;
+  object-fit:contain;
+}
 .confirmStats{
   display:flex;
   flex-direction:column;
@@ -1844,14 +1849,16 @@ body.inBattle .enemyMiniMeta .muted{
 }
 .skillShopTabRow{
   display:flex;
-  flex-wrap:wrap;
-  gap:10px;
+  flex-wrap:nowrap;
+  gap:8px;
   justify-content:center;
+  overflow-x:auto;
+  padding-bottom:4px;
 }
 .skillCategoryBtn{
-  width:74px;
-  height:74px;
-  border-radius:16px;
+  width:60px;
+  height:60px;
+  border-radius:14px;
   border:1px solid var(--line);
   background:var(--card2);
   color:var(--text);
@@ -1861,17 +1868,17 @@ body.inBattle .enemyMiniMeta .muted{
   flex-direction:column;
   align-items:center;
   justify-content:center;
-  gap:6px;
+  gap:4px;
   text-transform:capitalize;
   transition:all .2s ease;
 }
 .skillCategoryBtn img{
-  width:26px;
-  height:26px;
+  width:22px;
+  height:22px;
   display:block;
 }
 .skillCategoryBtn span{
-  font-size:12px;
+  font-size:10px;
 }
 .skillCategoryBtn.active{
   background:rgba(255,120,68,0.16);
@@ -1915,19 +1922,19 @@ body.inBattle .enemyMiniMeta .muted{
   margin:0 auto;
 }
 .skillShopGrid{
-  display:grid;
-  grid-template-columns:repeat(2, minmax(0, 1fr));
-  gap:14px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
   max-width:620px;
   margin:0 auto;
 }
 .skillShopCard{
-  border-radius:16px;
+  border-radius:14px;
   border:1px solid var(--line);
   background:var(--card2);
-  padding:16px;
+  padding:12px 14px;
   display:flex;
-  flex-direction:column;
+  align-items:center;
   gap:12px;
   cursor:pointer;
   transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
@@ -1943,28 +1950,40 @@ body.inBattle .enemyMiniMeta .muted{
   display:flex;
   align-items:center;
   gap:12px;
+  flex:1;
 }
-.skillShopCard .skillIconWrap{
-  width:44px;
-  height:44px;
-  border-radius:12px;
-  background:rgba(15,25,44,0.45);
+.skillShopThumb{
+  width:46px;
+  height:46px;
+  border-radius:10px;
+  border:1px solid rgba(159,178,200,0.35);
+  background:rgba(15,25,44,0.55);
   display:flex;
   align-items:center;
   justify-content:center;
+  flex-shrink:0;
+}
+.skillShopThumb img{
+  width:70%;
+  height:70%;
+  object-fit:contain;
+}
+.skillShopInfo{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
 }
 .skillShopCardTitle{
   font-weight:800;
   font-size:16px;
 }
-.skillShopCardMeta{
+.skillShopLevel{
   font-size:12px;
   color:var(--muted);
 }
 .skillShopBadge{
-  position:absolute;
-  right:14px;
-  top:14px;
+  margin-left:auto;
+  align-self:center;
   font-size:11px;
   padding:2px 8px;
   border-radius:999px;

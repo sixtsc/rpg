@@ -2729,16 +2729,17 @@ function renderSkillShopItems(){
     card.className = "skillShopCard";
     card.innerHTML = `
       <div class="skillShopCardHeader">
-        ${skillIconHtml(skill)}
-        <div>
+        <div class="skillShopThumb">
+          ${skill.icon ? `<img src="${escapeHtml(skill.icon)}" alt="" />` : ""}
+        </div>
+        <div class="skillShopInfo">
           <div class="skillShopCardTitle">${escapeHtml(skill.name)}</div>
-          <div class="skillShopCardMeta">MP ${skill.mpCost} • Power ${skill.power} • CD ${skill.cooldown || 0}</div>
+          <div class="skillShopLevel">Lv ${escapeHtml(String(entry.level || 1))}</div>
         </div>
       </div>
-      <div class="skillShopCardMeta">${escapeHtml(skill.desc || "Skill")}</div>
       <span class="skillShopBadge">${learned ? "Owned" : `${entry.price} gold`}</span>
     `;
-    card.onclick = () => openSkillLearnDetail(entry.key);
+    card.onclick = () => openSkillConfirm(entry.key);
     grid.appendChild(card);
   });
 }
@@ -2754,6 +2755,69 @@ function openSkillShopPage(){
   modal.close();
   setSkillShopPageVisible(true);
   renderSkillShopPage();
+}
+
+function openSkillConfirm(skillKey){
+  const entry = SHOP_SKILLS.find((s) => s.key === skillKey);
+  const skill = SKILLS[skillKey];
+  if (!entry || !skill) {
+    openSkillShopPage();
+    return;
+  }
+  const learned = Array.isArray(state.player.skills)
+    && state.player.skills.some((s) => s && s.name === skill.name);
+  const elementLabel = SKILL_SHOP_CATEGORIES.find((c) => c.key === skill.element)?.label || skill.element || "-";
+  const stats = [
+    { label: "Element", value: elementLabel },
+    { label: "Level", value: `Lv ${entry.level}` },
+    { label: "MP", value: `${skill.mpCost}` },
+    { label: "Power", value: `${skill.power}` },
+    { label: "Cooldown", value: `${skill.cooldown || 0}` },
+    { label: "Harga", value: `${entry.price} gold` },
+  ];
+  const statsHtml = stats.map((s) => (
+    `<div class="confirmStatRow"><span>${escapeHtml(s.label)}:</span><b>${escapeHtml(String(s.value))}</b></div>`
+  )).join("");
+  const descHtml = `
+    <div class="confirmDetailCard">
+      <div class="confirmThumb">${skill.icon ? `<img src="${escapeHtml(skill.icon)}" alt="" />` : "✨"}</div>
+      <div class="confirmStats">${statsHtml}</div>
+    </div>
+    <div class="confirmDesc">${escapeHtml(skill.desc || "Skill")}</div>
+  `;
+  modal.open(
+    skill.name,
+    [
+      { title: "Detail", descHtml, meta: "", value: undefined, className: "confirmDetails" },
+      {
+        title: "",
+        desc: "",
+        meta: "",
+        value: undefined,
+        className: "confirmActions",
+        buttons: [
+          { text: "Batal", value: "back", className: "ghost wide" },
+          { text: learned ? "Owned" : "Beli", value: `confirm:${skillKey}`, className: "primary wide", disabled: learned },
+        ],
+      },
+    ],
+    (pick) => {
+      if (pick === "back") {
+        modal.close();
+        renderSkillShopPage();
+        return;
+      }
+      if (!String(pick || "").startsWith("confirm:")) return;
+      const res = learnSkill(skillKey);
+      if (!res.ok) {
+        if (res.reason === "gold") showToast("Gold tidak cukup.", "warn");
+        if (res.reason === "learned") showToast("Skill sudah dimiliki.", "warn");
+        return;
+      }
+      modal.close();
+      renderSkillShopPage();
+    }
+  );
 }
 
 function openShopModal(mode = "menu"){
@@ -2920,57 +2984,7 @@ function openShopModal(mode = "menu"){
 }
 
 function openSkillLearnDetail(skillKey){
-  const p = state.player;
-  const entry = SHOP_SKILLS.find((s) => s.key === skillKey);
-  const skill = SKILLS[skillKey];
-  if (!entry || !skill) {
-    openSkillShopPage();
-    return;
-  }
-  const learned = Array.isArray(p.skills) && p.skills.some((s) => s.name === skill.name);
-  const detailDesc = `
-    <div class="skillDetailStats">
-      <div class="statRow"><img class="statIcon" src="./assets/icons/mp.svg" alt="" /><span>MP ${skill.mpCost}</span></div>
-      <div class="statRow"><img class="statIcon" src="./assets/icons/damage.svg" alt="" /><span>Damage ${skill.power}</span></div>
-      <div class="statRow"><img class="statIcon" src="./assets/icons/cooldown.svg" alt="" /><span>Cooldown ${skill.cooldown || 0}</span></div>
-    </div>
-    <div class="skillDetailDesc">${escapeHtml(skill.desc || "Skill")}</div>
-  `;
-  const price = entry.price;
-  modal.open(
-    "Skill Detail",
-    [
-      { title: "Back", desc: "Kembali ke Skill Shop.", meta: "", value: "back", className: "subMenuBack" },
-      {
-        title: skill.name,
-        icon: skill.icon,
-        descHtml: detailDesc,
-        meta: "",
-        value: undefined,
-        className: "skillDetail readonly",
-      },
-      {
-        title: learned ? "Sudah dimiliki" : "Learn Skill",
-        desc: learned ? "Skill sudah dipelajari." : "",
-        meta: learned ? "Learned" : `${price} gold`,
-        buttons: [
-          { text: learned ? "Owned" : "Learn", value: `learn:${skillKey}`, disabled: learned },
-        ],
-        keepOpen: true,
-      },
-    ],
-    (pick) => {
-      if (pick === "back") return openSkillShopPage();
-      const key = String(pick || "").replace(/^learn:/, "");
-      if (!key) return;
-      const res = learnSkill(key);
-      if (!res.ok) {
-        if (res.reason === "gold") addLog("WARN", "Gold tidak cukup.");
-        if (res.reason === "learned") addLog("INFO", "Skill sudah dipelajari.");
-      }
-      openSkillLearnDetail(key);
-    }
-  );
+  openSkillConfirm(skillKey);
 }
 
 /* ----------------------------- Core helpers ----------------------------- */
