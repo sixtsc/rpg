@@ -16,6 +16,9 @@ export const ITEMS = {
 export const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton"];
 export const ENEMY_AVATARS = {
   Slime: { image: "./assets/enemies/slime.png" },
+  Goblin: { image: "./assets/enemies/goblin.png" },
+  Bandit: { icon: "🗡️", bg: "linear-gradient(135deg, #f1b06b, #6b3a1a)" },
+  "Leader Bandit": { icon: "🗡️", bg: "linear-gradient(135deg, #f1b06b, #6b3a1a)" },
   Wolf: { image: "./assets/enemies/wolf.png" },
   Skeleton: { image: "./assets/enemies/skeleton.png" },
 };

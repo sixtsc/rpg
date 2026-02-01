@@ -34,8 +34,9 @@ const ITEMS = {
 const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton"];
 const ENEMY_AVATARS = {
   Slime: { image: "./assets/enemies/slime.png" },
-  Goblin: { icon: "👺", bg: "linear-gradient(135deg, #7de86a, #2f6b1f)" },
+  Goblin: { image: "./assets/enemies/goblin.png" },
   Bandit: { icon: "🗡️", bg: "linear-gradient(135deg, #f1b06b, #6b3a1a)" },
+  "Leader Bandit": { icon: "🗡️", bg: "linear-gradient(135deg, #f1b06b, #6b3a1a)" },
   Wolf: { image: "./assets/enemies/wolf.png" },
   Skeleton: { image: "./assets/enemies/skeleton.png" }
 };
@@ -145,6 +146,11 @@ function genEnemy(plv){
   };
   applyDerivedStats(enemy);
   enemy.blockRate = 0;
+  return enemy;
+}
+function genEnemyWithName(plv, name) {
+  const enemy = genEnemy(plv);
+  enemy.name = name;
   return enemy;
 }
 function calcDamage(attAtk, defDef, basePower, defending){
@@ -3386,8 +3392,15 @@ function openAdventureLevels(){
 function startAdventureBattle(targetLevel, stageName){
   state.currentStageName = stageName;
   if (targetLevel === 8 || targetLevel === 10) {
-    const count = targetLevel === 10 ? 3 : 2;
-    state.enemyQueue = Array.from({ length: count }, () => genEnemy(targetLevel));
+    if (targetLevel === 10) {
+      state.enemyQueue = [
+        genEnemyWithName(targetLevel, "Leader Bandit"),
+        genEnemyWithName(targetLevel, "Bandit"),
+        genEnemyWithName(targetLevel, "Bandit")
+      ];
+    } else {
+      state.enemyQueue = Array.from({ length: 2 }, () => genEnemy(targetLevel));
+    }
     state.enemy = state.enemyQueue[0];
     state.enemyTargetIndex = getDefaultEnemyTargetIndex(state.enemyQueue);
   } else {
