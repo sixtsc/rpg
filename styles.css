@@ -2081,7 +2081,7 @@ select.authInput{
   border-radius:0;
   background:transparent;
   position:relative;
-  overflow:hidden;
+  overflow:visible;
   display:flex;
   align-items:center;
   justify-content:center;
