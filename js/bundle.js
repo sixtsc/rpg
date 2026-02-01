@@ -2766,24 +2766,26 @@ function openSkillConfirm(skillKey){
   }
   const learned = Array.isArray(state.player.skills)
     && state.player.skills.some((s) => s && s.name === skill.name);
-  const elementLabel = SKILL_SHOP_CATEGORIES.find((c) => c.key === skill.element)?.label || skill.element || "-";
   const stats = [
-    { label: "Element", value: elementLabel },
     { label: "Level", value: `Lv ${entry.level}` },
-    { label: "MP", value: `${skill.mpCost}` },
-    { label: "Power", value: `${skill.power}` },
-    { label: "Cooldown", value: `${skill.cooldown || 0}` },
-    { label: "Harga", value: `${entry.price} gold` },
+    { label: "MP", value: `${skill.mpCost}`, icon: "./assets/icons/mp.svg" },
+    { label: "Damage", value: `${skill.power}`, icon: "./assets/icons/damage.svg" },
+    { label: "Cooldown", value: `${skill.cooldown || 0}`, icon: "./assets/icons/cooldown.svg" },
   ];
-  const statsHtml = stats.map((s) => (
-    `<div class="confirmStatRow"><span>${escapeHtml(s.label)}:</span><b>${escapeHtml(String(s.value))}</b></div>`
-  )).join("");
+  const statsHtml = stats.map((s) => {
+    const iconHtml = s.icon ? `<img src="${escapeHtml(s.icon)}" alt="" />` : "";
+    return `<div class="confirmStatRow icon"><span>${iconHtml}${escapeHtml(s.label)}:</span><b>${escapeHtml(String(s.value))}</b></div>`;
+  }).join("");
   const descHtml = `
     <div class="confirmDetailCard">
       <div class="confirmThumb">${skill.icon ? `<img src="${escapeHtml(skill.icon)}" alt="" />` : "✨"}</div>
       <div class="confirmStats">${statsHtml}</div>
     </div>
     <div class="confirmDesc">${escapeHtml(skill.desc || "Skill")}</div>
+    <div class="skillConfirmPrice">
+      <img src="./assets/icons/coin.svg" alt="" />
+      <span>${entry.price}</span>
+    </div>
   `;
   modal.open(
     skill.name,

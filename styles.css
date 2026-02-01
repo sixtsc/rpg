@@ -1924,18 +1924,18 @@ body.inBattle .enemyMiniMeta .muted{
 .skillShopGrid{
   display:flex;
   flex-direction:column;
-  gap:10px;
+  gap:6px;
   max-width:620px;
   margin:0 auto;
 }
 .skillShopCard{
-  border-radius:14px;
+  border-radius:12px;
   border:1px solid var(--line);
   background:var(--card2);
-  padding:12px 14px;
+  padding:8px 12px;
   display:flex;
   align-items:center;
-  gap:12px;
+  gap:10px;
   cursor:pointer;
   transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
   position:relative;
@@ -1949,13 +1949,13 @@ body.inBattle .enemyMiniMeta .muted{
 .skillShopCardHeader{
   display:flex;
   align-items:center;
-  gap:12px;
+  gap:8px;
   flex:1;
 }
 .skillShopThumb{
-  width:46px;
-  height:46px;
-  border-radius:10px;
+  width:40px;
+  height:40px;
+  border-radius:8px;
   border:1px solid rgba(159,178,200,0.35);
   background:rgba(15,25,44,0.55);
   display:flex;
@@ -1971,24 +1971,52 @@ body.inBattle .enemyMiniMeta .muted{
 .skillShopInfo{
   display:flex;
   flex-direction:column;
-  gap:2px;
+  gap:1px;
 }
 .skillShopCardTitle{
   font-weight:800;
-  font-size:16px;
+  font-size:15px;
 }
 .skillShopLevel{
-  font-size:12px;
+  font-size:11px;
   color:var(--muted);
 }
 .skillShopBadge{
   margin-left:auto;
   align-self:center;
   font-size:11px;
-  padding:2px 8px;
+  padding:2px 6px;
   border-radius:999px;
   background:rgba(58,108,255,0.2);
   color:var(--text);
+}
+
+.skillConfirmPrice{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin-top:10px;
+  color:#f9d65c;
+  font-weight:700;
+  font-size:13px;
+}
+.skillConfirmPrice img{
+  width:16px;
+  height:16px;
+  display:block;
+}
+.confirmStatRow.icon{
+  align-items:center;
+}
+.confirmStatRow.icon span{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.confirmStatRow.icon img{
+  width:16px;
+  height:16px;
+  display:block;
 }
 .skillShopEmpty{
   grid-column:1 / -1;
