@@ -894,6 +894,13 @@ body.inBattle .allyCard .allySub,
 body.inBattle .enemyCard .nameSub{
   order:2;
 }
+body.inBattle .statusIndicator{
+  order:2;
+  margin-top:2px;
+}
+body.inBattle .enemyCard .statusIndicator{
+  align-self:flex-end;
+}
 
 body.inBattle .turnIndicator{
   display:flex;
@@ -1650,6 +1657,23 @@ body.inBattle .enemyMiniMeta .muted{
   color:var(--muted);
   font-size:12px;
 }
+.skillEffectLink{
+  background:none;
+  border:none;
+  padding:0;
+  color:#f9d65c;
+  font-weight:700;
+  cursor:pointer;
+  text-decoration:underline;
+}
+.skillEffectDesc{
+  margin-top:6px;
+  color:var(--text);
+}
+.skillEffectHighlight{
+  color:#f9d65c;
+  font-weight:700;
+}
 .modalBody.confirmPopup .choice.confirmActions{
   border:none;
   background:transparent;
@@ -1714,6 +1738,58 @@ body.inBattle .enemyMiniMeta .muted{
 
 /* Name subline under title */
 .nameSub{ margin-top:6px; font-size:18px; font-weight:800; color: var(--text); }
+.statusIndicator{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:6px;
+  min-height:20px;
+}
+.statusBadge{
+  width:22px;
+  height:22px;
+  border-radius:6px;
+  border:1px solid rgba(255,255,255,0.2);
+  background:rgba(20,30,44,0.8);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0;
+  position:relative;
+  cursor:pointer;
+  box-shadow:0 0 0 1px rgba(0,0,0,0.2) inset;
+}
+.statusBadge.buff{
+  border-color:rgba(120,200,255,0.6);
+  box-shadow:0 0 0 1px rgba(80,160,255,0.35) inset;
+}
+.statusBadge.debuff{
+  border-color:rgba(255,120,120,0.65);
+  box-shadow:0 0 0 1px rgba(255,120,120,0.35) inset;
+}
+.statusBadgeIcon{
+  width:14px;
+  height:14px;
+  border-radius:4px;
+  background:rgba(255,255,255,0.15);
+}
+.statusBadgeTurns{
+  position:absolute;
+  right:-4px;
+  top:-4px;
+  min-width:14px;
+  height:14px;
+  border-radius:999px;
+  background:rgba(10,16,28,0.9);
+  border:1px solid rgba(255,255,255,0.2);
+  font-size:9px;
+  font-weight:800;
+  color:var(--text);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 3px;
+}
 
 
 
@@ -1821,6 +1897,14 @@ body.inBattle .enemyMiniMeta .muted{
   border-radius:16px;
   padding:24px;
 }
+.skillShopLabel{
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:0.6px;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin:-10px 0 12px -8px;
+}
 .marketPageControls,
 .skillShopControls{
   display:flex;
@@ -1867,9 +1951,24 @@ body.inBattle .enemyMiniMeta .muted{
   display:flex;
   flex-wrap:nowrap;
   gap:8px;
-  justify-content:center;
+  justify-content:flex-start;
   overflow-x:auto;
-  padding-bottom:4px;
+  padding:0 8px 4px;
+  scroll-padding-inline:8px;
+}
+.skillCategoryBtn.divider{
+  position:relative;
+  margin-left:16px;
+}
+.skillCategoryBtn.divider::before{
+  content:"";
+  position:absolute;
+  left:-9px;
+  top:10px;
+  bottom:10px;
+  width:2px;
+  background:var(--line);
+  opacity:0.9;
 }
 .skillCategoryBtn{
   width:60px;
@@ -1887,6 +1986,8 @@ body.inBattle .enemyMiniMeta .muted{
   gap:4px;
   text-transform:capitalize;
   transition:all .2s ease;
+  flex:0 0 auto;
+  box-sizing:border-box;
 }
 .skillCategoryBtn img{
   width:22px;
@@ -1972,8 +2073,12 @@ body.inBattle .enemyMiniMeta .muted{
   width:40px;
   height:40px;
   border-radius:8px;
-  border:1px solid rgba(159,178,200,0.35);
-  background:rgba(15,25,44,0.55);
+  border:1px solid transparent;
+  background:transparent;
+  background-image:url("./assets/ui/skill-frame.png");
+  background-size:100% 100%;
+  background-position:center;
+  background-repeat:no-repeat;
   display:flex;
   align-items:center;
   justify-content:center;

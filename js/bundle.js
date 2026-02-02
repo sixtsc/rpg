@@ -5,7 +5,10 @@ try{var _el=document.getElementById('menuSub'); if(_el && _el.textContent && _el
 
 /* ===== data.js ===== */
 const SKILLS = {
-  fireball: { name:"Fireball", icon:"./assets/skills/fireball.svg", element:"fire", mpCost:6, power:10, cooldown:3, desc:"Serangan api (damage tinggi)." }
+  fireball: { name:"Fireball", icon:"", element:"fire", mpCost:6, power:10, cooldown:3, desc:"Serangan api (damage tinggi)." },
+  fireArrow: { name:"Fire Arrow", icon:"", element:"fire", mpCost:9, power:14, cooldown:4, desc:"Fire flame arrow that pierce to enemy" },
+  blazingShield: { name:"Blazing Shield", icon:"", element:"fire", mpCost:14, power:0, cooldown:4, desc:"Menyelimuti tubuh dengan aura api selama 2 turn. Apply effect Strengthen 20% selama durasi." },
+  echoStrike: { name:"Echo Strike", icon:"", element:"physical", mpCost:25, power:10, cooldown:8, desc:"Memberikan Stun kepada target selama 3 turn." }
 };
 const ITEMS = {
   potion: { name:"Potion", kind:"heal_hp", amount:25, desc:"Memulihkan 25 HP", level:1 },
@@ -93,6 +96,9 @@ const SHOP_GOODS = [
 ];
 const SHOP_SKILLS = [
   { key:"fireball", level:1, price:18 },
+  { key:"fireArrow", level:3, price:65 },
+  { key:"blazingShield", level:10, price:180 },
+  { key:"echoStrike", level:10, price:180 },
 ];
 const SKILL_SHOP_CATEGORIES = [
   { key:"fire", label:"Fire", iconSrc:"./assets/icons/fire.svg" },
@@ -171,7 +177,10 @@ function resolveAttack(att, def, basePower, opts = {}) {
     return { missed: true, crit: false, combustion: false, dmg: 0, evasion, rollEv, rollCrit: null, rollComb: null };
   }
 
-  let dmg = calcDamage(att.atk, def.def, basePower, false);
+  const atkPower = hasStatus(att, "strengthen")
+    ? Math.round((att.atk || 0) * 1.2)
+    : (att.atk || 0);
+  let dmg = calcDamage(atkPower, def.def, basePower, false);
 
   const critChance = clamp(att.critChance || 0, 0, 100);
   const rollCrit = randInt(1, 100);
@@ -1163,6 +1172,7 @@ function renderAllyRow() {
     const mpText = row.querySelector(`[data-ally-mp="${slotIndex}"]`);
     const hpBar = row.querySelector(`[data-ally-hpbar="${slotIndex}"]`);
     const mpBar = row.querySelector(`[data-ally-mpbar="${slotIndex}"]`);
+    const statusWrap = row.querySelector(`[data-ally-status="${slotIndex}"]`);
     const card = row.querySelector(`.allyCard.extra[data-ally-slot="${slotIndex}"]`);
 
     if (!nameEl || !lvlEl || !subEl || !hpText || !mpText || !hpBar || !mpBar || !card) return;
@@ -1210,6 +1220,7 @@ function renderAllyRow() {
         delete avatarBox.dataset.allyId;
       }
       applyAllyAvatar(avatarBox, ally);
+      renderStatusBadges(ally, statusWrap);
     } else {
       nameEl.textContent = `NPC ${slotIndex}`;
       lvlEl.textContent = "Lv-";
@@ -1227,6 +1238,7 @@ function renderAllyRow() {
       delete card.dataset.allyId;
       delete avatarBox.dataset.allyId;
       applyAllyAvatar(avatarBox, null);
+      renderStatusBadges(null, statusWrap);
     }
   });
 }
@@ -1330,6 +1342,7 @@ function renderEnemyRow() {
       <div class="sectionTitle">
         <div><b class="enemyName"></b> <span class="pill enemyLevel"></span></div>
       </div>
+      <div class="statusIndicator enemyStatusBadges" aria-label="Status enemy"></div>
       <div class="avatarWrap">
         <div class="avatarBox enemyAvatarBox"></div>
       </div>
@@ -1369,6 +1382,7 @@ function renderEnemyRow() {
     const mpText = card.querySelector(".enemyMpText");
     const hpFill = card.querySelector(".enemyHpFill");
     const mpFill = card.querySelector(".enemyMpFill");
+    const statusWrap = card.querySelector(".enemyStatusBadges");
     const prevHp = (typeof enemy._prevHp === "number") ? enemy._prevHp : enemy.hp;
     const prevHpPct = enemy.maxHp ? clamp((prevHp / enemy.maxHp) * 100, 0, 100) : 0;
     const wasAlive = enemy._alive === true;
@@ -1444,6 +1458,7 @@ function renderEnemyRow() {
     enemy._prevHp = enemy.hp;
 
     applyEnemyAvatar(card.querySelector(".enemyAvatarBox"), enemy);
+    renderStatusBadges(enemy, statusWrap);
 
     if (isAlive) {
       const targetIndex = enemyIndex;
@@ -1583,6 +1598,12 @@ function useSkillAtIndex(idx){
   p.mp -= s.mpCost;
 
   addLog("SKILL", s.name);
+  if (s.name === "Blazing Shield") {
+    addStatusEffect(p, { type: "strengthen", turns: 2, debuff: false });
+    s.cdLeft = s.cooldown || 0;
+    afterPlayerAction();
+    return;
+  }
   const res = resolveAttack(p, e, s.power);
   const targetIndex = getEnemyIndex(e);
   if (res.missed) {
@@ -1603,6 +1624,9 @@ function useSkillAtIndex(idx){
       showDamageText("player", `-${res.reflected} (REFLECT)`);
     }
   }
+  if (s.name === "Echo Strike" && !res.missed) {
+    addStatusEffect(e, { type: "stun", turns: 3, debuff: true });
+  }
 
   s.cdLeft = s.cooldown || 0;
   if (p.hp <= 0) {
@@ -1619,6 +1643,66 @@ function statusLabel(entity) {
   return active
     .map((s) => `${(s.type || "Effect").toUpperCase()} (${s.turns} turn${s.turns > 1 ? "s" : ""})`)
     .join(" • ");
+}
+const STATUS_DEFS = {
+  strengthen: {
+    label: "Strengthen",
+    desc: "Strengthen meningkatkan stat ATK sebesar X%.",
+    kind: "buff",
+  },
+  stun: {
+    label: "Stun",
+    desc: (turns) => `Restricted from action for ${turns} Turn.`,
+    kind: "debuff",
+  },
+};
+
+function getStatusDefinition(status) {
+  if (!status) return { label: "Effect", desc: "Status aktif.", kind: "buff" };
+  const def = STATUS_DEFS[status.type] || {};
+  const descValue = typeof def.desc === "function" ? def.desc(status.turns || 0) : def.desc;
+  return {
+    label: def.label || status.type || "Effect",
+    desc: descValue || "Status aktif.",
+    kind: def.kind || (status.debuff ? "debuff" : "buff"),
+  };
+}
+
+function renderStatusBadges(entity, container) {
+  if (!container) return;
+  const statuses = Array.isArray(entity?.statuses)
+    ? entity.statuses.filter((s) => (s.turns || 0) > 0)
+    : [];
+  if (!statuses.length) {
+    container.innerHTML = "";
+    container.style.display = "none";
+    return;
+  }
+  container.innerHTML = "";
+  container.style.display = "flex";
+  statuses.forEach((status) => {
+    const meta = getStatusDefinition(status);
+    const turns = Math.max(0, status.turns || 0);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `statusBadge ${meta.kind}`.trim();
+    btn.setAttribute("aria-label", `${meta.label} (${turns} turn)`);
+    btn.title = `${meta.label} (${turns} turn${turns > 1 ? "s" : ""})`;
+    btn.innerHTML = `
+      <span class="statusBadgeIcon" aria-hidden="true"></span>
+      ${turns ? `<span class="statusBadgeTurns">${turns}</span>` : ""}
+    `;
+    btn.onclick = (event) => {
+      event.stopPropagation();
+      const turnText = turns ? ` (${turns} turn${turns > 1 ? "s" : ""})` : "";
+      modal.open(
+        `Status: ${meta.label}`,
+        [{ title: "Detail", desc: `${meta.desc}${turnText}`, meta: "", value: undefined, className: "readonly" }],
+        () => {}
+      );
+    };
+    container.appendChild(btn);
+  });
 }
 function setBar(el, cur, max) {
   const pctRaw = max <= 0 ? 0 : (cur / max) * 100;
@@ -1806,6 +1890,7 @@ const modal = {
 // TURN INDICATOR: state.turn = "player" | "enemy" | "town"
 function refresh(state) {
   const p = state.player;
+  const inBattle = state.inBattle && state.enemy;
 
   const turnCountEl = $("turnCount");
   if (turnCountEl) {
@@ -1829,10 +1914,11 @@ function refresh(state) {
 
   const pSub = $("pSub");
   if (pSub) {
-    const label = statusLabel(p);
+    const label = inBattle ? "" : statusLabel(p);
     pSub.textContent = label;
     pSub.style.display = label ? "block" : "none";
   }
+  renderStatusBadges(p, $("pStatusBadges"));
 
   $("pLvl").textContent = `Lv${p.level}`;
   const goldPill = $("goldPill");
@@ -1867,8 +1953,6 @@ function refresh(state) {
   if (skillShopPage && !skillShopPage.classList.contains("hidden")) {
     renderSkillShopPage();
   }
-
-  const inBattle = state.inBattle && state.enemy;
 
   document.body.classList.toggle("inBattle", !!inBattle);
   document.body.classList.toggle("inTown", !inBattle);
@@ -1936,10 +2020,11 @@ function refresh(state) {
 
     const eSub = $("eSub");
     if (eSub) {
-      const label = e ? statusLabel(e) : "";
+      const label = inBattle ? "" : (e ? statusLabel(e) : "");
       eSub.textContent = label;
       eSub.style.display = label ? "block" : "none";
     }
+    renderStatusBadges(e, $("eStatusBadges"));
 
     if (e) {
       $("eLvl").textContent = `Lv${e.level}`;
@@ -2703,7 +2788,7 @@ function renderSkillShopTabs(){
   if (!tabs) return;
   tabs.innerHTML = "";
   SKILL_SHOP_CATEGORIES.forEach((category) => {
-    tabs.appendChild(createSkillCategoryButton({
+    const btn = createSkillCategoryButton({
       label: category.label,
       iconSrc: category.iconSrc,
       isActive: state.skillShopCategory === category.key,
@@ -2712,14 +2797,21 @@ function renderSkillShopTabs(){
         renderSkillShopItems();
         renderSkillShopTabs();
       },
-    }));
+    });
+    if (category.key === "physical") btn.classList.add("divider");
+    tabs.appendChild(btn);
   });
 }
 
 function renderSkillShopItems(){
+  const label = byId("skillShopLabel");
   const grid = byId("skillShopItemsGrid");
   if (!grid) return;
   grid.innerHTML = "";
+  if (label) {
+    const categoryLabel = SKILL_SHOP_CATEGORIES.find((category) => category.key === state.skillShopCategory)?.label || "Skill";
+    label.textContent = `${categoryLabel} Skill`.toUpperCase();
+  }
   const entries = getSkillShopEntries()
     .filter((entry) => entry.skill && entry.skill.element === state.skillShopCategory);
   if (!entries.length) {
@@ -2785,12 +2877,26 @@ function openSkillConfirm(skillKey){
     const iconHtml = s.icon ? `<img src="${escapeHtml(s.icon)}" alt="" />` : "";
     return `<div class="confirmStatRow icon"><span>${iconHtml}${escapeHtml(s.label)}:</span><b>${escapeHtml(String(s.value))}</b></div>`;
   }).join("");
+  const descText = skill.desc || "Skill";
+  let descEscaped = escapeHtml(descText);
+  let extraDesc = "";
+  if (descText.includes("Strengthen")) {
+    descEscaped = descEscaped.replace(
+      /Strengthen/g,
+      `<button type="button" class="skillEffectLink" data-effect="strengthen">Strengthen</button>`
+    );
+    extraDesc = '<div class="skillEffectDesc" data-effect-desc="strengthen" hidden>Strengthen meningkatkan stat ATK sebesar X%.</div>';
+  }
+  if (descText.includes("Stun")) {
+    descEscaped = descEscaped.replace(/Stun/g, `<span class="skillEffectHighlight">Stun</span>`);
+  }
+  const descHtmlText = `${descEscaped}${extraDesc}`;
   const descHtml = `
     <div class="confirmDetailCard">
       <div class="confirmThumb">${skill.icon ? `<img src="${escapeHtml(skill.icon)}" alt="" />` : "✨"}</div>
       <div class="confirmStats">${statsHtml}</div>
     </div>
-    <div class="confirmDesc">${escapeHtml(skill.desc || "Skill")}</div>
+    <div class="confirmDesc">${descHtmlText}</div>
     <div class="skillConfirmPrice">
       <img src="./assets/icons/coin.svg" alt="" />
       <span>${entry.price}</span>
@@ -2829,6 +2935,20 @@ function openSkillConfirm(skillKey){
       renderSkillShopPage();
     }
   );
+  const modalBody = $("modalBody");
+  if (modalBody) {
+    const effectButton = modalBody.querySelector(".skillEffectLink");
+    if (effectButton) {
+      effectButton.onclick = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const effectDesc = modalBody.querySelector('[data-effect-desc="strengthen"]');
+        if (effectDesc) {
+          effectDesc.hidden = !effectDesc.hidden;
+        }
+      };
+    }
+  }
 }
 
 function openShopModal(mode = "menu"){
@@ -3269,6 +3389,11 @@ function enemyTurn() {
       done(0);
       return;
     }
+    if (hasStatus(enemy, "stun")) {
+      addLog("ENEMY", `${enemy.name} terkena Stun dan tidak bisa bergerak.`);
+      done(ENEMY_ACTION_GAP_MS);
+      return;
+    }
     const { target, isPlayer } = pickEnemyTarget();
     if (!target) {
       done(0);
@@ -3407,6 +3532,11 @@ function alliesAct(done){
     setTimeout(() => {
       const currentTarget = getTargetEnemy();
       if (!currentTarget || ally.hp <= 0) return;
+      if (hasStatus(ally, "stun")) {
+        addLog("ALLY", `${ally.name} terkena Stun dan tidak bisa bergerak.`);
+        refresh(state);
+        return;
+      }
       const targetIndex = getEnemyIndex(currentTarget);
       if (targetIndex < 0) return;
       const res = resolveAttack(ally, currentTarget, 2);

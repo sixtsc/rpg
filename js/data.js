@@ -1,11 +1,38 @@
 export const SKILLS = {
   fireball: {
     name:"Fireball",
-    icon:"./assets/skills/fireball.svg",
+    icon:"",
     element:"fire",
     mpCost:6,
     power:10,
     desc:"Serangan api (damage tinggi)."
+  },
+  fireArrow: {
+    name:"Fire Arrow",
+    icon:"",
+    element:"fire",
+    mpCost:9,
+    power:14,
+    cooldown:4,
+    desc:"Fire flame arrow that pierce to enemy"
+  },
+  blazingShield: {
+    name:"Blazing Shield",
+    icon:"",
+    element:"fire",
+    mpCost:14,
+    power:0,
+    cooldown:4,
+    desc:"Menyelimuti tubuh dengan aura api selama 2 turn. Apply effect Strengthen 20% selama durasi."
+  },
+  echoStrike: {
+    name:"Echo Strike",
+    icon:"",
+    element:"physical",
+    mpCost:25,
+    power:10,
+    cooldown:8,
+    desc:"Memberikan Stun kepada target selama 3 turn."
   }
 };
 
