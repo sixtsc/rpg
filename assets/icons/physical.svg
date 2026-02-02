@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="physGrad" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#e09a57"/>
+      <stop offset="1" stop-color="#9a4d24"/>
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="32" r="28" fill="url(#physGrad)"/>
+  <path fill="#ffffff" fill-opacity="0.2" d="M18 22h28v20a8 8 0 0 1-8 8H26a8 8 0 0 1-8-8V22z"/>
+  <path fill="#3b1f12" d="M20 24h6v10h-6zM28 24h6v10h-6zM36 24h6v10h-6zM22 36h20v6H22z"/>
+</svg>

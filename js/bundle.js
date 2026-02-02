@@ -100,8 +100,8 @@ const SKILL_SHOP_CATEGORIES = [
   { key:"thunder", label:"Thunder", iconSrc:"./assets/icons/lightning.svg" },
   { key:"rock", label:"Rock", iconSrc:"./assets/icons/earth.svg" },
   { key:"water", label:"Water", iconSrc:"./assets/icons/water.svg" },
-  { key:"physical", label:"Physical Arts", iconSrc:"./assets/icons/damage.svg" },
-  { key:"universal", label:"Universal", iconSrc:"./assets/icons/gem.svg" },
+  { key:"physical", label:"Physical Arts", iconSrc:"./assets/icons/physical.svg" },
+  { key:"universal", label:"Universal", iconSrc:"./assets/icons/universal.svg" },
 ];
 
 
