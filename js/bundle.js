@@ -175,7 +175,10 @@ function resolveAttack(att, def, basePower, opts = {}) {
     return { missed: true, crit: false, combustion: false, dmg: 0, evasion, rollEv, rollCrit: null, rollComb: null };
   }
 
-  let dmg = calcDamage(att.atk, def.def, basePower, false);
+  const atkPower = hasStatus(att, "strengthen")
+    ? Math.round((att.atk || 0) * 1.2)
+    : (att.atk || 0);
+  let dmg = calcDamage(atkPower, def.def, basePower, false);
 
   const critChance = clamp(att.critChance || 0, 0, 100);
   const rollCrit = randInt(1, 100);
@@ -1587,6 +1590,12 @@ function useSkillAtIndex(idx){
   p.mp -= s.mpCost;
 
   addLog("SKILL", s.name);
+  if (s.name === "Blazing Shield") {
+    addStatusEffect(p, { type: "strengthen", turns: 2, debuff: false });
+    s.cdLeft = s.cooldown || 0;
+    afterPlayerAction();
+    return;
+  }
   const res = resolveAttack(p, e, s.power);
   const targetIndex = getEnemyIndex(e);
   if (res.missed) {
