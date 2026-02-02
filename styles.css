@@ -1867,9 +1867,10 @@ body.inBattle .enemyMiniMeta .muted{
   display:flex;
   flex-wrap:nowrap;
   gap:8px;
-  justify-content:center;
+  justify-content:flex-start;
   overflow-x:auto;
-  padding-bottom:4px;
+  padding:0 8px 4px;
+  scroll-padding-inline:8px;
 }
 .skillCategoryBtn{
   width:60px;
@@ -1887,6 +1888,8 @@ body.inBattle .enemyMiniMeta .muted{
   gap:4px;
   text-transform:capitalize;
   transition:all .2s ease;
+  flex:0 0 auto;
+  box-sizing:border-box;
 }
 .skillCategoryBtn img{
   width:22px;
