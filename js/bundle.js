@@ -5,7 +5,7 @@ try{var _el=document.getElementById('menuSub'); if(_el && _el.textContent && _el
 
 /* ===== data.js ===== */
 const SKILLS = {
-  fireball: { name:"Fireball", icon:"./assets/skills/fireball.svg", element:"fire", mpCost:6, power:10, cooldown:3, desc:"Serangan api (damage tinggi)." }
+  fireball: { name:"Fireball", icon:"", element:"fire", mpCost:6, power:10, cooldown:3, desc:"Serangan api (damage tinggi)." }
 };
 const ITEMS = {
   potion: { name:"Potion", kind:"heal_hp", amount:25, desc:"Memulihkan 25 HP", level:1 },
@@ -2703,7 +2703,7 @@ function renderSkillShopTabs(){
   if (!tabs) return;
   tabs.innerHTML = "";
   SKILL_SHOP_CATEGORIES.forEach((category) => {
-    tabs.appendChild(createSkillCategoryButton({
+    const btn = createSkillCategoryButton({
       label: category.label,
       iconSrc: category.iconSrc,
       isActive: state.skillShopCategory === category.key,
@@ -2712,7 +2712,9 @@ function renderSkillShopTabs(){
         renderSkillShopItems();
         renderSkillShopTabs();
       },
-    }));
+    });
+    if (category.key === "physical") btn.classList.add("divider");
+    tabs.appendChild(btn);
   });
 }
 
