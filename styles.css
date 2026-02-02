@@ -1670,6 +1670,10 @@ body.inBattle .enemyMiniMeta .muted{
   margin-top:6px;
   color:var(--text);
 }
+.skillEffectHighlight{
+  color:#f9d65c;
+  font-weight:700;
+}
 .modalBody.confirmPopup .choice.confirmActions{
   border:none;
   background:transparent;

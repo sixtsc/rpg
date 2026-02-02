@@ -7,7 +7,8 @@ try{var _el=document.getElementById('menuSub'); if(_el && _el.textContent && _el
 const SKILLS = {
   fireball: { name:"Fireball", icon:"", element:"fire", mpCost:6, power:10, cooldown:3, desc:"Serangan api (damage tinggi)." },
   fireArrow: { name:"Fire Arrow", icon:"", element:"fire", mpCost:9, power:14, cooldown:4, desc:"Fire flame arrow that pierce to enemy" },
-  blazingShield: { name:"Blazing Shield", icon:"", element:"fire", mpCost:14, power:0, cooldown:4, desc:"Menyelimuti tubuh dengan aura api selama 2 turn. Apply effect Strengthen 20% selama durasi." }
+  blazingShield: { name:"Blazing Shield", icon:"", element:"fire", mpCost:14, power:0, cooldown:4, desc:"Menyelimuti tubuh dengan aura api selama 2 turn. Apply effect Strengthen 20% selama durasi." },
+  echoStrike: { name:"Echo Strike", icon:"", element:"physical", mpCost:25, power:10, cooldown:8, desc:"Memberikan Stun kepada target selama 3 turn." }
 };
 const ITEMS = {
   potion: { name:"Potion", kind:"heal_hp", amount:25, desc:"Memulihkan 25 HP", level:1 },
@@ -97,6 +98,7 @@ const SHOP_SKILLS = [
   { key:"fireball", level:1, price:18 },
   { key:"fireArrow", level:3, price:65 },
   { key:"blazingShield", level:10, price:180 },
+  { key:"echoStrike", level:10, price:180 },
 ];
 const SKILL_SHOP_CATEGORIES = [
   { key:"fire", label:"Fire", iconSrc:"./assets/icons/fire.svg" },
@@ -1622,6 +1624,9 @@ function useSkillAtIndex(idx){
       showDamageText("player", `-${res.reflected} (REFLECT)`);
     }
   }
+  if (s.name === "Echo Strike" && !res.missed) {
+    addStatusEffect(e, { type: "stun", turns: 3, debuff: true });
+  }
 
   s.cdLeft = s.cooldown || 0;
   if (p.hp <= 0) {
@@ -1645,14 +1650,20 @@ const STATUS_DEFS = {
     desc: "Strengthen meningkatkan stat ATK sebesar X%.",
     kind: "buff",
   },
+  stun: {
+    label: "Stun",
+    desc: (turns) => `Restricted from action for ${turns} Turn.`,
+    kind: "debuff",
+  },
 };
 
 function getStatusDefinition(status) {
   if (!status) return { label: "Effect", desc: "Status aktif.", kind: "buff" };
   const def = STATUS_DEFS[status.type] || {};
+  const descValue = typeof def.desc === "function" ? def.desc(status.turns || 0) : def.desc;
   return {
     label: def.label || status.type || "Effect",
-    desc: def.desc || "Status aktif.",
+    desc: descValue || "Status aktif.",
     kind: def.kind || (status.debuff ? "debuff" : "buff"),
   };
 }
@@ -2867,12 +2878,19 @@ function openSkillConfirm(skillKey){
     return `<div class="confirmStatRow icon"><span>${iconHtml}${escapeHtml(s.label)}:</span><b>${escapeHtml(String(s.value))}</b></div>`;
   }).join("");
   const descText = skill.desc || "Skill";
-  const descHtmlText = descText.includes("Strengthen")
-    ? escapeHtml(descText).replace(
+  let descEscaped = escapeHtml(descText);
+  let extraDesc = "";
+  if (descText.includes("Strengthen")) {
+    descEscaped = descEscaped.replace(
       /Strengthen/g,
       `<button type="button" class="skillEffectLink" data-effect="strengthen">Strengthen</button>`
-    ) + '<div class="skillEffectDesc" data-effect-desc="strengthen" hidden>Strengthen meningkatkan stat ATK sebesar X%.</div>'
-    : escapeHtml(descText);
+    );
+    extraDesc = '<div class="skillEffectDesc" data-effect-desc="strengthen" hidden>Strengthen meningkatkan stat ATK sebesar X%.</div>';
+  }
+  if (descText.includes("Stun")) {
+    descEscaped = descEscaped.replace(/Stun/g, `<span class="skillEffectHighlight">Stun</span>`);
+  }
+  const descHtmlText = `${descEscaped}${extraDesc}`;
   const descHtml = `
     <div class="confirmDetailCard">
       <div class="confirmThumb">${skill.icon ? `<img src="${escapeHtml(skill.icon)}" alt="" />` : "✨"}</div>
@@ -3371,6 +3389,11 @@ function enemyTurn() {
       done(0);
       return;
     }
+    if (hasStatus(enemy, "stun")) {
+      addLog("ENEMY", `${enemy.name} terkena Stun dan tidak bisa bergerak.`);
+      done(ENEMY_ACTION_GAP_MS);
+      return;
+    }
     const { target, isPlayer } = pickEnemyTarget();
     if (!target) {
       done(0);
@@ -3509,6 +3532,11 @@ function alliesAct(done){
     setTimeout(() => {
       const currentTarget = getTargetEnemy();
       if (!currentTarget || ally.hp <= 0) return;
+      if (hasStatus(ally, "stun")) {
+        addLog("ALLY", `${ally.name} terkena Stun dan tidak bisa bergerak.`);
+        refresh(state);
+        return;
+      }
       const targetIndex = getEnemyIndex(currentTarget);
       if (targetIndex < 0) return;
       const res = resolveAttack(ally, currentTarget, 2);
