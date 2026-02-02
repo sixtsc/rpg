@@ -5,7 +5,9 @@ try{var _el=document.getElementById('menuSub'); if(_el && _el.textContent && _el
 
 /* ===== data.js ===== */
 const SKILLS = {
-  fireball: { name:"Fireball", icon:"", element:"fire", mpCost:6, power:10, cooldown:3, desc:"Serangan api (damage tinggi)." }
+  fireball: { name:"Fireball", icon:"", element:"fire", mpCost:6, power:10, cooldown:3, desc:"Serangan api (damage tinggi)." },
+  fireArrow: { name:"Fire Arrow", icon:"", element:"fire", mpCost:9, power:14, cooldown:4, desc:"Fire flame arrow that pierce to enemy" },
+  blazingShield: { name:"Blazing Shield", icon:"", element:"fire", mpCost:14, power:0, cooldown:4, desc:"Menyelimuti tubuh dengan aura api selama 2 turn. Apply effect 'strengthen' 20% selama durasi." }
 };
 const ITEMS = {
   potion: { name:"Potion", kind:"heal_hp", amount:25, desc:"Memulihkan 25 HP", level:1 },
@@ -93,6 +95,8 @@ const SHOP_GOODS = [
 ];
 const SHOP_SKILLS = [
   { key:"fireball", level:1, price:18 },
+  { key:"fireArrow", level:3, price:65 },
+  { key:"blazingShield", level:10, price:180 },
 ];
 const SKILL_SHOP_CATEGORIES = [
   { key:"fire", label:"Fire", iconSrc:"./assets/icons/fire.svg" },
