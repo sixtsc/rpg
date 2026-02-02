@@ -3391,6 +3391,7 @@ function enemyTurn() {
     }
     if (hasStatus(enemy, "stun")) {
       addLog("ENEMY", `${enemy.name} terkena Stun dan tidak bisa bergerak.`);
+      tickStatuses(enemy);
       done(ENEMY_ACTION_GAP_MS);
       return;
     }
@@ -3449,6 +3450,7 @@ function enemyTurn() {
     if (!isPlayer && target.hp <= 0) {
       addLog("ALLY", `${target.name} tumbang!`);
     }
+    tickStatuses(enemy);
     const wait = delays.length ? Math.max(...delays, 180) + 40 : 0;
     done(wait + ENEMY_ACTION_GAP_MS);
   };
@@ -3534,6 +3536,7 @@ function alliesAct(done){
       if (!currentTarget || ally.hp <= 0) return;
       if (hasStatus(ally, "stun")) {
         addLog("ALLY", `${ally.name} terkena Stun dan tidak bisa bergerak.`);
+        tickStatuses(ally);
         refresh(state);
         return;
       }
