@@ -1879,6 +1879,7 @@ const modal = {
 // TURN INDICATOR: state.turn = "player" | "enemy" | "town"
 function refresh(state) {
   const p = state.player;
+  const inBattle = state.inBattle && state.enemy;
 
   const turnCountEl = $("turnCount");
   if (turnCountEl) {
@@ -1902,7 +1903,7 @@ function refresh(state) {
 
   const pSub = $("pSub");
   if (pSub) {
-    const label = statusLabel(p);
+    const label = inBattle ? "" : statusLabel(p);
     pSub.textContent = label;
     pSub.style.display = label ? "block" : "none";
   }
@@ -1941,8 +1942,6 @@ function refresh(state) {
   if (skillShopPage && !skillShopPage.classList.contains("hidden")) {
     renderSkillShopPage();
   }
-
-  const inBattle = state.inBattle && state.enemy;
 
   document.body.classList.toggle("inBattle", !!inBattle);
   document.body.classList.toggle("inTown", !inBattle);
@@ -2010,7 +2009,7 @@ function refresh(state) {
 
     const eSub = $("eSub");
     if (eSub) {
-      const label = e ? statusLabel(e) : "";
+      const label = inBattle ? "" : (e ? statusLabel(e) : "");
       eSub.textContent = label;
       eSub.style.display = label ? "block" : "none";
     }
