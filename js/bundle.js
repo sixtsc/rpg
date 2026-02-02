@@ -1170,6 +1170,7 @@ function renderAllyRow() {
     const mpText = row.querySelector(`[data-ally-mp="${slotIndex}"]`);
     const hpBar = row.querySelector(`[data-ally-hpbar="${slotIndex}"]`);
     const mpBar = row.querySelector(`[data-ally-mpbar="${slotIndex}"]`);
+    const statusWrap = row.querySelector(`[data-ally-status="${slotIndex}"]`);
     const card = row.querySelector(`.allyCard.extra[data-ally-slot="${slotIndex}"]`);
 
     if (!nameEl || !lvlEl || !subEl || !hpText || !mpText || !hpBar || !mpBar || !card) return;
@@ -1217,6 +1218,7 @@ function renderAllyRow() {
         delete avatarBox.dataset.allyId;
       }
       applyAllyAvatar(avatarBox, ally);
+      renderStatusBadges(ally, statusWrap);
     } else {
       nameEl.textContent = `NPC ${slotIndex}`;
       lvlEl.textContent = "Lv-";
@@ -1234,6 +1236,7 @@ function renderAllyRow() {
       delete card.dataset.allyId;
       delete avatarBox.dataset.allyId;
       applyAllyAvatar(avatarBox, null);
+      renderStatusBadges(null, statusWrap);
     }
   });
 }
@@ -1337,6 +1340,7 @@ function renderEnemyRow() {
       <div class="sectionTitle">
         <div><b class="enemyName"></b> <span class="pill enemyLevel"></span></div>
       </div>
+      <div class="statusIndicator enemyStatusBadges" aria-label="Status enemy"></div>
       <div class="avatarWrap">
         <div class="avatarBox enemyAvatarBox"></div>
       </div>
@@ -1376,6 +1380,7 @@ function renderEnemyRow() {
     const mpText = card.querySelector(".enemyMpText");
     const hpFill = card.querySelector(".enemyHpFill");
     const mpFill = card.querySelector(".enemyMpFill");
+    const statusWrap = card.querySelector(".enemyStatusBadges");
     const prevHp = (typeof enemy._prevHp === "number") ? enemy._prevHp : enemy.hp;
     const prevHpPct = enemy.maxHp ? clamp((prevHp / enemy.maxHp) * 100, 0, 100) : 0;
     const wasAlive = enemy._alive === true;
@@ -1451,6 +1456,7 @@ function renderEnemyRow() {
     enemy._prevHp = enemy.hp;
 
     applyEnemyAvatar(card.querySelector(".enemyAvatarBox"), enemy);
+    renderStatusBadges(enemy, statusWrap);
 
     if (isAlive) {
       const targetIndex = enemyIndex;
@@ -1632,6 +1638,60 @@ function statusLabel(entity) {
   return active
     .map((s) => `${(s.type || "Effect").toUpperCase()} (${s.turns} turn${s.turns > 1 ? "s" : ""})`)
     .join(" • ");
+}
+const STATUS_DEFS = {
+  strengthen: {
+    label: "Strengthen",
+    desc: "Strengthen meningkatkan stat ATK sebesar X%.",
+    kind: "buff",
+  },
+};
+
+function getStatusDefinition(status) {
+  if (!status) return { label: "Effect", desc: "Status aktif.", kind: "buff" };
+  const def = STATUS_DEFS[status.type] || {};
+  return {
+    label: def.label || status.type || "Effect",
+    desc: def.desc || "Status aktif.",
+    kind: def.kind || (status.debuff ? "debuff" : "buff"),
+  };
+}
+
+function renderStatusBadges(entity, container) {
+  if (!container) return;
+  const statuses = Array.isArray(entity?.statuses)
+    ? entity.statuses.filter((s) => (s.turns || 0) > 0)
+    : [];
+  if (!statuses.length) {
+    container.innerHTML = "";
+    container.style.display = "none";
+    return;
+  }
+  container.innerHTML = "";
+  container.style.display = "flex";
+  statuses.forEach((status) => {
+    const meta = getStatusDefinition(status);
+    const turns = Math.max(0, status.turns || 0);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `statusBadge ${meta.kind}`.trim();
+    btn.setAttribute("aria-label", `${meta.label} (${turns} turn)`);
+    btn.title = `${meta.label} (${turns} turn${turns > 1 ? "s" : ""})`;
+    btn.innerHTML = `
+      <span class="statusBadgeIcon" aria-hidden="true"></span>
+      ${turns ? `<span class="statusBadgeTurns">${turns}</span>` : ""}
+    `;
+    btn.onclick = (event) => {
+      event.stopPropagation();
+      const turnText = turns ? ` (${turns} turn${turns > 1 ? "s" : ""})` : "";
+      modal.open(
+        `Status: ${meta.label}`,
+        [{ title: "Detail", desc: `${meta.desc}${turnText}`, meta: "", value: undefined, className: "readonly" }],
+        () => {}
+      );
+    };
+    container.appendChild(btn);
+  });
 }
 function setBar(el, cur, max) {
   const pctRaw = max <= 0 ? 0 : (cur / max) * 100;
@@ -1846,6 +1906,7 @@ function refresh(state) {
     pSub.textContent = label;
     pSub.style.display = label ? "block" : "none";
   }
+  renderStatusBadges(p, $("pStatusBadges"));
 
   $("pLvl").textContent = `Lv${p.level}`;
   const goldPill = $("goldPill");
@@ -1953,6 +2014,7 @@ function refresh(state) {
       eSub.textContent = label;
       eSub.style.display = label ? "block" : "none";
     }
+    renderStatusBadges(e, $("eStatusBadges"));
 
     if (e) {
       $("eLvl").textContent = `Lv${e.level}`;

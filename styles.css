@@ -894,6 +894,13 @@ body.inBattle .allyCard .allySub,
 body.inBattle .enemyCard .nameSub{
   order:2;
 }
+body.inBattle .statusIndicator{
+  order:2;
+  margin-top:2px;
+}
+body.inBattle .enemyCard .statusIndicator{
+  align-self:flex-end;
+}
 
 body.inBattle .turnIndicator{
   display:flex;
@@ -1727,6 +1734,58 @@ body.inBattle .enemyMiniMeta .muted{
 
 /* Name subline under title */
 .nameSub{ margin-top:6px; font-size:18px; font-weight:800; color: var(--text); }
+.statusIndicator{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:6px;
+  min-height:20px;
+}
+.statusBadge{
+  width:22px;
+  height:22px;
+  border-radius:6px;
+  border:1px solid rgba(255,255,255,0.2);
+  background:rgba(20,30,44,0.8);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0;
+  position:relative;
+  cursor:pointer;
+  box-shadow:0 0 0 1px rgba(0,0,0,0.2) inset;
+}
+.statusBadge.buff{
+  border-color:rgba(120,200,255,0.6);
+  box-shadow:0 0 0 1px rgba(80,160,255,0.35) inset;
+}
+.statusBadge.debuff{
+  border-color:rgba(255,120,120,0.65);
+  box-shadow:0 0 0 1px rgba(255,120,120,0.35) inset;
+}
+.statusBadgeIcon{
+  width:14px;
+  height:14px;
+  border-radius:4px;
+  background:rgba(255,255,255,0.15);
+}
+.statusBadgeTurns{
+  position:absolute;
+  right:-4px;
+  top:-4px;
+  min-width:14px;
+  height:14px;
+  border-radius:999px;
+  background:rgba(10,16,28,0.9);
+  border:1px solid rgba(255,255,255,0.2);
+  font-size:9px;
+  font-weight:800;
+  color:var(--text);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 3px;
+}
 
 
 
