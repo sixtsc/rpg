@@ -2719,9 +2719,14 @@ function renderSkillShopTabs(){
 }
 
 function renderSkillShopItems(){
+  const label = byId("skillShopLabel");
   const grid = byId("skillShopItemsGrid");
   if (!grid) return;
   grid.innerHTML = "";
+  if (label) {
+    const categoryLabel = SKILL_SHOP_CATEGORIES.find((category) => category.key === state.skillShopCategory)?.label || "Skill";
+    label.textContent = `${categoryLabel} Skill`.toUpperCase();
+  }
   const entries = getSkillShopEntries()
     .filter((entry) => entry.skill && entry.skill.element === state.skillShopCategory);
   if (!entries.length) {
