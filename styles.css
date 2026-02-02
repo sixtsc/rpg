@@ -1586,6 +1586,11 @@ body.inBattle .enemyMiniMeta .muted{
   justify-content:center;
   font-size:28px;
 }
+.confirmThumb img{
+  width:70%;
+  height:70%;
+  object-fit:contain;
+}
 .confirmStats{
   display:flex;
   flex-direction:column;
@@ -1726,13 +1731,15 @@ body.inBattle .enemyMiniMeta .muted{
 .hidden{ display:none !important; }
 
 /* --- Market Page (standalone) --- */
-.marketPage{
+.marketPage,
+.skillShopPage{
   min-height:100vh;
   padding:32px 24px 48px;
   background:var(--bg);
   color:var(--text);
 }
-.marketPageHeader{
+.marketPageHeader,
+.skillShopPageHeader{
   display:grid;
   grid-template-columns:1fr auto;
   grid-template-rows:auto auto;
@@ -1797,21 +1804,25 @@ body.inBattle .enemyMiniMeta .muted{
   min-width:86px;
   justify-content:center;
 }
-.marketPageHeader h2{
+.marketPageHeader h2,
+.skillShopPageHeader h2{
   margin:0 0 6px;
   font-size:28px;
 }
-.marketPageHeader p{
+.marketPageHeader p,
+.skillShopPageHeader p{
   margin:0;
   color:var(--muted);
 }
-.marketPageBody{
+.marketPageBody,
+.skillShopBody{
   background:var(--card);
   border:1px solid var(--line);
   border-radius:16px;
   padding:24px;
 }
-.marketPageControls{
+.marketPageControls,
+.skillShopControls{
   display:flex;
   flex-direction:column;
   gap:16px;
@@ -1852,6 +1863,44 @@ body.inBattle .enemyMiniMeta .muted{
   padding-left:8px;
   border-left:2px solid var(--line);
 }
+.skillShopTabRow{
+  display:flex;
+  flex-wrap:nowrap;
+  gap:8px;
+  justify-content:center;
+  overflow-x:auto;
+  padding-bottom:4px;
+}
+.skillCategoryBtn{
+  width:60px;
+  height:60px;
+  border-radius:14px;
+  border:1px solid var(--line);
+  background:var(--card2);
+  color:var(--text);
+  font-weight:600;
+  cursor:pointer;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  text-transform:capitalize;
+  transition:all .2s ease;
+}
+.skillCategoryBtn img{
+  width:22px;
+  height:22px;
+  display:block;
+}
+.skillCategoryBtn span{
+  font-size:10px;
+}
+.skillCategoryBtn.active{
+  background:rgba(255,120,68,0.16);
+  border-color:rgba(255,120,68,0.55);
+  box-shadow:0 0 0 1px rgba(255,120,68,0.3) inset;
+}
 .marketTabBtn{
   border-radius:12px;
   padding:8px 14px;
@@ -1887,6 +1936,115 @@ body.inBattle .enemyMiniMeta .muted{
   gap:12px;
   max-width:540px;
   margin:0 auto;
+}
+.skillShopGrid{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  max-width:620px;
+  margin:0 auto;
+}
+.skillShopCard{
+  border-radius:12px;
+  border:1px solid var(--line);
+  background:var(--card2);
+  padding:8px 12px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  cursor:pointer;
+  transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  position:relative;
+  text-align:left;
+}
+.skillShopCard:hover{
+  transform:translateY(-2px);
+  box-shadow:0 12px 24px rgba(0,0,0,0.25);
+  border-color:rgba(255,120,68,0.6);
+}
+.skillShopCardHeader{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex:1;
+}
+.skillShopThumb{
+  width:40px;
+  height:40px;
+  border-radius:8px;
+  border:1px solid rgba(159,178,200,0.35);
+  background:rgba(15,25,44,0.55);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+}
+.skillShopThumb img{
+  width:70%;
+  height:70%;
+  object-fit:contain;
+}
+.skillShopInfo{
+  display:flex;
+  flex-direction:column;
+  gap:1px;
+}
+.skillShopCardTitle{
+  font-weight:800;
+  font-size:15px;
+}
+.skillShopLevel{
+  font-size:11px;
+  color:var(--muted);
+}
+.skillShopBadge{
+  margin-left:auto;
+  align-self:center;
+  font-size:11px;
+  padding:2px 6px;
+  border-radius:999px;
+  background:rgba(58,108,255,0.2);
+  color:var(--text);
+}
+
+.skillConfirmPrice{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin-top:10px;
+  color:#f9d65c;
+  font-weight:700;
+  font-size:13px;
+}
+.skillConfirmPrice img{
+  width:16px;
+  height:16px;
+  display:block;
+}
+.confirmStatRow.icon{
+  align-items:center;
+}
+.confirmStatRow.icon span{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.confirmStatRow.icon img{
+  width:16px;
+  height:16px;
+  display:block;
+}
+.skillShopEmpty{
+  grid-column:1 / -1;
+  text-align:center;
+}
+.skillShopEmpty h3{
+  margin:0 0 8px;
+  font-size:20px;
+}
+.skillShopEmpty p{
+  margin:0;
+  color:var(--muted);
 }
 .marketItemCard{
   display:flex;

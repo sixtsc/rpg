@@ -375,6 +375,36 @@
     </div>
   </section>
 
+  <section id="skillShopPage" class="skillShopPage hidden" aria-hidden="true">
+    <div class="skillShopPageHeader">
+      <div class="marketCurrency" aria-label="Mata uang saat ini">
+        <div class="pill currencyPill">
+          <img class="currencyIcon" src="./assets/icons/coin.svg" alt="" />
+          <span id="skillShopGoldValue">0</span>
+        </div>
+        <div class="pill currencyPill">
+          <img class="currencyIcon" src="./assets/icons/gem.svg" alt="" />
+          <span id="skillShopGemValue">0</span>
+        </div>
+      </div>
+      <div class="marketTitle">
+        <h2>Skill Shop</h2>
+        <p>Pilih elemen skill untuk melihat daftar jurus.</p>
+      </div>
+      <div class="marketActions">
+        <button class="marketBackBtn" id="skillShopBack" type="button" aria-label="Tutup">
+          <span aria-hidden="true">✕</span>
+        </button>
+      </div>
+    </div>
+    <div class="skillShopControls">
+      <div class="skillShopTabRow" id="skillShopCategoryTabs" role="tablist" aria-label="Kategori Skill"></div>
+    </div>
+    <div class="skillShopBody">
+      <div class="skillShopGrid" id="skillShopItemsGrid"></div>
+    </div>
+  </section>
+
   <!-- Modal (tetap satu kali) -->
   <div class="modalBackdrop" id="modalBackdrop">
     <div class="modal">

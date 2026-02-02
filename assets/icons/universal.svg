@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="uniGrad" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#7dd3fc"/>
+      <stop offset="1" stop-color="#c084fc"/>
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="32" r="28" fill="url(#uniGrad)"/>
+  <path fill="#ffffff" fill-opacity="0.35" d="M32 14l4.5 11 11.5.8-9 7.2 2.9 11.1L32 38l-9.9 6.1L25 33l-9-7.2 11.5-.8L32 14z"/>
+  <circle cx="32" cy="32" r="5" fill="#2d1b45" fill-opacity="0.6"/>
+</svg>
