@@ -23,7 +23,7 @@ export const SKILLS = {
     mpCost:14,
     power:0,
     cooldown:4,
-    desc:"Menyelimuti tubuh dengan aura api selama 2 turn. Apply effect 'strengthen' 20% selama durasi."
+    desc:"Menyelimuti tubuh dengan aura api selama 2 turn. Apply effect Strengthen 20% selama durasi."
   }
 };
 

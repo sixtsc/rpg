@@ -7,7 +7,7 @@ try{var _el=document.getElementById('menuSub'); if(_el && _el.textContent && _el
 const SKILLS = {
   fireball: { name:"Fireball", icon:"", element:"fire", mpCost:6, power:10, cooldown:3, desc:"Serangan api (damage tinggi)." },
   fireArrow: { name:"Fire Arrow", icon:"", element:"fire", mpCost:9, power:14, cooldown:4, desc:"Fire flame arrow that pierce to enemy" },
-  blazingShield: { name:"Blazing Shield", icon:"", element:"fire", mpCost:14, power:0, cooldown:4, desc:"Menyelimuti tubuh dengan aura api selama 2 turn. Apply effect 'strengthen' 20% selama durasi." }
+  blazingShield: { name:"Blazing Shield", icon:"", element:"fire", mpCost:14, power:0, cooldown:4, desc:"Menyelimuti tubuh dengan aura api selama 2 turn. Apply effect Strengthen 20% selama durasi." }
 };
 const ITEMS = {
   potion: { name:"Potion", kind:"heal_hp", amount:25, desc:"Memulihkan 25 HP", level:1 },
@@ -2796,12 +2796,19 @@ function openSkillConfirm(skillKey){
     const iconHtml = s.icon ? `<img src="${escapeHtml(s.icon)}" alt="" />` : "";
     return `<div class="confirmStatRow icon"><span>${iconHtml}${escapeHtml(s.label)}:</span><b>${escapeHtml(String(s.value))}</b></div>`;
   }).join("");
+  const descText = skill.desc || "Skill";
+  const descHtmlText = descText.includes("Strengthen")
+    ? escapeHtml(descText).replace(
+      /Strengthen/g,
+      `<button type="button" class="skillEffectLink" data-effect="strengthen">Strengthen</button>`
+    ) + '<div class="skillEffectDesc" data-effect-desc="strengthen" hidden>Strengthen meningkatkan stat ATK sebesar X%.</div>'
+    : escapeHtml(descText);
   const descHtml = `
     <div class="confirmDetailCard">
       <div class="confirmThumb">${skill.icon ? `<img src="${escapeHtml(skill.icon)}" alt="" />` : "✨"}</div>
       <div class="confirmStats">${statsHtml}</div>
     </div>
-    <div class="confirmDesc">${escapeHtml(skill.desc || "Skill")}</div>
+    <div class="confirmDesc">${descHtmlText}</div>
     <div class="skillConfirmPrice">
       <img src="./assets/icons/coin.svg" alt="" />
       <span>${entry.price}</span>
@@ -2840,6 +2847,20 @@ function openSkillConfirm(skillKey){
       renderSkillShopPage();
     }
   );
+  const modalBody = $("modalBody");
+  if (modalBody) {
+    const effectButton = modalBody.querySelector(".skillEffectLink");
+    if (effectButton) {
+      effectButton.onclick = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const effectDesc = modalBody.querySelector('[data-effect-desc="strengthen"]');
+        if (effectDesc) {
+          effectDesc.hidden = !effectDesc.hidden;
+        }
+      };
+    }
+  }
 }
 
 function openShopModal(mode = "menu"){

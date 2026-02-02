@@ -1650,6 +1650,19 @@ body.inBattle .enemyMiniMeta .muted{
   color:var(--muted);
   font-size:12px;
 }
+.skillEffectLink{
+  background:none;
+  border:none;
+  padding:0;
+  color:#f9d65c;
+  font-weight:700;
+  cursor:pointer;
+  text-decoration:underline;
+}
+.skillEffectDesc{
+  margin-top:6px;
+  color:var(--text);
+}
 .modalBody.confirmPopup .choice.confirmActions{
   border:none;
   background:transparent;
