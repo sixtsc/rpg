@@ -1220,7 +1220,7 @@ function renderAllyRow() {
         delete avatarBox.dataset.allyId;
       }
       applyAllyAvatar(avatarBox, ally);
-      renderStatusBadges(ally, statusWrap);
+      renderStatusBadges(isAlive ? ally : null, statusWrap);
       bindLongPress(card, () => {
         const currentAllies = Array.isArray(state.allies) ? state.allies : [];
         const currentAlly = currentAllies[i];
