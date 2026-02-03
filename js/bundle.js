@@ -3439,6 +3439,7 @@ function enemyTurn() {
         showAllyDamageText("MISS", target);
         addLog("ENEMY", `${enemy.name} meleset menyerang ${target.name}.`);
       }
+      tickStatuses(enemy);
       done(0);
       return;
     }
