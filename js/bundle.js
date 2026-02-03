@@ -4521,6 +4521,12 @@ function openTownMenu(){
 
 function bind() {
   modal.bind();
+  const appRoot = document.querySelector(".wrap");
+  if (appRoot) {
+    appRoot.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+    });
+  }
 
   // Town
   byId("btnExplore").onclick = explore;
