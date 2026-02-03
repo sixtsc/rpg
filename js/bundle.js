@@ -1463,7 +1463,7 @@ function renderEnemyRow() {
     enemy._prevHp = enemy.hp;
 
     applyEnemyAvatar(card.querySelector(".enemyAvatarBox"), enemy);
-    renderStatusBadges(enemy, statusWrap);
+    renderStatusBadges(isAlive ? enemy : null, statusWrap);
 
     if (isAlive) {
       const targetIndex = enemyIndex;
@@ -2038,7 +2038,7 @@ function refresh(state) {
       eSub.textContent = label;
       eSub.style.display = label ? "block" : "none";
     }
-    renderStatusBadges(e, $("eStatusBadges"));
+    renderStatusBadges(e && e.hp > 0 ? e : null, $("eStatusBadges"));
 
     if (e) {
       $("eLvl").textContent = `Lv${e.level}`;
