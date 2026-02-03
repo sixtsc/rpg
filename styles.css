@@ -797,6 +797,7 @@ body.inBattle .enemyCard{
   box-sizing:border-box;
   margin:0;
   overflow:visible;
+  position:relative;
   background:transparent;
   border:none;
   box-shadow:none;
@@ -895,11 +896,20 @@ body.inBattle .enemyCard .nameSub{
   order:2;
 }
 body.inBattle .statusIndicator{
-  order:2;
-  margin-top:2px;
+  position:absolute;
+  top:44px;
+  left:10px;
+  right:auto;
+  z-index:4;
+  order:0;
+  margin-top:0;
+  max-width: calc(100% - 20px);
 }
 body.inBattle .enemyCard .statusIndicator{
   align-self:flex-end;
+  left:auto;
+  right:10px;
+  justify-content:flex-end;
 }
 
 body.inBattle .turnIndicator{
@@ -987,6 +997,11 @@ body.inBattle .allyCard .avatarWrap,
 body.inBattle .enemyCard .avatarWrap{
   order:1;
   margin:8px 0 2px;
+}
+body.inBattle .avatarBox{
+  width:116px;
+  height:116px;
+  font-size:46px;
 }
 body.inBattle .allyCard .bars,
 body.inBattle .enemyCard .bars{
@@ -2445,6 +2460,7 @@ select.authInput{
 @media (max-width:520px){
   .avatarWrap{ margin:8px 0 4px; }
   .avatarBox{ width:74px; height:74px; border-radius:12px; font-size:32px; }
+  body.inBattle .avatarBox{ width:78px; height:78px; font-size:34px; }
 }
 
 
