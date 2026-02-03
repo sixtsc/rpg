@@ -23,7 +23,15 @@ body{
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
 }
 
-.wrap{ max-width:980px; margin:0 auto; padding:14px; }
+.wrap{
+  max-width:980px;
+  margin:0 auto;
+  padding:14px;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
 
 .topbar{
   display:flex;
