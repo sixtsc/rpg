@@ -1221,6 +1221,11 @@ function renderAllyRow() {
       }
       applyAllyAvatar(avatarBox, ally);
       renderStatusBadges(ally, statusWrap);
+      bindLongPress(card, () => {
+        const currentAllies = Array.isArray(state.allies) ? state.allies : [];
+        const currentAlly = currentAllies[i];
+        if (currentAlly) openAllyStatsModal(currentAlly);
+      });
     } else {
       nameEl.textContent = `NPC ${slotIndex}`;
       lvlEl.textContent = "Lv-";
@@ -1463,11 +1468,20 @@ function renderEnemyRow() {
     if (isAlive) {
       const targetIndex = enemyIndex;
       card.onclick = () => {
+        if (card.dataset.longPressTriggered === "true") {
+          delete card.dataset.longPressTriggered;
+          return;
+        }
         if (setActiveEnemyByIndex(targetIndex)) {
           addLog("TARGET", `Target: ${enemy.name}`);
           refresh(state);
         }
       };
+      bindLongPress(card, () => {
+        const queue = getEnemyQueue();
+        const target = queue[targetIndex];
+        if (target) openEnemyStatsModal(target);
+      });
     } else {
       card.onclick = null;
     }
@@ -2123,11 +2137,19 @@ function refresh(state) {
       }
       enemyCard.classList.toggle("active", state.enemyTargetIndex === 0);
       enemyCard.onclick = () => {
+        if (enemyCard.dataset.longPressTriggered === "true") {
+          delete enemyCard.dataset.longPressTriggered;
+          return;
+        }
         if (setActiveEnemyByIndex(0)) {
           addLog("TARGET", `Target: ${getTargetEnemy()?.name || "Musuh"}`);
           refresh(state);
         }
       };
+      bindLongPress(enemyCard, () => {
+        const primary = getPrimaryEnemy();
+        if (primary) openEnemyStatsModal(primary);
+      });
     }
   } else {
     const turnIndicator = $("turnIndicator");
@@ -2171,6 +2193,8 @@ function refresh(state) {
   renderAllyRow();
   updateAllySlotBadge();
   renderEnemyRow();
+  const playerCardLongPress = $("playerCard");
+  if (playerCardLongPress) bindLongPress(playerCardLongPress, openStatsModal);
 }
 
 
@@ -4297,26 +4321,69 @@ function openEquipSelect(slot){
 
 
 
-function openEnemyStatsModal() {
-  const e = state.enemy;
+const LONG_PRESS_DELAY = 520;
+function bindLongPress(el, onLongPress, delay = LONG_PRESS_DELAY) {
+  if (!el || typeof onLongPress !== "function") return;
+  if (el.dataset.longPressBound === "true") return;
+  el.dataset.longPressBound = "true";
+  let timer = null;
+  const clearTimer = () => {
+    if (timer) clearTimeout(timer);
+    timer = null;
+  };
+  const start = (event) => {
+    if (event.type === "mousedown" && event.button !== 0) return;
+    clearTimer();
+    timer = setTimeout(() => {
+      el.dataset.longPressTriggered = "true";
+      onLongPress();
+    }, delay);
+  };
+  const cancel = () => {
+    clearTimer();
+  };
+  el.addEventListener("touchstart", start, { passive: true });
+  el.addEventListener("touchend", cancel);
+  el.addEventListener("touchcancel", cancel);
+  el.addEventListener("touchmove", cancel, { passive: true });
+  el.addEventListener("mousedown", start);
+  el.addEventListener("mouseup", cancel);
+  el.addEventListener("mouseleave", cancel);
+}
+
+function buildCombatStatRows(entity) {
+  if (!entity) return [];
+  return [
+    { title: `ATK : ${entity.atk}`, desc: "", meta: "" },
+    { title: `DEF : ${entity.def}`, desc: "", meta: "" },
+    { title: `SPD : ${entity.spd}`, desc: "", meta: "" },
+    { title: `ACC : ${entity.acc || 0}`, desc: "", meta: "" },
+    { title: `COMBUST : ${entity.combustionChance || 0}%`, desc: "", meta: "" },
+    { title: `CRIT : ${entity.critChance}%`, desc: "", meta: "" },
+    { title: `CRIT DMG : ${entity.critDamage}%`, desc: "", meta: "" },
+    { title: `EVASION : ${entity.evasion}%`, desc: "", meta: "" },
+    { title: `BLOCK : ${entity.blockRate || 0}%`, desc: "", meta: "" },
+    { title: `ESCAPE : ${entity.escapeChance || 0}%`, desc: "", meta: "" },
+    { title: `MANA REGEN : ${entity.manaRegen || 0}`, desc: "", meta: "" },
+  ];
+}
+
+function openEnemyStatsModal(enemy = state.enemy) {
+  const e = enemy;
   if (!state.inBattle || !e) return;
 
   modal.open(
-    "Enemy Stats",
-    [
-      // Enemy: show core combat stats in simple lines
-      { title: `ATK : ${e.atk}`, desc: "", meta: "" },
-      { title: `DEF : ${e.def}`, desc: "", meta: "" },
-      { title: `SPD : ${e.spd}`, desc: "", meta: "" },
-      { title: `ACC : ${e.acc || 0}`, desc: "", meta: "" },
-      { title: `COMBUST : ${e.combustionChance || 0}%`, desc: "", meta: "" },
-            { title: `CRIT : ${e.critChance}%`, desc: "", meta: "" },
-      { title: `CRIT DMG : ${e.critDamage}%`, desc: "", meta: "" },
-      { title: `EVASION : ${e.evasion}%`, desc: "", meta: "" },
-      { title: `BLOCK : ${e.blockRate || 0}%`, desc: "", meta: "" },
-      { title: `ESCAPE : ${e.escapeChance || 0}%`, desc: "", meta: "" },
-      { title: `MANA REGEN : ${e.manaRegen || 0}`, desc: "", meta: "" },
-    ],
+    `${e.name} Stats`,
+    buildCombatStatRows(e),
+    () => {}
+  );
+}
+
+function openAllyStatsModal(ally) {
+  if (!ally) return;
+  modal.open(
+    `${ally.name} Stats`,
+    buildCombatStatRows(ally),
     () => {}
   );
 }
