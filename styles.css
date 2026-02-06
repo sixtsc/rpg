@@ -897,7 +897,7 @@ body.inBattle .enemyCard .nameSub{
 }
 body.inBattle .statusIndicator{
   position:absolute;
-  top:64px;
+  top:74px;
   left:10px;
   right:auto;
   z-index:4;
