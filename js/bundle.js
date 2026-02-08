@@ -1011,6 +1011,15 @@ function playAllyDodgeFade(ally){
   setTimeout(() => el.classList.remove("dodgeFade"), 450);
 }
 
+function playAllyCritShake(ally){
+  const el = getAllyAvatarBox(ally);
+  if (!el) return;
+  el.classList.remove("critShake");
+  void el.offsetWidth;
+  el.classList.add("critShake");
+  setTimeout(() => el.classList.remove("critShake"), 450);
+}
+
 function timeStr() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
@@ -1626,13 +1635,12 @@ function useSkillAtIndex(idx){
   } else {
     if (res.dmg > 0) {
       e.hp = clamp(e.hp - res.dmg, 0, e.maxHp);
-      playEnemySlash(targetIndex, 80);
+      playEnemyCritShake(targetIndex);
     }
     if (res.reflected > 0) {
       p.hp = clamp(p.hp - res.reflected, 0, p.maxHp);
-      playSlash("player", 150);
+      playCritShake("player");
     }
-    if (res.crit || res.combustion) playEnemyCritShake(targetIndex);
     showEnemyDamageText(formatDamageText(res, res.dmg), targetIndex);
     if (res.reflected > 0) {
       showDamageText("player", `-${res.reflected} (REFLECT)`);
@@ -2343,11 +2351,15 @@ function applyDamageAfterDelay(target, dmg, slashTarget, delay = 200){
   setTimeout(() => {
     target.hp = clamp((target.hp || 0) - dmg, 0, target.maxHp || 0);
     if (slashTarget === "player" || slashTarget === "enemy") {
-      playSlash(slashTarget);
+      if (slashTarget === "player") {
+        playCritShake("player");
+      } else {
+        playCritShake("enemy");
+      }
     } else if (slashTarget && typeof slashTarget.enemyIndex === "number") {
-      playEnemySlash(slashTarget.enemyIndex);
+      playEnemyCritShake(slashTarget.enemyIndex);
     } else if (slashTarget && slashTarget.ally) {
-      playAllySlash(slashTarget.ally);
+      playAllyCritShake(slashTarget.ally);
     }
     refresh(state);
   }, delay);
@@ -3449,7 +3461,7 @@ function enemyTurn() {
         delays.push(applyDamageAfterDelay(p, res.dmg, "player", 230));
       } else {
         target.hp = clamp(target.hp - res.dmg, 0, target.maxHp);
-        playAllySlash(target, 120);
+        playAllyCritShake(target);
       }
     }
     if (res.reflected > 0) {
@@ -3459,7 +3471,6 @@ function enemyTurn() {
         enemy.hp = clamp(enemy.hp - res.reflected, 0, enemy.maxHp);
       }
     }
-    if (isPlayer && (res.crit || res.combustion)) playCritShake("player");
     if (isPlayer) {
       showDamageText("player", formatDamageText(res, res.dmg));
       if (res.reflected > 0) {
@@ -3575,14 +3586,13 @@ function alliesAct(done){
       }
       if (res.dmg > 0) {
         currentTarget.hp = clamp(currentTarget.hp - res.dmg, 0, currentTarget.maxHp);
-        playEnemySlash(targetIndex, 60);
+        playEnemyCritShake(targetIndex);
       }
       if (res.reflected > 0) {
         ally.hp = clamp(ally.hp - res.reflected, 0, ally.maxHp);
         addLog("ALLY", `${ally.name} terkena pantulan ${res.reflected} damage.`);
       }
       addLog("ALLY", `${ally.name} menyerang! Damage ${res.dmg}.`);
-      if (res.crit || res.combustion) playEnemyCritShake(targetIndex);
       showEnemyDamageText(formatDamageText(res, res.dmg), targetIndex);
       refresh(state);
     }, delay);
@@ -3679,7 +3689,7 @@ function startAdventureBattle(targetLevel, stageName){
   } else {
     state.enemyQueue = null;
     state.enemy = genEnemy(targetLevel);
-    state.enemyTargetIndex = 0;
+    state.enemyTargetIndex = getDefaultEnemyTargetIndex([state.enemy]);
   }
   state.inBattle = true;
   state._animateEnemyIn = true;
@@ -3834,14 +3844,13 @@ function attack() {
 
   if (res.dmg > 0) {
     e.hp = clamp(e.hp - res.dmg, 0, e.maxHp);
-    playEnemySlash(targetIndex, 80);
+    playEnemyCritShake(targetIndex);
   }
   if (res.reflected > 0) {
     p.hp = clamp(p.hp - res.reflected, 0, p.maxHp);
-    playSlash("player", 150);
+    playCritShake("player");
   }
 
-  if (res.crit || res.combustion) playEnemyCritShake(targetIndex);
   showEnemyDamageText(formatDamageText(res, res.dmg), targetIndex);
   if (res.reflected > 0) {
     showDamageText("player", `-${res.reflected} (REFLECT)`);
@@ -3950,13 +3959,12 @@ function openSkillModal() {
     } else {
       if (res.dmg > 0) {
         target.hp = clamp(target.hp - res.dmg, 0, target.maxHp);
-        playEnemySlash(targetIndex, 80);
+        playEnemyCritShake(targetIndex);
       }
       if (res.reflected > 0) {
         p.hp = clamp(p.hp - res.reflected, 0, p.maxHp);
-        playSlash("player", 150);
+        playCritShake("player");
       }
-      if (res.crit || res.combustion) playEnemyCritShake(targetIndex);
       showEnemyDamageText(formatDamageText(res, res.dmg), targetIndex);
       if (res.reflected > 0) {
         showDamageText("player", `-${res.reflected} (REFLECT)`);
