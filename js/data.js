@@ -17,7 +17,7 @@ export const SKILLS = {
     desc:"Fire flame arrow that pierce to enemy"
   },
   blazingShield: {
-    name:"Blazing Shield",
+    name:"Blazing Aura",
     icon:"",
     element:"fire",
     mpCost:14,
