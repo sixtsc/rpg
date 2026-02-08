@@ -7,7 +7,7 @@ try{var _el=document.getElementById('menuSub'); if(_el && _el.textContent && _el
 const SKILLS = {
   fireball: { name:"Fireball", icon:"", element:"fire", mpCost:6, power:10, cooldown:3, desc:"Serangan api (damage tinggi)." },
   fireArrow: { name:"Fire Arrow", icon:"", element:"fire", mpCost:9, power:14, cooldown:4, desc:"Fire flame arrow that pierce to enemy" },
-  blazingShield: { name:"Blazing Shield", icon:"", element:"fire", mpCost:14, power:0, cooldown:4, desc:"Menyelimuti tubuh dengan aura api selama 2 turn. Apply effect Strengthen 20% selama durasi." },
+  blazingShield: { name:"Blazing Aura", icon:"", element:"fire", mpCost:14, power:0, cooldown:4, desc:"Menyelimuti tubuh dengan aura api selama 2 turn. Apply effect Strengthen 20% selama durasi." },
   echoStrike: { name:"Echo Strike", icon:"", element:"physical", mpCost:25, power:10, cooldown:8, desc:"Memberikan Stun kepada target selama 3 turn." }
 };
 const ITEMS = {
@@ -1011,6 +1011,15 @@ function playAllyDodgeFade(ally){
   setTimeout(() => el.classList.remove("dodgeFade"), 450);
 }
 
+function playAllyCritShake(ally){
+  const el = getAllyAvatarBox(ally);
+  if (!el) return;
+  el.classList.remove("critShake");
+  void el.offsetWidth;
+  el.classList.add("critShake");
+  setTimeout(() => el.classList.remove("critShake"), 450);
+}
+
 function timeStr() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
@@ -1220,7 +1229,12 @@ function renderAllyRow() {
         delete avatarBox.dataset.allyId;
       }
       applyAllyAvatar(avatarBox, ally);
-      renderStatusBadges(ally, statusWrap);
+      renderStatusBadges(isAlive ? ally : null, statusWrap);
+      bindLongPress(card, () => {
+        const currentAllies = Array.isArray(state.allies) ? state.allies : [];
+        const currentAlly = currentAllies[i];
+        if (currentAlly) openAllyStatsModal(currentAlly);
+      });
     } else {
       nameEl.textContent = `NPC ${slotIndex}`;
       lvlEl.textContent = "Lv-";
@@ -1458,16 +1472,25 @@ function renderEnemyRow() {
     enemy._prevHp = enemy.hp;
 
     applyEnemyAvatar(card.querySelector(".enemyAvatarBox"), enemy);
-    renderStatusBadges(enemy, statusWrap);
+    renderStatusBadges(isAlive ? enemy : null, statusWrap);
 
     if (isAlive) {
       const targetIndex = enemyIndex;
       card.onclick = () => {
+        if (card.dataset.longPressTriggered === "true") {
+          delete card.dataset.longPressTriggered;
+          return;
+        }
         if (setActiveEnemyByIndex(targetIndex)) {
           addLog("TARGET", `Target: ${enemy.name}`);
           refresh(state);
         }
       };
+      bindLongPress(card, () => {
+        const queue = getEnemyQueue();
+        const target = queue[targetIndex];
+        if (target) openEnemyStatsModal(target);
+      });
     } else {
       card.onclick = null;
     }
@@ -1598,7 +1621,7 @@ function useSkillAtIndex(idx){
   p.mp -= s.mpCost;
 
   addLog("SKILL", s.name);
-  if (s.name === "Blazing Shield") {
+  if (s.name === "Blazing Aura") {
     addStatusEffect(p, { type: "strengthen", turns: 2, debuff: false });
     s.cdLeft = s.cooldown || 0;
     afterPlayerAction();
@@ -1612,13 +1635,12 @@ function useSkillAtIndex(idx){
   } else {
     if (res.dmg > 0) {
       e.hp = clamp(e.hp - res.dmg, 0, e.maxHp);
-      playEnemySlash(targetIndex, 80);
+      playEnemyCritShake(targetIndex);
     }
     if (res.reflected > 0) {
       p.hp = clamp(p.hp - res.reflected, 0, p.maxHp);
-      playSlash("player", 150);
+      playCritShake("player");
     }
-    if (res.crit || res.combustion) playEnemyCritShake(targetIndex);
     showEnemyDamageText(formatDamageText(res, res.dmg), targetIndex);
     if (res.reflected > 0) {
       showDamageText("player", `-${res.reflected} (REFLECT)`);
@@ -2024,7 +2046,7 @@ function refresh(state) {
       eSub.textContent = label;
       eSub.style.display = label ? "block" : "none";
     }
-    renderStatusBadges(e, $("eStatusBadges"));
+    renderStatusBadges(e && e.hp > 0 ? e : null, $("eStatusBadges"));
 
     if (e) {
       $("eLvl").textContent = `Lv${e.level}`;
@@ -2123,11 +2145,19 @@ function refresh(state) {
       }
       enemyCard.classList.toggle("active", state.enemyTargetIndex === 0);
       enemyCard.onclick = () => {
+        if (enemyCard.dataset.longPressTriggered === "true") {
+          delete enemyCard.dataset.longPressTriggered;
+          return;
+        }
         if (setActiveEnemyByIndex(0)) {
           addLog("TARGET", `Target: ${getTargetEnemy()?.name || "Musuh"}`);
           refresh(state);
         }
       };
+      bindLongPress(enemyCard, () => {
+        const primary = getPrimaryEnemy();
+        if (primary) openEnemyStatsModal(primary);
+      });
     }
   } else {
     const turnIndicator = $("turnIndicator");
@@ -2171,6 +2201,8 @@ function refresh(state) {
   renderAllyRow();
   updateAllySlotBadge();
   renderEnemyRow();
+  const playerCardLongPress = $("playerCard");
+  if (playerCardLongPress) bindLongPress(playerCardLongPress, openStatsModal);
 }
 
 
@@ -2319,11 +2351,15 @@ function applyDamageAfterDelay(target, dmg, slashTarget, delay = 200){
   setTimeout(() => {
     target.hp = clamp((target.hp || 0) - dmg, 0, target.maxHp || 0);
     if (slashTarget === "player" || slashTarget === "enemy") {
-      playSlash(slashTarget);
+      if (slashTarget === "player") {
+        playCritShake("player");
+      } else {
+        playCritShake("enemy");
+      }
     } else if (slashTarget && typeof slashTarget.enemyIndex === "number") {
-      playEnemySlash(slashTarget.enemyIndex);
+      playEnemyCritShake(slashTarget.enemyIndex);
     } else if (slashTarget && slashTarget.ally) {
-      playAllySlash(slashTarget.ally);
+      playAllyCritShake(slashTarget.ally);
     }
     refresh(state);
   }, delay);
@@ -3162,6 +3198,7 @@ function beginPlayerTurn(){
     }, 380);
     return false;
   }
+  tickStatuses(state.player);
   applyManaRegen(state.player);
   refresh(state);
   return true;
@@ -3391,6 +3428,7 @@ function enemyTurn() {
     }
     if (hasStatus(enemy, "stun")) {
       addLog("ENEMY", `${enemy.name} terkena Stun dan tidak bisa bergerak.`);
+      tickStatuses(enemy);
       done(ENEMY_ACTION_GAP_MS);
       return;
     }
@@ -3414,6 +3452,7 @@ function enemyTurn() {
         showAllyDamageText("MISS", target);
         addLog("ENEMY", `${enemy.name} meleset menyerang ${target.name}.`);
       }
+      tickStatuses(enemy);
       done(0);
       return;
     }
@@ -3423,7 +3462,7 @@ function enemyTurn() {
         delays.push(applyDamageAfterDelay(p, res.dmg, "player", 230));
       } else {
         target.hp = clamp(target.hp - res.dmg, 0, target.maxHp);
-        playAllySlash(target, 120);
+        playAllyCritShake(target);
       }
     }
     if (res.reflected > 0) {
@@ -3433,7 +3472,6 @@ function enemyTurn() {
         enemy.hp = clamp(enemy.hp - res.reflected, 0, enemy.maxHp);
       }
     }
-    if (isPlayer && (res.crit || res.combustion)) playCritShake("player");
     if (isPlayer) {
       showDamageText("player", formatDamageText(res, res.dmg));
       if (res.reflected > 0) {
@@ -3449,6 +3487,7 @@ function enemyTurn() {
     if (!isPlayer && target.hp <= 0) {
       addLog("ALLY", `${target.name} tumbang!`);
     }
+    tickStatuses(enemy);
     const wait = delays.length ? Math.max(...delays, 180) + 40 : 0;
     done(wait + ENEMY_ACTION_GAP_MS);
   };
@@ -3534,6 +3573,7 @@ function alliesAct(done){
       if (!currentTarget || ally.hp <= 0) return;
       if (hasStatus(ally, "stun")) {
         addLog("ALLY", `${ally.name} terkena Stun dan tidak bisa bergerak.`);
+        tickStatuses(ally);
         refresh(state);
         return;
       }
@@ -3542,19 +3582,20 @@ function alliesAct(done){
       const res = resolveAttack(ally, currentTarget, 2);
       if (res.missed) {
         addLog("ALLY", `${ally.name} meleset.`);
+        tickStatuses(ally);
         refresh(state);
         return;
       }
       if (res.dmg > 0) {
         currentTarget.hp = clamp(currentTarget.hp - res.dmg, 0, currentTarget.maxHp);
-        playEnemySlash(targetIndex, 60);
+        playEnemyCritShake(targetIndex);
       }
       if (res.reflected > 0) {
         ally.hp = clamp(ally.hp - res.reflected, 0, ally.maxHp);
         addLog("ALLY", `${ally.name} terkena pantulan ${res.reflected} damage.`);
       }
       addLog("ALLY", `${ally.name} menyerang! Damage ${res.dmg}.`);
-      if (res.crit || res.combustion) playEnemyCritShake(targetIndex);
+      tickStatuses(ally);
       showEnemyDamageText(formatDamageText(res, res.dmg), targetIndex);
       refresh(state);
     }, delay);
@@ -3593,8 +3634,6 @@ function afterPlayerAction() {
         handleEnemyDefeat();
         return;
       }
-
-    tickStatuses(state.player);
 
       // Small delay sebelum enemy acts, biar terasa lebih seperti RPG turn-based
       setTimeout(() => {
@@ -3651,7 +3690,7 @@ function startAdventureBattle(targetLevel, stageName){
   } else {
     state.enemyQueue = null;
     state.enemy = genEnemy(targetLevel);
-    state.enemyTargetIndex = 0;
+    state.enemyTargetIndex = getDefaultEnemyTargetIndex([state.enemy]);
   }
   state.inBattle = true;
   state._animateEnemyIn = true;
@@ -3806,14 +3845,13 @@ function attack() {
 
   if (res.dmg > 0) {
     e.hp = clamp(e.hp - res.dmg, 0, e.maxHp);
-    playEnemySlash(targetIndex, 80);
+    playEnemyCritShake(targetIndex);
   }
   if (res.reflected > 0) {
     p.hp = clamp(p.hp - res.reflected, 0, p.maxHp);
-    playSlash("player", 150);
+    playCritShake("player");
   }
 
-  if (res.crit || res.combustion) playEnemyCritShake(targetIndex);
   showEnemyDamageText(formatDamageText(res, res.dmg), targetIndex);
   if (res.reflected > 0) {
     showDamageText("player", `-${res.reflected} (REFLECT)`);
@@ -3922,13 +3960,12 @@ function openSkillModal() {
     } else {
       if (res.dmg > 0) {
         target.hp = clamp(target.hp - res.dmg, 0, target.maxHp);
-        playEnemySlash(targetIndex, 80);
+        playEnemyCritShake(targetIndex);
       }
       if (res.reflected > 0) {
         p.hp = clamp(p.hp - res.reflected, 0, p.maxHp);
-        playSlash("player", 150);
+        playCritShake("player");
       }
-      if (res.crit || res.combustion) playEnemyCritShake(targetIndex);
       showEnemyDamageText(formatDamageText(res, res.dmg), targetIndex);
       if (res.reflected > 0) {
         showDamageText("player", `-${res.reflected} (REFLECT)`);
@@ -4294,26 +4331,69 @@ function openEquipSelect(slot){
 
 
 
-function openEnemyStatsModal() {
-  const e = state.enemy;
+const LONG_PRESS_DELAY = 520;
+function bindLongPress(el, onLongPress, delay = LONG_PRESS_DELAY) {
+  if (!el || typeof onLongPress !== "function") return;
+  if (el.dataset.longPressBound === "true") return;
+  el.dataset.longPressBound = "true";
+  let timer = null;
+  const clearTimer = () => {
+    if (timer) clearTimeout(timer);
+    timer = null;
+  };
+  const start = (event) => {
+    if (event.type === "mousedown" && event.button !== 0) return;
+    clearTimer();
+    timer = setTimeout(() => {
+      el.dataset.longPressTriggered = "true";
+      onLongPress();
+    }, delay);
+  };
+  const cancel = () => {
+    clearTimer();
+  };
+  el.addEventListener("touchstart", start, { passive: true });
+  el.addEventListener("touchend", cancel);
+  el.addEventListener("touchcancel", cancel);
+  el.addEventListener("touchmove", cancel, { passive: true });
+  el.addEventListener("mousedown", start);
+  el.addEventListener("mouseup", cancel);
+  el.addEventListener("mouseleave", cancel);
+}
+
+function buildCombatStatRows(entity) {
+  if (!entity) return [];
+  return [
+    { title: `ATK : ${entity.atk}`, desc: "", meta: "" },
+    { title: `DEF : ${entity.def}`, desc: "", meta: "" },
+    { title: `SPD : ${entity.spd}`, desc: "", meta: "" },
+    { title: `ACC : ${entity.acc || 0}`, desc: "", meta: "" },
+    { title: `COMBUST : ${entity.combustionChance || 0}%`, desc: "", meta: "" },
+    { title: `CRIT : ${entity.critChance}%`, desc: "", meta: "" },
+    { title: `CRIT DMG : ${entity.critDamage}%`, desc: "", meta: "" },
+    { title: `EVASION : ${entity.evasion}%`, desc: "", meta: "" },
+    { title: `BLOCK : ${entity.blockRate || 0}%`, desc: "", meta: "" },
+    { title: `ESCAPE : ${entity.escapeChance || 0}%`, desc: "", meta: "" },
+    { title: `MANA REGEN : ${entity.manaRegen || 0}`, desc: "", meta: "" },
+  ];
+}
+
+function openEnemyStatsModal(enemy = state.enemy) {
+  const e = enemy;
   if (!state.inBattle || !e) return;
 
   modal.open(
-    "Enemy Stats",
-    [
-      // Enemy: show core combat stats in simple lines
-      { title: `ATK : ${e.atk}`, desc: "", meta: "" },
-      { title: `DEF : ${e.def}`, desc: "", meta: "" },
-      { title: `SPD : ${e.spd}`, desc: "", meta: "" },
-      { title: `ACC : ${e.acc || 0}`, desc: "", meta: "" },
-      { title: `COMBUST : ${e.combustionChance || 0}%`, desc: "", meta: "" },
-            { title: `CRIT : ${e.critChance}%`, desc: "", meta: "" },
-      { title: `CRIT DMG : ${e.critDamage}%`, desc: "", meta: "" },
-      { title: `EVASION : ${e.evasion}%`, desc: "", meta: "" },
-      { title: `BLOCK : ${e.blockRate || 0}%`, desc: "", meta: "" },
-      { title: `ESCAPE : ${e.escapeChance || 0}%`, desc: "", meta: "" },
-      { title: `MANA REGEN : ${e.manaRegen || 0}`, desc: "", meta: "" },
-    ],
+    `${e.name} Stats`,
+    buildCombatStatRows(e),
+    () => {}
+  );
+}
+
+function openAllyStatsModal(ally) {
+  if (!ally) return;
+  modal.open(
+    `${ally.name} Stats`,
+    buildCombatStatRows(ally),
     () => {}
   );
 }
