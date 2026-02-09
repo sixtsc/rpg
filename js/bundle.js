@@ -359,6 +359,7 @@ function normalizePlayer(p){
   if (!Array.isArray(p.skills)) p.skills = [];
   p.skills = p.skills.map((skill) => {
     if (!skill || !skill.name) return skill;
+    if (skill.name === "Blazing Shield") skill.name = "Blazing Aura";
     const template = Object.values(SKILLS).find((entry) => entry && entry.name === skill.name);
     if (!template) return skill;
     return { ...template, ...skill, icon: skill.icon || template.icon };
@@ -377,6 +378,7 @@ function normalizePlayer(p){
       if (typeof entry === "object" && entry.name) return entry.name;
       return null;
     });
+    p.skillSlots = p.skillSlots.map((entry) => (entry === "Blazing Shield" ? "Blazing Aura" : entry));
   }
 
   // Safety defaults (older saves)
