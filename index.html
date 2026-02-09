@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Text RPG Turn-Based (Modular)</title>
   <link rel="stylesheet" href="./styles.css?v=v37" />
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body>
   
@@ -407,6 +408,82 @@
     <div class="skillShopBody">
       <div class="skillShopLabel" id="skillShopLabel">FIRE SKILL</div>
       <div class="skillShopGrid" id="skillShopItemsGrid"></div>
+    </div>
+  </section>
+
+  <section id="profileEquipmentPage" class="profileEquipmentPage hidden" aria-hidden="true">
+    <div class="profileEquipBackdrop min-h-screen w-full px-4 pb-24 pt-6 text-white sm:px-8">
+      <header class="mx-auto flex w-full max-w-5xl flex-col gap-4">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="profileLevelBadge glassPanel">
+              <span id="profileEquipLevel">Lv 1</span>
+            </div>
+            <div>
+              <div id="profileEquipName" class="text-lg font-semibold">Hero</div>
+              <div class="text-xs text-sky-200/70">Character Profile</div>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="profileCurrency glassPanel">
+              <svg class="profileCurrencyIcon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2 2.5 12 12 22 21.5 12 12 2Z" fill="#4CC9F0" stroke="#B4F0FF" stroke-width="1.5"/>
+                <path d="M12 5.5 5.5 12 12 18.5 18.5 12 12 5.5Z" fill="#1F6BFF" opacity="0.7"/>
+              </svg>
+              <span id="profileEquipGems">0</span>
+            </div>
+            <div class="profileCurrency glassPanel">
+              <svg class="profileCurrencyIcon" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" fill="#F5B942" stroke="#FFE3A1" stroke-width="1.5"/>
+                <path d="M8 9.5h8M8 12h8M8 14.5h8" stroke="#7A4B00" stroke-width="1.4" stroke-linecap="round"/>
+              </svg>
+              <span id="profileEquipGold">0</span>
+            </div>
+            <button id="profileEquipBack" class="profileEquipButton profileEquipGhost" type="button">Back</button>
+          </div>
+        </div>
+        <div class="glassPanel profileExpWrap">
+          <div class="flex items-center justify-between text-xs text-sky-100/80">
+            <span>EXP</span>
+            <span id="profileEquipExpValue">0%</span>
+          </div>
+          <div class="profileExpBar mt-2">
+            <div id="profileEquipExpFill" class="profileExpFill"></div>
+          </div>
+        </div>
+      </header>
+
+      <div class="mx-auto mt-6 flex w-full max-w-5xl flex-col gap-6">
+        <div class="glassPanel profileCharacterCard">
+          <div class="profileBanner">Character Profile</div>
+          <div class="profileAvatarStage">
+            <div class="profileAvatarPlatform">
+              <div class="profileAvatarFloat" id="profileEquipAvatar">H</div>
+              <div class="profileAvatarLevel" id="profileEquipAvatarLevel">Lv 1</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="profileTabsWrap">
+          <div id="profileEquipTabs" class="profileEquipTabs" role="tablist" aria-label="Kategori Equipment"></div>
+        </div>
+
+        <div id="profileEquipGrid" class="profileEquipGrid"></div>
+      </div>
+    </div>
+
+    <div id="profileEquipModal" class="profileEquipModal" aria-hidden="true">
+      <div class="profileEquipModalCard glassPanel">
+        <div class="text-center">
+          <div id="profileEquipModalIcon" class="text-5xl">🗡️</div>
+          <div id="profileEquipModalName" class="mt-2 text-lg font-bold">Item</div>
+          <p id="profileEquipModalDesc" class="mt-1 text-sm text-slate-200/70">Deskripsi item.</p>
+        </div>
+        <div class="mt-4 flex gap-3">
+          <button id="profileEquipModalCancel" class="profileEquipButton profileEquipGhost" type="button">Cancel</button>
+          <button id="profileEquipModalEquip" class="profileEquipButton profileEquipPrimary" type="button">Equip</button>
+        </div>
+      </div>
     </div>
   </section>
 

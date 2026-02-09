@@ -1504,6 +1504,274 @@ body.inBattle .enemyMiniMeta .muted{
 .choice .desc{ color:var(--muted); font-size:12px; }
 .choice .right{ text-align:right; }
 
+/* Profile equipment page */
+.profileEquipmentPage{
+  position:fixed;
+  inset:0;
+  z-index:9000;
+  overflow-y:auto;
+  background: #0b111c;
+}
+.profileEquipBackdrop{
+  background:
+    radial-gradient(circle at top, rgba(84,140,220,.35), transparent 55%),
+    radial-gradient(circle at 20% 40%, rgba(66,224,255,.2), transparent 50%),
+    linear-gradient(180deg, rgba(7, 14, 24, 0.96), rgba(6, 9, 16, 0.98));
+}
+.glassPanel{
+  background: rgba(20, 30, 46, 0.6);
+  border: 1px solid rgba(120, 160, 220, 0.2);
+  border-radius: 18px;
+  box-shadow: 0 18px 40px rgba(3, 8, 20, 0.35);
+  backdrop-filter: blur(12px);
+}
+.profileLevelBadge{
+  padding:8px 14px;
+  font-weight:700;
+  letter-spacing:0.3px;
+  color:#d7f3ff;
+}
+.profileCurrency{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  font-weight:700;
+  color:#e6f6ff;
+}
+.profileCurrencyIcon{
+  width:18px;
+  height:18px;
+}
+.profileEquipButton{
+  padding:10px 16px;
+  border-radius:14px;
+  font-weight:700;
+  letter-spacing:0.3px;
+  transition: transform .15s ease, background .2s ease, border-color .2s ease;
+}
+.profileEquipButton:active{ transform: scale(0.95); }
+.profileEquipPrimary{
+  background: linear-gradient(140deg, rgba(63, 164, 255, 0.9), rgba(60, 96, 255, 0.9));
+  border: 1px solid rgba(104, 189, 255, 0.6);
+  box-shadow: 0 10px 20px rgba(25, 80, 150, 0.35);
+}
+.profileEquipGhost{
+  background: rgba(13, 22, 36, 0.6);
+  border: 1px solid rgba(120, 160, 220, 0.25);
+}
+.profileExpWrap{ padding:12px 16px; }
+.profileExpBar{
+  width:100%;
+  height:10px;
+  border-radius:999px;
+  background: rgba(255,255,255,0.1);
+  overflow:hidden;
+  position:relative;
+}
+.profileExpFill{
+  height:100%;
+  width:0%;
+  border-radius:999px;
+  background: linear-gradient(90deg, rgba(67, 195, 255, 0.9), rgba(110, 240, 255, 0.9));
+  transition: width .4s ease;
+}
+.profileCharacterCard{
+  padding:20px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+.profileBanner{
+  align-self:center;
+  padding:6px 18px;
+  border-radius:999px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:1.5px;
+  background: rgba(31, 64, 112, 0.65);
+  border:1px solid rgba(93, 170, 255, 0.4);
+}
+.profileAvatarStage{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+.profileAvatarPlatform{
+  width:180px;
+  height:180px;
+  border-radius:50%;
+  background: radial-gradient(circle, rgba(92, 165, 255, 0.45), rgba(9, 18, 34, 0.95));
+  box-shadow: 0 24px 60px rgba(6, 12, 24, 0.6);
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.profileAvatarPlatform::after{
+  content:"";
+  position:absolute;
+  top:-80%;
+  left:-50%;
+  width:200%;
+  height:60%;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,0.45), transparent);
+  transform: rotate(12deg);
+  animation: profileShine 4s ease-in-out infinite;
+}
+.profileAvatarFloat{
+  width:84px;
+  height:84px;
+  border-radius:20px;
+  background: rgba(16, 26, 44, 0.85);
+  border: 1px solid rgba(120, 170, 240, 0.4);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:36px;
+  font-weight:800;
+  text-shadow:0 6px 16px rgba(0,0,0,0.4);
+  animation: profileFloat 3s ease-in-out infinite;
+  z-index:1;
+}
+.profileAvatarLevel{
+  position:absolute;
+  bottom:24px;
+  right:40px;
+  padding:4px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:700;
+  background: rgba(10, 18, 32, 0.8);
+  border:1px solid rgba(120, 170, 240, 0.5);
+  z-index:2;
+}
+.profileTabsWrap{
+  overflow:hidden;
+}
+.profileEquipTabs{
+  display:flex;
+  gap:12px;
+  overflow-x:auto;
+  padding-bottom:8px;
+  scroll-snap-type:x mandatory;
+}
+.profileEquipTab{
+  position:relative;
+  padding:10px 16px;
+  border-radius:16px 16px 6px 6px;
+  background: rgba(11, 20, 34, 0.7);
+  border:1px solid rgba(120, 160, 220, 0.2);
+  font-weight:700;
+  white-space:nowrap;
+  scroll-snap-align:start;
+  transition: background .25s ease, border-color .25s ease;
+}
+.profileEquipTab:active{
+  transform: scale(0.97);
+}
+.profileEquipTab::after{
+  content:"";
+  position:absolute;
+  left:12px;
+  right:12px;
+  bottom:-6px;
+  height:3px;
+  border-radius:999px;
+  background: rgba(88, 180, 255, 0.9);
+  transform: scaleX(0);
+  transform-origin:center;
+  transition: transform .25s ease;
+}
+.profileEquipTab.active{
+  background: rgba(30, 80, 140, 0.65);
+  border-color: rgba(88, 180, 255, 0.9);
+}
+.profileEquipTab.active::after{
+  transform: scaleX(1);
+}
+.profileEquipGrid{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap:12px;
+  transition: opacity .2s ease;
+}
+.profileEquipGrid.is-fading{ opacity:0.6; }
+.profileEquipSlot{
+  background: linear-gradient(160deg, rgba(23, 40, 70, 0.85), rgba(13, 18, 30, 0.95));
+  border:1px solid rgba(88, 140, 210, 0.35);
+  border-radius:16px;
+  min-height:86px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  font-weight:700;
+  color:#e5f3ff;
+  position:relative;
+  cursor:pointer;
+  transition: transform .2s ease, border-color .2s ease;
+}
+.profileEquipSlot:active{
+  transform: scale(0.97);
+}
+.profileEquipSlot.empty{
+  opacity:0.55;
+  cursor:default;
+}
+.profileEquipSlot small{
+  font-size:11px;
+  color:rgba(226, 240, 255, 0.6);
+}
+.profileEquipSlot.equipped::after{
+  content:"Equipped";
+  position:absolute;
+  top:8px;
+  right:8px;
+  padding:2px 6px;
+  border-radius:999px;
+  font-size:9px;
+  background: rgba(64, 174, 255, 0.85);
+  color:#04101c;
+  font-weight:800;
+}
+.profileEquipModal{
+  position:fixed;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: rgba(4, 8, 14, 0.75);
+  opacity:0;
+  pointer-events:none;
+  transition: opacity .2s ease;
+  z-index:9100;
+}
+.profileEquipModal.is-open{
+  opacity:1;
+  pointer-events:auto;
+}
+.profileEquipModalCard{
+  width:min(320px, 90vw);
+  padding:20px;
+  transform: scale(0.92);
+  transition: transform .2s ease;
+}
+.profileEquipModal.is-open .profileEquipModalCard{
+  transform: scale(1);
+}
+@keyframes profileFloat{
+  0%, 100%{ transform: translateY(0); }
+  50%{ transform: translateY(-10px); }
+}
+@keyframes profileShine{
+  0%{ transform: translateX(-60%) rotate(12deg); opacity:0; }
+  40%{ opacity:0.7; }
+  100%{ transform: translateX(60%) rotate(12deg); opacity:0; }
+}
+
 .choice.danger{
   border-color: rgba(255, 120, 120, .55);
 }

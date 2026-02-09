@@ -456,6 +456,8 @@ function newState(){
     shopEquipCategory: "weapon",
     skillShopCategory: "fire",
     inventoryCategory: "item",
+    profileEquipTab: "costume",
+    profileEquipSelected: null,
     playerDefending: false,
     turn: "town",
     battleTurn: 0 // "town" | "player" | "enemy"
@@ -1953,6 +1955,10 @@ function refresh(state) {
   if (skillShopPage && !skillShopPage.classList.contains("hidden")) {
     renderSkillShopPage();
   }
+  const profileEquipPage = $("profileEquipmentPage");
+  if (profileEquipPage && !profileEquipPage.classList.contains("hidden")) {
+    renderProfileEquipmentPage();
+  }
 
   document.body.classList.toggle("inBattle", !!inBattle);
   document.body.classList.toggle("inTown", !inBattle);
@@ -2570,6 +2576,7 @@ function learnSkill(skillKey){
 function setMarketPageVisible(show){
   const page = byId("marketPage");
   const skillPage = byId("skillShopPage");
+  const profileEquipPage = byId("profileEquipmentPage");
   const wrap = document.querySelector(".wrap");
   if (!page || !wrap) return;
   if (show) {
@@ -2579,6 +2586,10 @@ function setMarketPageVisible(show){
     if (skillPage) {
       skillPage.classList.add("hidden");
       skillPage.setAttribute("aria-hidden", "true");
+    }
+    if (profileEquipPage) {
+      profileEquipPage.classList.add("hidden");
+      profileEquipPage.setAttribute("aria-hidden", "true");
     }
   } else {
     page.classList.add("hidden");
@@ -2590,6 +2601,7 @@ function setMarketPageVisible(show){
 function setSkillShopPageVisible(show){
   const page = byId("skillShopPage");
   const marketPage = byId("marketPage");
+  const profileEquipPage = byId("profileEquipmentPage");
   const wrap = document.querySelector(".wrap");
   if (!page || !wrap) return;
   if (show) {
@@ -2600,11 +2612,194 @@ function setSkillShopPageVisible(show){
       marketPage.classList.add("hidden");
       marketPage.setAttribute("aria-hidden", "true");
     }
+    if (profileEquipPage) {
+      profileEquipPage.classList.add("hidden");
+      profileEquipPage.setAttribute("aria-hidden", "true");
+    }
   } else {
     page.classList.add("hidden");
     page.setAttribute("aria-hidden", "true");
     wrap.classList.remove("hidden");
   }
+}
+
+const PROFILE_EQUIP_TABS = [
+  { key: "costume", label: "Costume", slot: "pant", icon: "👘" },
+  { key: "hand", label: "Hand", slot: "hand", icon: "🗡️" },
+  { key: "head", label: "Head", slot: "head", icon: "🪖" },
+  { key: "body", label: "Body", slot: "armor", icon: "🛡️" },
+  { key: "shoes", label: "Shoes", slot: "shoes", icon: "🥾" },
+  { key: "back", label: "Back Item", slot: "back", icon: "🎒" },
+  { key: "accessories", label: "Accesories", slot: "accessory", icon: "💍" },
+];
+
+function setProfileEquipmentPageVisible(show){
+  const page = byId("profileEquipmentPage");
+  const marketPage = byId("marketPage");
+  const skillPage = byId("skillShopPage");
+  const wrap = document.querySelector(".wrap");
+  if (!page || !wrap) return;
+  if (show) {
+    page.classList.remove("hidden");
+    page.setAttribute("aria-hidden", "false");
+    wrap.classList.add("hidden");
+    if (marketPage) {
+      marketPage.classList.add("hidden");
+      marketPage.setAttribute("aria-hidden", "true");
+    }
+    if (skillPage) {
+      skillPage.classList.add("hidden");
+      skillPage.setAttribute("aria-hidden", "true");
+    }
+  } else {
+    page.classList.add("hidden");
+    page.setAttribute("aria-hidden", "true");
+    wrap.classList.remove("hidden");
+    setProfileEquipModalOpen(false);
+  }
+}
+
+function getProfileEquipTabConfig(tabKey){
+  return PROFILE_EQUIP_TABS.find((tab) => tab.key === tabKey) || PROFILE_EQUIP_TABS[0];
+}
+
+function getProfileEquipSlotForTab(tabKey){
+  return getProfileEquipTabConfig(tabKey)?.slot || null;
+}
+
+function getProfileEquipItems(tabKey){
+  const p = state.player;
+  if (!p || !p.inv) return [];
+  const slot = getProfileEquipSlotForTab(tabKey);
+  if (!slot) return [];
+  return Object.keys(p.inv)
+    .map((name) => ({ name, entry: p.inv[name] }))
+    .filter((row) => row.entry && row.entry.kind === "gear" && row.entry.slot === slot);
+}
+
+function getProfileEquipIcon(entry, fallbackIcon){
+  if (entry && entry.icon) return entry.icon;
+  return fallbackIcon || "✨";
+}
+
+function getProfileEquipExpPercent(p){
+  if (!p || p.level >= MAX_LEVEL) return 100;
+  if (!p.xpToLevel) return 0;
+  return Math.min(100, Math.max(0, Math.round((p.xp / p.xpToLevel) * 100)));
+}
+
+function setProfileEquipModalOpen(open){
+  const modal = byId("profileEquipModal");
+  if (!modal) return;
+  modal.classList.toggle("is-open", open);
+  modal.setAttribute("aria-hidden", open ? "false" : "true");
+}
+
+function openProfileEquipModal(payload){
+  const iconEl = byId("profileEquipModalIcon");
+  const nameEl = byId("profileEquipModalName");
+  const descEl = byId("profileEquipModalDesc");
+  const equipBtn = byId("profileEquipModalEquip");
+  if (!payload || !nameEl || !descEl || !equipBtn) return;
+  state.profileEquipSelected = payload;
+  if (iconEl) iconEl.textContent = payload.icon || "✨";
+  nameEl.textContent = payload.name || "Item";
+  const statText = payload.entry ? formatItemStats(payload.entry) : "";
+  const desc = payload.entry?.desc || "Perlengkapan";
+  descEl.textContent = statText ? `${desc} (${statText})` : desc;
+  equipBtn.disabled = !payload.slot || payload.isEquipped;
+  equipBtn.textContent = payload.isEquipped ? "Equipped" : "Equip";
+  setProfileEquipModalOpen(true);
+}
+
+function renderProfileEquipmentHeader(){
+  const p = state.player || {};
+  const nameEl = byId("profileEquipName");
+  const levelEl = byId("profileEquipLevel");
+  const goldEl = byId("profileEquipGold");
+  const gemEl = byId("profileEquipGems");
+  const expEl = byId("profileEquipExpValue");
+  const expFill = byId("profileEquipExpFill");
+  const pct = getProfileEquipExpPercent(p);
+  if (nameEl) nameEl.textContent = p.name || "Hero";
+  if (levelEl) levelEl.textContent = `Lv ${p.level || 1}`;
+  if (goldEl) goldEl.textContent = `${p.gold || 0}`;
+  if (gemEl) gemEl.textContent = `${p.gems || 0}`;
+  if (expEl) expEl.textContent = `${pct}%`;
+  if (expFill) expFill.style.width = `${pct}%`;
+}
+
+function renderProfileEquipmentAvatar(){
+  const p = state.player || {};
+  const avatarEl = byId("profileEquipAvatar");
+  const levelBadge = byId("profileEquipAvatarLevel");
+  const initial = p.name ? p.name.trim().charAt(0).toUpperCase() : "H";
+  if (avatarEl) avatarEl.textContent = initial;
+  if (levelBadge) levelBadge.textContent = `Lv ${p.level || 1}`;
+}
+
+function renderProfileEquipmentTabs(){
+  const tabsEl = byId("profileEquipTabs");
+  if (!tabsEl) return;
+  tabsEl.innerHTML = "";
+  PROFILE_EQUIP_TABS.forEach((tab) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `profileEquipTab${state.profileEquipTab === tab.key ? " active" : ""}`;
+    btn.textContent = tab.label;
+    btn.onclick = () => {
+      state.profileEquipTab = tab.key;
+      renderProfileEquipmentTabs();
+      renderProfileEquipmentGrid();
+    };
+    tabsEl.appendChild(btn);
+  });
+}
+
+function renderProfileEquipmentGrid(){
+  const grid = byId("profileEquipGrid");
+  if (!grid) return;
+  grid.classList.add("is-fading");
+  setTimeout(() => grid.classList.remove("is-fading"), 150);
+  grid.innerHTML = "";
+  const tab = getProfileEquipTabConfig(state.profileEquipTab);
+  const items = getProfileEquipItems(tab.key);
+  const slotKey = tab.slot;
+  const p = state.player || {};
+  const equippedName = slotKey && p.equipment ? p.equipment[slotKey] : null;
+  const minSlots = Math.max(8, Math.ceil(items.length / 4) * 4);
+  items.forEach((row) => {
+    const icon = getProfileEquipIcon(row.entry, tab.icon);
+    const isEquipped = equippedName === row.name;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `profileEquipSlot${isEquipped ? " equipped" : ""}`;
+    btn.innerHTML = `
+      <div class="text-2xl">${icon}</div>
+      <small>${escapeHtml(row.name)}</small>
+    `;
+    btn.onclick = () => openProfileEquipModal({
+      name: row.name,
+      entry: row.entry,
+      slot: slotKey,
+      icon,
+      isEquipped,
+    });
+    grid.appendChild(btn);
+  });
+  for (let i = items.length; i < minSlots; i += 1) {
+    const empty = document.createElement("div");
+    empty.className = "profileEquipSlot empty";
+    empty.innerHTML = `<div class="text-xl">✨</div><small>Empty</small>`;
+    grid.appendChild(empty);
+  }
+}
+
+function renderProfileEquipmentPage(){
+  renderProfileEquipmentHeader();
+  renderProfileEquipmentAvatar();
+  renderProfileEquipmentTabs();
+  renderProfileEquipmentGrid();
 }
 
 function ensureMarketState(){
@@ -4053,11 +4248,19 @@ function openProfileModal(){
       { title: "Skill Slot", desc: "Pilih skill untuk slot battle.", meta: "", value: "skill_slot" },
     ],
     (pick) => {
-      if (pick === "equip") return openEquipmentModal();
+      if (pick === "equip") return openProfileEquipmentPage();
       if (pick === "stat") return openProfileStatModal();
       if (pick === "skill_slot") return openSkillSlotModal();
     }
   );
+}
+
+function openProfileEquipmentPage(){
+  if (state.inBattle) return;
+  modal.close();
+  setProfileEquipmentPageVisible(true);
+  if (!state.profileEquipTab) state.profileEquipTab = "costume";
+  renderProfileEquipmentPage();
 }
 
 function openProfileStatModal(){
@@ -4556,6 +4759,28 @@ function bind() {
   if (marketBack) marketBack.onclick = () => setMarketPageVisible(false);
   const skillShopBack = byId("skillShopBack");
   if (skillShopBack) skillShopBack.onclick = () => setSkillShopPageVisible(false);
+  const profileEquipBack = byId("profileEquipBack");
+  if (profileEquipBack) profileEquipBack.onclick = () => setProfileEquipmentPageVisible(false);
+  const profileEquipModal = byId("profileEquipModal");
+  if (profileEquipModal) {
+    profileEquipModal.onclick = (event) => {
+      if (event.target === profileEquipModal) setProfileEquipModalOpen(false);
+    };
+  }
+  const profileEquipModalCancel = byId("profileEquipModalCancel");
+  if (profileEquipModalCancel) profileEquipModalCancel.onclick = () => setProfileEquipModalOpen(false);
+  const profileEquipModalEquip = byId("profileEquipModalEquip");
+  if (profileEquipModalEquip) {
+    profileEquipModalEquip.onclick = () => {
+      const pick = state.profileEquipSelected;
+      if (!pick || !pick.slot) return;
+      const ok = equipItem(pick.slot, pick.name);
+      if (!ok) addLog("WARN", "Item tidak bisa dipakai.");
+      setProfileEquipModalOpen(false);
+      renderProfileEquipmentPage();
+      refresh(state);
+    };
+  }
   const playerStatLink = byId("playerStatLink");
   if (playerStatLink) playerStatLink.onclick = openStatsModal;
   const mailButton = byId("mailButton");
