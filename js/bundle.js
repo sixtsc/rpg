@@ -3198,7 +3198,6 @@ function beginPlayerTurn(){
     }, 380);
     return false;
   }
-  tickStatuses(state.player);
   applyManaRegen(state.player);
   refresh(state);
   return true;
@@ -3621,6 +3620,7 @@ function afterPlayerAction() {
   const e = getTargetEnemy();
   if (!e) return;
 
+  tickStatuses(state.player);
   setTurn("enemy");
   refresh(state);
   setTimeout(() => {
