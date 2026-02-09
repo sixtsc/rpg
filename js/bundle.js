@@ -2303,8 +2303,9 @@ function addStatusEffect(entity, status){
   if (existing){
     existing.turns = Math.max(existing.turns || 0, status.turns || 0);
     existing.debuff = status.debuff ?? existing.debuff;
+    existing.justApplied = true;
   } else {
-    list.push({ ...status });
+    list.push({ ...status, justApplied: true });
   }
 }
 
@@ -2316,7 +2317,12 @@ function tickStatuses(entity){
   if (!entity || !entity.statuses) return 0;
   let removed = 0;
   entity.statuses = entity.statuses
-    .map((s) => ({ ...s, turns: (s.turns || 0) - 1 }))
+    .map((s) => {
+      if (s.justApplied) {
+        return { ...s, justApplied: false };
+      }
+      return { ...s, turns: (s.turns || 0) - 1 };
+    })
     .filter((s) => {
       const alive = (s.turns || 0) > 0;
       if (!alive) removed += 1;
