@@ -1114,38 +1114,51 @@ function showBattleResultOverlay(summary, onClose) {
   $("battleResultTitle").textContent = summary.outcome === "win" ? "Victory" : "Defeat";
   $("battleResultEnemy").textContent = summary.enemyName ? `Vs ${summary.enemyName}` : "";
 
+  const isWin = summary.outcome === "win";
   const coreGrid = $("battleRewardCoreGrid");
   const dropGrid = $("battleRewardDropGrid");
+  const dropTitle = $("battleDropTitle");
   if (coreGrid) {
     coreGrid.innerHTML = "";
-    coreGrid.appendChild(createBattleRewardItem({
-      icon: getBattleRewardIcon({ type: "gold" }),
-      name: "Gold",
-      amount: `+${summary.gold || 0}`,
-    }));
-    coreGrid.appendChild(createBattleRewardItem({
-      icon: getBattleRewardIcon({ type: "xp" }),
-      name: "EXP",
-      amount: `+${summary.xp || 0}`,
-    }));
+    if (isWin) {
+      coreGrid.appendChild(createBattleRewardItem({
+        icon: getBattleRewardIcon({ type: "gold" }),
+        name: "Gold",
+        amount: `+${summary.gold || 0}`,
+      }));
+      coreGrid.appendChild(createBattleRewardItem({
+        icon: getBattleRewardIcon({ type: "xp" }),
+        name: "EXP",
+        amount: `+${summary.xp || 0}`,
+      }));
+    } else {
+      const empty = document.createElement("div");
+      empty.className = "battleRewardItem battleRewardEmpty";
+      empty.innerHTML = `<div class="battleRewardName">Tidak ada reward karena kalah.</div>`;
+      coreGrid.appendChild(empty);
+    }
   }
 
   const drops = Array.isArray(summary.drops) ? summary.drops : [];
+  if (dropTitle) dropTitle.style.display = isWin ? "block" : "none";
   if (dropGrid) {
+    dropGrid.style.display = isWin ? "grid" : "none";
     dropGrid.innerHTML = "";
-    if (!drops.length) {
-      const empty = document.createElement("div");
-      empty.className = "battleRewardItem battleRewardEmpty";
-      empty.innerHTML = `<div class="battleRewardName">Tidak ada drop item</div>`;
-      dropGrid.appendChild(empty);
-    } else {
-      drops.forEach((drop) => {
-        dropGrid.appendChild(createBattleRewardItem({
-          icon: getBattleRewardIcon(drop),
-          name: drop.name || "Item",
-          amount: `x${drop.qty || 1}`,
-        }));
-      });
+    if (isWin) {
+      if (!drops.length) {
+        const empty = document.createElement("div");
+        empty.className = "battleRewardItem battleRewardEmpty";
+        empty.innerHTML = `<div class="battleRewardName">Tidak ada drop item</div>`;
+        dropGrid.appendChild(empty);
+      } else {
+        drops.forEach((drop) => {
+          dropGrid.appendChild(createBattleRewardItem({
+            icon: getBattleRewardIcon(drop),
+            name: drop.name || "Item",
+            amount: `x${drop.qty || 1}`,
+          }));
+        });
+      }
     }
   }
 
