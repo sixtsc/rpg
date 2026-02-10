@@ -20,7 +20,7 @@ export const SKILLS = {
   },
   blazingShield: {
     id:103,
-    name:"Blazing Shield",
+    name:"Blazing Aura",
     icon:"",
     element:"fire",
     mpCost:14,
