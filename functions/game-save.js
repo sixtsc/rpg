@@ -52,28 +52,62 @@ export function validatePlayerSnapshot(player) {
   return { ok: true };
 }
 
+function validateProfilePayload(data) {
+  if (!Array.isArray(data.slots)) return { ok: false, message: "payload.slots wajib array" };
+  if (data.slots.length > 12) return { ok: false, message: "Jumlah slot terlalu banyak" };
+
+  for (const slot of data.slots) {
+    if (!slot) continue;
+    const valid = validatePlayerSnapshot(slot);
+    if (!valid.ok) return valid;
+  }
+
+  return { ok: true };
+}
+
 export function validateSavePayload(data) {
   if (!isObj(data)) return { ok: false, message: "payload harus object" };
-  if (!isObj(data.player)) return { ok: false, message: "payload.player wajib" };
-  return validatePlayerSnapshot(data.player);
+  if (isObj(data.player)) return validatePlayerSnapshot(data.player);
+  if (Array.isArray(data.slots)) return validateProfilePayload(data);
+  return { ok: false, message: "payload harus berisi player atau slots" };
+}
+
+function estimateProgress(player) {
+  if (!player) return { level: 0, gold: 0, totalXp: 0 };
+  return {
+    level: Number(player.level || 0),
+    gold: Number(player.gold || 0),
+    totalXp: Number(player.level || 0) * Number(player.xpToLevel || 0) + Number(player.xp || 0),
+  };
+}
+
+function extractMainPlayer(payload) {
+  if (payload?.player) return payload.player;
+  if (Array.isArray(payload?.slots)) {
+    const idx = typeof payload.activeSlot === "number" ? payload.activeSlot : 0;
+    return payload.slots[idx] || payload.slots.find(Boolean) || null;
+  }
+  return null;
 }
 
 export function validateProgression(prevParsed, nextParsed, maxGain = { gold: 25000, xp: 100000 }) {
-  if (!prevParsed || !prevParsed.player) return { ok: true };
-  const prev = prevParsed.player;
-  const next = nextParsed.player;
+  const prev = extractMainPlayer(prevParsed);
+  const next = extractMainPlayer(nextParsed);
+  if (!next) return { ok: false, message: "Karakter utama tidak ditemukan." };
+  if (!prev) return { ok: true };
 
-  if (next.level < prev.level) {
+  const prevStats = estimateProgress(prev);
+  const nextStats = estimateProgress(next);
+
+  if (nextStats.level < prevStats.level) {
     return { ok: false, message: "Level tidak boleh turun di cloud save." };
   }
 
-  if (next.gold - prev.gold > maxGain.gold) {
+  if (nextStats.gold - prevStats.gold > maxGain.gold) {
     return { ok: false, message: "Kenaikan gold terlalu besar." };
   }
 
-  const prevTotalXp = prev.level * prev.xpToLevel + prev.xp;
-  const nextTotalXp = next.level * next.xpToLevel + next.xp;
-  if (nextTotalXp - prevTotalXp > maxGain.xp) {
+  if (nextStats.totalXp - prevStats.totalXp > maxGain.xp) {
     return { ok: false, message: "Kenaikan XP terlalu besar." };
   }
 

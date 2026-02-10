@@ -1,5 +1,6 @@
 import { json, authUserId, checkRateLimit, logSecurityEvent } from "../_lib.js";
 import { validateSavePayload, validateProgression } from "../game-save.js";
+import { normalizeProfile, syncCharacterUidsFromProfile } from "../character-service.js";
 
 export async function onRequest({ request, env }) {
   if (request.method === "OPTIONS") {
@@ -42,7 +43,7 @@ export async function onRequest({ request, env }) {
       return json({ message: "Invalid JSON" }, { status: 400 });
     }
 
-    const data = body.data ?? null;
+    let data = body.data ?? null;
     if (data == null) return json({ message: "No data" }, { status: 400 });
 
     const validated = validateSavePayload(data);
@@ -66,6 +67,11 @@ export async function onRequest({ request, env }) {
       }
     }
 
+    const profile = normalizeProfile(data);
+    if (profile) {
+      data = await syncCharacterUidsFromProfile(env, userId, profile);
+    }
+
     const now = Math.floor(Date.now() / 1000);
     const payload = JSON.stringify(data);
 
@@ -84,7 +90,7 @@ export async function onRequest({ request, env }) {
         .run();
     }
 
-    return json({ ok: true });
+    return json({ ok: true, data });
   } catch (e) {
     return json({ message: "Server error (cloud-save): " + (e?.message || String(e)) }, { status: 500 });
   }

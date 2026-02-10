@@ -81,3 +81,36 @@ CREATE TABLE IF NOT EXISTS security_events (
 );
 
 CREATE INDEX IF NOT EXISTS idx_security_events_type_time ON security_events(event_type, created_at DESC);
+
+-- Character UID global (mulai dari 1) untuk fitur friend by UID
+CREATE TABLE IF NOT EXISTS characters (
+  uid INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
+  slot_index INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  gender TEXT,
+  payload TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  UNIQUE(user_id, slot_index),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_characters_user ON characters(user_id);
+
+CREATE TABLE IF NOT EXISTS character_friends (
+  id TEXT PRIMARY KEY,
+  requester_uid INTEGER NOT NULL,
+  addressee_uid INTEGER NOT NULL,
+  uid_low INTEGER NOT NULL,
+  uid_high INTEGER NOT NULL,
+  status TEXT NOT NULL CHECK(status IN ('pending','accepted','rejected','blocked')),
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  UNIQUE(uid_low, uid_high),
+  FOREIGN KEY (requester_uid) REFERENCES characters(uid) ON DELETE CASCADE,
+  FOREIGN KEY (addressee_uid) REFERENCES characters(uid) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_character_friends_req ON character_friends(requester_uid, status, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_character_friends_add ON character_friends(addressee_uid, status, updated_at DESC);
