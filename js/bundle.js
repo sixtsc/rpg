@@ -7,7 +7,7 @@ try{var _el=document.getElementById('menuSub'); if(_el && _el.textContent && _el
 const SKILLS = {
   fireball: { name:"Fireball", icon:"", element:"fire", mpCost:6, power:10, cooldown:3, desc:"Serangan api (damage tinggi)." },
   fireArrow: { name:"Fire Arrow", icon:"", element:"fire", mpCost:9, power:14, cooldown:4, desc:"Fire flame arrow that pierce to enemy" },
-  blazingShield: { name:"Blazing Shield", icon:"", element:"fire", mpCost:14, power:0, cooldown:4, desc:"Menyelimuti tubuh dengan aura api selama 2 turn. Apply effect Strengthen 20% selama durasi." },
+  blazingShield: { name:"Blazing Aura", icon:"", element:"fire", mpCost:14, power:0, cooldown:4, desc:"Menyelimuti tubuh dengan aura api selama 2 turn. Apply effect Strengthen 20% selama durasi." },
   echoStrike: { name:"Echo Strike", icon:"", element:"physical", mpCost:25, power:10, cooldown:8, desc:"Memberikan Stun kepada target selama 3 turn." }
 };
 const ITEMS = {
@@ -1598,7 +1598,7 @@ function useSkillAtIndex(idx){
   p.mp -= s.mpCost;
 
   addLog("SKILL", s.name);
-  if (s.name === "Blazing Shield") {
+  if (s.name === "Blazing Aura") {
     addStatusEffect(p, { type: "strengthen", turns: 2, debuff: false });
     s.cdLeft = s.cooldown || 0;
     afterPlayerAction();
