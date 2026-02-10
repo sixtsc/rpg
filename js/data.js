@@ -1,48 +1,48 @@
 export const SKILLS = {
   fireball: {
-    id:101,
     name:"Fireball",
     icon:"",
     element:"fire",
     mpCost:6,
     power:10,
-    desc:"Serangan api (damage tinggi)."
+    desc:"Serangan api (damage tinggi).",
+    id:101,
   },
   fireArrow: {
-    id:102,
     name:"Fire Arrow",
     icon:"",
     element:"fire",
     mpCost:9,
     power:14,
     cooldown:4,
-    desc:"Fire flame arrow that pierce to enemy"
+    desc:"Fire flame arrow that pierce to enemy",
+    id:102,
   },
   blazingShield: {
-    id:103,
     name:"Blazing Aura",
     icon:"",
     element:"fire",
     mpCost:14,
     power:0,
     cooldown:4,
-    desc:"Menyelimuti tubuh dengan aura api selama 2 turn. Apply effect Strengthen 20% selama durasi."
+    desc:"Menyelimuti tubuh dengan aura api selama 2 turn. Apply effect Strengthen 20% selama durasi.",
+    id:103,
   },
   echoStrike: {
-    id:104,
     name:"Echo Strike",
     icon:"",
     element:"physical",
     mpCost:25,
     power:10,
     cooldown:8,
-    desc:"Memberikan Stun kepada target selama 3 turn."
+    desc:"Memberikan Stun kepada target selama 3 turn.",
+    id:104,
   }
 };
 
 export const ITEMS = {
-  potion: { id:1, name:"Potion", kind:"heal_hp", amount:25, desc:"Memulihkan 25 HP" },
-  ether:  { id:2, name:"Ether", kind:"heal_mp", amount:10, desc:"Memulihkan 10 MP" }
+  potion: { name:"Potion", kind:"heal_hp", amount:25, desc:"Memulihkan 25 HP", id:1 },
+  ether:  { name:"Ether", kind:"heal_mp", amount:10, desc:"Memulihkan 10 MP", id:2 }
 };
 
 export const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton"];
