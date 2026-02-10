@@ -255,7 +255,7 @@ function newPlayer(){
     escapeChance:0,
     statuses: [],
     equipment: { hand:null, head:null, pant:null, armor:null, shoes:null },
-    equipmentBonus: { atk:0, def:0, spd:0 },
+    equipmentBonus: { atk:0, def:0, spd:0, evasion:0 },
 
     deprecatedSkillCooldown:0,
     xp:0, xpToLevel:50,
@@ -354,11 +354,12 @@ function normalizePlayer(p){
     p.equipment.shoes ??= null;
   }
   if (!p.equipmentBonus || typeof p.equipmentBonus !== "object") {
-    p.equipmentBonus = { atk:0, def:0, spd:0 };
+    p.equipmentBonus = { atk:0, def:0, spd:0, evasion:0 };
   } else {
     p.equipmentBonus.atk = Number(p.equipmentBonus.atk || 0);
     p.equipmentBonus.def = Number(p.equipmentBonus.def || 0);
     p.equipmentBonus.spd = Number(p.equipmentBonus.spd || 0);
+    p.equipmentBonus.evasion = Number(p.equipmentBonus.evasion || 0);
   }
   if (!Array.isArray(p.skills)) p.skills = [];
   p.skills = p.skills.map((skill) => {
@@ -420,7 +421,7 @@ function getItemRef(name, player){
 
 function calcEquipmentBonus(player){
   const p = player;
-  const bonus = { atk:0, def:0, spd:0 };
+  const bonus = { atk:0, def:0, spd:0, evasion:0 };
   if (!p || !p.equipment) return bonus;
   Object.values(p.equipment).forEach((name) => {
     const it = getItemRef(name, p);
@@ -428,6 +429,7 @@ function calcEquipmentBonus(player){
     if (typeof it.atk === "number") bonus.atk += it.atk;
     if (typeof it.def === "number") bonus.def += it.def;
     if (typeof it.spd === "number") bonus.spd += it.spd;
+    if (typeof it.evasion === "number") bonus.evasion += it.evasion;
   });
   return bonus;
 }
@@ -435,11 +437,12 @@ function calcEquipmentBonus(player){
 function applyEquipmentStats(player){
   const p = player;
   if (!p) return;
-  const prev = p.equipmentBonus || { atk:0, def:0, spd:0 };
+  const prev = p.equipmentBonus || { atk:0, def:0, spd:0, evasion:0 };
   const next = calcEquipmentBonus(p);
   p.atk = Math.max(0, (p.atk || 0) - (prev.atk || 0) + next.atk);
   p.def = Math.max(0, (p.def || 0) - (prev.def || 0) + next.def);
   p.spd = Math.max(0, (p.spd || 0) - (prev.spd || 0) + next.spd);
+  p.evasion = clamp((p.evasion || 0) - (prev.evasion || 0) + next.evasion, 0, 100);
   p.equipmentBonus = next;
 }
 
@@ -4485,6 +4488,7 @@ function openEquipSelect(slot){
 const LONG_PRESS_DELAY = 520;
 function bindLongPress(el, onLongPress, delay = LONG_PRESS_DELAY) {
   if (!el || typeof onLongPress !== "function") return;
+  el._longPressCallback = onLongPress;
   if (el.dataset.longPressBound === "true") return;
   el.dataset.longPressBound = "true";
   let timer = null;
@@ -4497,7 +4501,7 @@ function bindLongPress(el, onLongPress, delay = LONG_PRESS_DELAY) {
     clearTimer();
     timer = setTimeout(() => {
       el.dataset.longPressTriggered = "true";
-      onLongPress();
+      if (typeof el._longPressCallback === "function") el._longPressCallback();
     }, delay);
   };
   const cancel = () => {
