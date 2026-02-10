@@ -55,6 +55,7 @@ function migrateSkills(skills){
     if (skill?.id) acc[slug] = skill.id;
     return acc;
   }, {});
+  const validSkillIds = new Set(Object.values(SKILLS).map((entry) => entry?.id).filter((id) => id !== undefined));
   return skills.map((skill) => {
     if (!skill || typeof skill !== "object") return skill;
     if (!skill.id) {
@@ -64,7 +65,12 @@ function migrateSkills(skills){
       return skill;
     }
     if (typeof skill.id === "string") {
-      const nextId = slugToId[skill.id] || nameToId[skill.name];
+      const trimmedId = skill.id.trim();
+      if (/^\d+$/.test(trimmedId)) {
+        const numericId = Number(trimmedId);
+        if (validSkillIds.has(numericId)) return { ...skill, id: numericId };
+      }
+      const nextId = slugToId[trimmedId] || nameToId[skill.name];
       if (nextId) return { ...skill, id: nextId };
     }
     return skill;
