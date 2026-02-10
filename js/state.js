@@ -11,7 +11,7 @@ export function newPlayer(){
     gold:0,
     allies: [],
     skills:[SKILLS.fireball],
-    inv: { "Potion": { ...ITEMS.potion, qty:2 }, "Ether": { ...ITEMS.ether, qty:1 } }
+    inv: { "1": { ...ITEMS.potion, qty:2 }, "2": { ...ITEMS.ether, qty:1 } }
   };
 }
 
