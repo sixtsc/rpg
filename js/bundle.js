@@ -1638,15 +1638,37 @@ function formatDamageText(res, dmg){
   return tags.length ? `${base} (${tags.join(" ")})` : base;
 }
 
-function openSkillDescriptionModal(skill){
-  if (!skill) return;
-  const rows = [
-    { title: skill.name || "Skill", desc: skill.desc || "Tidak ada deskripsi.", meta: "" },
-    { title: `MP Cost : ${skill.mpCost || 0}`, desc: "Biaya MP untuk memakai skill.", meta: "" },
-    { title: `Power : ${skill.power || 0}`, desc: "Kekuatan serangan dasar skill.", meta: "" },
-    { title: `Cooldown : ${skill.cooldown || 0} turn`, desc: "Waktu tunggu sebelum skill bisa dipakai lagi.", meta: "" },
-  ];
-  modal.open("Skill Detail", rows, () => {});
+function ensureSkillFloatingDetail(){
+  let el = document.getElementById("skillFloatingDetail");
+  if (el) return el;
+  el = document.createElement("div");
+  el.id = "skillFloatingDetail";
+  el.className = "skillFloatingDetail";
+  document.body.appendChild(el);
+  return el;
+}
+
+function hideSkillFloatingDetail(){
+  const el = document.getElementById("skillFloatingDetail");
+  if (!el) return;
+  el.classList.remove("show");
+}
+
+function showSkillFloatingDetail(skill, anchorEl){
+  if (!skill || !anchorEl) return;
+  const el = ensureSkillFloatingDetail();
+  el.innerHTML = `
+    <div class="skillFloatingTitle">${escapeHtml(skill.name || "Skill")}</div>
+    <div class="skillFloatingDesc">${escapeHtml(skill.desc || "Tidak ada deskripsi.")}</div>
+    <div class="skillFloatingMeta">MP ${skill.mpCost || 0} • Power ${skill.power || 0} • CD ${skill.cooldown || 0} turn</div>
+  `;
+  const r = anchorEl.getBoundingClientRect();
+  const maxLeft = Math.max(8, window.innerWidth - 260);
+  const left = Math.min(maxLeft, Math.max(8, r.left + (r.width / 2) - 120));
+  const top = Math.max(8, r.top - 92);
+  el.style.left = `${left}px`;
+  el.style.top = `${top}px`;
+  el.classList.add("show");
 }
 
 function renderSkillSlots(){
@@ -1681,7 +1703,7 @@ function renderSkillSlots(){
         }
         useSkillAtIndex(i);
       };
-      bindLongPress(btn, () => openSkillDescriptionModal(skill));
+      bindLongPress(btn, () => showSkillFloatingDetail(skill, btn));
     } else {
       btn.textContent = "-";
       btn.disabled = true;
@@ -1691,6 +1713,7 @@ function renderSkillSlots(){
 }
 
 function useSkillAtIndex(idx){
+  hideSkillFloatingDetail();
   const p = state.player;
   const e = getTargetEnemy();
   if (!p || !e || !Array.isArray(p.skills)) return;
@@ -4506,6 +4529,10 @@ function bindLongPress(el, onLongPress, delay = LONG_PRESS_DELAY) {
   };
   const cancel = () => {
     clearTimer();
+    hideSkillFloatingDetail();
+    setTimeout(() => {
+      delete el.dataset.longPressTriggered;
+    }, 220);
   };
   el.addEventListener("touchstart", start, { passive: true });
   el.addEventListener("touchend", cancel);
