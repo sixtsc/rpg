@@ -333,9 +333,13 @@
     <div class="battleResultCard">
       <div class="battleResultTitle" id="battleResultTitle">Victory</div>
       <div class="battleResultEnemy" id="battleResultEnemy"></div>
-      <div class="battleResultLine" id="battleResultGold">Gold +0</div>
-      <div class="battleResultLine" id="battleResultXp">XP +0</div>
-      <div class="battleResultLine" id="battleResultDrops">Drop: -</div>
+
+      <div class="battleRewardSection" aria-label="Battle rewards">
+        <div class="battleRewardGrid" id="battleRewardCoreGrid"></div>
+        <div class="battleDropTitle">Drop Item</div>
+        <div class="battleRewardGrid battleDropGrid" id="battleRewardDropGrid"></div>
+      </div>
+
       <button class="battleResultBtn" id="battleResultClose">Continue</button>
     </div>
   </div>

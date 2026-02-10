@@ -1082,20 +1082,71 @@ function pulseMarketGrid(){
   setTimeout(() => grid.classList.remove("marketPulse"), 450);
 }
 
+function getBattleRewardIcon(entry) {
+  if (!entry) return "./assets/icons/universal.svg";
+  if (entry.type === "gold") return "./assets/icons/coin.svg";
+  if (entry.type === "xp") return "./assets/icons/universal.svg";
+  const slot = entry.slot || "";
+  if (slot === "hand") return "./assets/icons/weapon.svg";
+  if (slot === "head") return "./assets/icons/head.svg";
+  if (slot === "armor") return "./assets/icons/armor.svg";
+  if (slot === "pant") return "./assets/icons/pant.svg";
+  if (slot === "shoes") return "./assets/icons/shoes.svg";
+  return "./assets/icons/universal.svg";
+}
+
+function createBattleRewardItem({ icon, name, amount }) {
+  const card = document.createElement("div");
+  card.className = "battleRewardItem";
+  card.innerHTML = `
+    <div class="battleRewardFrame">
+      <img class="battleRewardIcon" src="${escapeHtml(icon || "./assets/icons/universal.svg")}" alt="" />
+    </div>
+    <div class="battleRewardName">${escapeHtml(name || "Reward")}</div>
+    <div class="battleRewardAmount">${escapeHtml(amount || "")}</div>
+  `;
+  return card;
+}
+
 function showBattleResultOverlay(summary, onClose) {
   const backdrop = $("battleResultBackdrop");
   if (!backdrop) return;
   $("battleResultTitle").textContent = summary.outcome === "win" ? "Victory" : "Defeat";
   $("battleResultEnemy").textContent = summary.enemyName ? `Vs ${summary.enemyName}` : "";
-  $("battleResultGold").textContent = `Gold +${summary.gold || 0}`;
-  $("battleResultXp").textContent = `XP +${summary.xp || 0}`;
 
-  const dropEl = $("battleResultDrops");
+  const coreGrid = $("battleRewardCoreGrid");
+  const dropGrid = $("battleRewardDropGrid");
+  if (coreGrid) {
+    coreGrid.innerHTML = "";
+    coreGrid.appendChild(createBattleRewardItem({
+      icon: getBattleRewardIcon({ type: "gold" }),
+      name: "Gold",
+      amount: `+${summary.gold || 0}`,
+    }));
+    coreGrid.appendChild(createBattleRewardItem({
+      icon: getBattleRewardIcon({ type: "xp" }),
+      name: "EXP",
+      amount: `+${summary.xp || 0}`,
+    }));
+  }
+
   const drops = Array.isArray(summary.drops) ? summary.drops : [];
-  if (!drops.length) {
-    dropEl.textContent = "Drop: -";
-  } else {
-    dropEl.textContent = `Drop: ${drops.map((d) => `${d.name} x${d.qty || 1}`).join(", ")}`;
+  if (dropGrid) {
+    dropGrid.innerHTML = "";
+    if (!drops.length) {
+      const empty = document.createElement("div");
+      empty.className = "battleRewardItem battleRewardEmpty";
+      empty.innerHTML = `<div class="battleRewardName">Tidak ada drop item</div>`;
+      dropGrid.appendChild(empty);
+    } else {
+      drops.forEach((drop) => {
+        dropGrid.appendChild(createBattleRewardItem({
+          icon: getBattleRewardIcon(drop),
+          name: drop.name || "Item",
+          amount: `x${drop.qty || 1}`,
+        }));
+      });
+    }
   }
 
   backdrop.style.display = "flex";
