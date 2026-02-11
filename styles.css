@@ -14,7 +14,17 @@
   --radius:16px;
 }
 
-*{ box-sizing:border-box; }
+*{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+*:focus,
+*:focus-visible,
+*:active{
+  outline:none !important;
+  box-shadow:none !important;
+}
 
 body{
   margin:0;

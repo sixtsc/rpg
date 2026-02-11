@@ -438,6 +438,23 @@
   <script src="./js/bundle.js?v=v40" defer></script>
 
   <script>
+    (function lockInteraction(){
+      const blockedEvents = ["copy", "cut", "contextmenu", "selectstart", "dragstart"];
+      blockedEvents.forEach(function(eventName){
+        document.addEventListener(eventName, function(event){
+          event.preventDefault();
+        });
+      });
+
+      document.addEventListener("keydown", function(event){
+        if (!event.ctrlKey && !event.metaKey) return;
+        const key = String(event.key || "").toLowerCase();
+        if (["c", "x", "u", "s", "a"].includes(key)) {
+          event.preventDefault();
+        }
+      });
+    })();
+
     // If bundle didn't run, show hint in-menu (no DevTools needed)
     setTimeout(function(){
       if(!window.__BUNDLE_LOADED__){
