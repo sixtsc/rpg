@@ -307,7 +307,7 @@
               <div class="battlePrimary">
                 <button class="primary" id="btnExplore">Adventure</button>
                 <button id="btnInventory">Inventory</button>
-                <button id="btnRecruit">Recruit</button>
+                <button id="btnRecruit">Ally</button>
                 <button id="btnProfile">Profile</button>
                 <button id="btnShop">Shop</button>
                 <button class="good" id="btnMenu">Menu</button>
@@ -413,6 +413,44 @@
       <div class="skillShopGrid" id="skillShopItemsGrid"></div>
     </div>
   </section>
+
+  <section id="allyPage" class="allyPage hidden" aria-hidden="true">
+    <div class="allyPageHeader">
+      <div class="marketCurrency" aria-label="Mata uang saat ini">
+        <div class="pill currencyPill">
+          <img class="currencyIcon" src="./assets/icons/coin.svg" alt="" />
+          <span id="allyPageGoldValue">0</span>
+        </div>
+        <div class="pill currencyPill">
+          <img class="currencyIcon" src="./assets/icons/gem.svg" alt="" />
+          <span id="allyPageGemValue">0</span>
+        </div>
+      </div>
+      <div class="marketTitle">
+        <h2>Ally</h2>
+        <p>Manajemen karakter ally untuk party-mu.</p>
+      </div>
+      <div class="marketActions">
+        <button class="marketBackBtn" id="allyBack" type="button" aria-label="Tutup">
+          <span aria-hidden="true">✕</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="allyPageBody">
+      <div id="allyGrid" class="allyGrid" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <div id="allyDetailPopup" class="allyDetailPopup hidden" aria-hidden="true">
+    <div class="allyDetailCard" role="dialog" aria-modal="true" aria-labelledby="allyDetailName">
+      <button id="allyDetailClose" class="allyDetailClose" type="button" aria-label="Tutup">✕</button>
+      <div class="allyDetailAvatar" id="allyDetailAvatar">A</div>
+      <h3 id="allyDetailName">Ally</h3>
+      <p id="allyDetailRole" class="allyDetailRole">Role</p>
+      <div class="allyDetailStats" id="allyDetailStats"></div>
+    </div>
+  </div>
 
   <!-- Modal (tetap satu kali) -->
   <div class="modalBackdrop" id="modalBackdrop">

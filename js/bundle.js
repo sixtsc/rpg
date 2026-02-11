@@ -47,38 +47,27 @@ const ALLY_AVATARS = {
   Ranger: { icon: "🏹", bg: "linear-gradient(135deg, #8be77b, #2c6b2a)" },
   Mystic: { icon: "🔮", bg: "linear-gradient(135deg, #c59bff, #4c2a7a)" }
 };
-const RECRUIT_TEMPLATES = [
-  {
-    id: "guardian",
-    name: "Guardian",
-    role: "Tank",
-    desc: "HP tinggi, cocok jadi tameng tim.",
-    base: { maxHp: 70, maxMp: 15, atk: 6, def: 7, spd: 4 },
-    growth: { maxHp: 8, maxMp: 2, atk: 1, def: 2, spd: 1 },
-    costBase: 35,
-    costPerLevel: 7
-  },
-  {
-    id: "ranger",
-    name: "Ranger",
-    role: "Striker",
-    desc: "Serangan cepat dengan damage stabil.",
-    base: { maxHp: 50, maxMp: 20, atk: 8, def: 4, spd: 7 },
-    growth: { maxHp: 6, maxMp: 3, atk: 2, def: 1, spd: 2 },
-    costBase: 30,
-    costPerLevel: 6
-  },
-  {
-    id: "mystic",
-    name: "Mystic",
-    role: "Support",
-    desc: "MP tinggi, membantu lewat serangan sihir.",
-    base: { maxHp: 45, maxMp: 30, atk: 7, def: 3, spd: 5 },
-    growth: { maxHp: 5, maxMp: 5, atk: 2, def: 1, spd: 1 },
-    costBase: 32,
-    costPerLevel: 6
-  }
-];
+const ALLY_DEFAULT = {
+  id: "astra",
+  name: "Astra",
+  role: "Vanguard",
+  level: 1,
+  maxHp: 62,
+  maxMp: 24,
+  hp: 62,
+  mp: 24,
+  atk: 9,
+  def: 4,
+  spd: 8,
+  critChance: 6,
+  critDamage: 0,
+  combustionChance: 0,
+  evasion: 6,
+  blockRate: 0,
+  escapeChance: 0,
+  manaRegen: 0,
+  statuses: []
+};
 const SHOP_GOODS = [
   { name:"Potion", price:12, ref: ITEMS.potion },
   { name:"Ether", price:18, ref: ITEMS.ether },
@@ -231,6 +220,24 @@ function dodgeChance(p,e){
 
 
 /* ===== state.js ===== */
+function createStarterAlly(level = 1){
+  const lv = Math.max(1, Number(level) || 1);
+  const maxHp = ALLY_DEFAULT.maxHp + (lv - 1) * 8;
+  const maxMp = ALLY_DEFAULT.maxMp + (lv - 1) * 3;
+  return {
+    ...ALLY_DEFAULT,
+    level: lv,
+    maxHp,
+    maxMp,
+    hp: maxHp,
+    mp: maxMp,
+    atk: ALLY_DEFAULT.atk + (lv - 1) * 2,
+    def: ALLY_DEFAULT.def + (lv - 1),
+    spd: ALLY_DEFAULT.spd + (lv - 1),
+    statuses: []
+  };
+}
+
 function newPlayer(){
   return {
     name:"Hero",
@@ -261,7 +268,7 @@ function newPlayer(){
     xp:0, xpToLevel:50,
     gold:0,
     gems:0,
-    allies: [],
+    allies: [createStarterAlly(1)],
     skills:[{ ...SKILLS.fireball, cdLeft:0 }],
     skillSlots: ["Fireball", null, null, null, null, null, null, null],
     inv: { "Potion": { ...ITEMS.potion, qty:2 }, "Ether": { ...ITEMS.ether, qty:1 } }
@@ -2081,6 +2088,10 @@ function refresh(state) {
   if (marketGemValue) marketGemValue.textContent = `${p.gems || 0}`;
   const skillShopGemValue = $("skillShopGemValue");
   if (skillShopGemValue) skillShopGemValue.textContent = `${p.gems || 0}`;
+  const allyPageGoldValue = $("allyPageGoldValue");
+  if (allyPageGoldValue) allyPageGoldValue.textContent = `${p.gold}`;
+  const allyPageGemValue = $("allyPageGemValue");
+  if (allyPageGemValue) allyPageGemValue.textContent = `${p.gems || 0}`;
 
   // Player bars
   $("hpText").textContent = `${p.hp}/${p.maxHp}`;
@@ -2094,6 +2105,10 @@ function refresh(state) {
   const skillShopPage = $("skillShopPage");
   if (skillShopPage && !skillShopPage.classList.contains("hidden")) {
     renderSkillShopPage();
+  }
+  const allyPage = $("allyPage");
+  if (allyPage && !allyPage.classList.contains("hidden")) {
+    renderAllyPage();
   }
 
   document.body.classList.toggle("inBattle", !!inBattle);
@@ -2335,6 +2350,9 @@ function ensureAllies(){
   if (!state.player) return [];
   if (!Array.isArray(state.player.allies)) state.player.allies = [];
   state.player.allies = state.player.allies.map(normalizeAlly).filter(Boolean);
+  if (!state.player.allies.length) {
+    state.player.allies.push(normalizeAlly(createStarterAlly(state.player.level || 1)));
+  }
   state.allies = state.player.allies;
   return state.allies;
 }
@@ -2360,47 +2378,125 @@ function pickEnemyTarget(){
   return { target: pick(allies), isPlayer: false };
 }
 
-function recruitCost(template, level){
-  return template.costBase + (level - 1) * template.costPerLevel;
+/* ------------------------------ Ally Page ------------------------------ */
+
+const ALLY_TILE_ICONS = ["🛡️", "⚔️", "✨", "🏹", "🌙", "🔥"];
+const ALLY_TILE_BACKGROUNDS = [
+  "linear-gradient(135deg, #6f8dff, #334e9b)",
+  "linear-gradient(135deg, #7ce1ff, #3f7896)",
+  "linear-gradient(135deg, #ffb47c, #9c4c2c)",
+  "linear-gradient(135deg, #c69bff, #5b3b95)",
+  "linear-gradient(135deg, #8bd6a3, #2d6646)"
+];
+
+function getAllyVisual(ally, idx = 0){
+  const seed = `${ally?.id || "ally"}-${idx}`;
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+  const icon = ALLY_TILE_ICONS[Math.abs(hash) % ALLY_TILE_ICONS.length];
+  const background = ALLY_TILE_BACKGROUNDS[Math.abs(hash) % ALLY_TILE_BACKGROUNDS.length];
+  return { icon, background };
 }
 
-function buildRecruit(template, level){
-  const maxHp = template.base.maxHp + (level - 1) * template.growth.maxHp;
-  const maxMp = template.base.maxMp + (level - 1) * template.growth.maxMp;
-  return normalizeAlly({
-    id: template.id,
-    name: template.name,
-    role: template.role,
-    level,
-    maxHp,
-    maxMp,
-    hp: maxHp,
-    mp: maxMp,
-    atk: template.base.atk + (level - 1) * template.growth.atk,
-    def: template.base.def + (level - 1) * template.growth.def,
-    spd: template.base.spd + (level - 1) * template.growth.spd,
-    critChance: 5,
-    critDamage: 0,
-    combustionChance: 0,
-    evasion: 4,
-    blockRate: 0,
-    escapeChance: 0,
-    manaRegen: 0
+function setAllyPageVisible(show){
+  const page = byId("allyPage");
+  const marketPage = byId("marketPage");
+  const skillPage = byId("skillShopPage");
+  const wrap = document.querySelector(".wrap");
+  if (!page || !wrap) return;
+  if (show) {
+    page.classList.remove("hidden");
+    page.setAttribute("aria-hidden", "false");
+    wrap.classList.add("hidden");
+    if (marketPage) {
+      marketPage.classList.add("hidden");
+      marketPage.setAttribute("aria-hidden", "true");
+    }
+    if (skillPage) {
+      skillPage.classList.add("hidden");
+      skillPage.setAttribute("aria-hidden", "true");
+    }
+  } else {
+    page.classList.add("hidden");
+    page.setAttribute("aria-hidden", "true");
+    wrap.classList.remove("hidden");
+    closeAllyDetailPopup();
+  }
+}
+
+
+function openAllyDetailPopup(ally, idx = 0){
+  const popup = byId("allyDetailPopup");
+  if (!popup || !ally) return;
+  const visual = getAllyVisual(ally, idx);
+  const avatar = byId("allyDetailAvatar");
+  const name = byId("allyDetailName");
+  const role = byId("allyDetailRole");
+  const stats = byId("allyDetailStats");
+  if (avatar) {
+    avatar.textContent = visual.icon;
+    avatar.style.background = visual.background;
+  }
+  if (name) name.textContent = ally.name || `Ally ${idx + 1}`;
+  if (role) role.textContent = `${ally.role || "Ally"} • Lv ${ally.level || 1}`;
+  if (stats) {
+    const rows = [
+      ["HP", `${ally.hp}/${ally.maxHp}`],
+      ["MP", `${ally.mp}/${ally.maxMp}`],
+      ["ATK", `${ally.atk || 0}`],
+      ["DEF", `${ally.def || 0}`],
+      ["SPD", `${ally.spd || 0}`],
+      ["CRIT", `${ally.critChance || 0}%`]
+    ];
+    stats.innerHTML = rows.map(([label, value]) => `
+      <div class="allyDetailStat">
+        <span class="allyDetailStatLabel">${escapeHtml(label)}</span>
+        <span class="allyDetailStatValue">${escapeHtml(value)}</span>
+      </div>
+    `).join("");
+  }
+  popup.classList.remove("hidden");
+  popup.setAttribute("aria-hidden", "false");
+}
+
+function closeAllyDetailPopup(){
+  const popup = byId("allyDetailPopup");
+  if (!popup) return;
+  popup.classList.add("hidden");
+  popup.setAttribute("aria-hidden", "true");
+}
+
+function renderAllyPage(){
+  ensureAllies();
+  const grid = byId("allyGrid");
+  if (!grid) return;
+  const allies = Array.isArray(state.player?.allies) ? state.player.allies : [];
+  if (!allies.length) {
+    grid.innerHTML = `<div class="marketEmptyState"><h3>Belum ada ally</h3><p>Karakter ally belum tersedia.</p></div>`;
+    return;
+  }
+  grid.innerHTML = "";
+  allies.forEach((ally, idx) => {
+    if (!ally) return;
+    const visual = getAllyVisual(ally, idx);
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "allyAvatarCard";
+    card.innerHTML = `
+      <div class="allyAvatarLevel">${escapeHtml(String(ally.level || 1))}</div>
+      <div class="allyAvatarPortrait" style="background:${escapeHtml(visual.background)}">${escapeHtml(visual.icon)}</div>
+      <div class="allyAvatarName">${escapeHtml(ally.name || `Ally ${idx + 1}`)}</div>
+    `;
+    card.onclick = () => openAllyDetailPopup(ally, idx);
+    grid.appendChild(card);
   });
 }
 
-function addRecruit(ally){
-  const allies = ensureAllies();
-  if (allies.length >= MAX_ALLIES) return false;
-  allies.push(ally);
-  return true;
-}
-
-function dismissRecruit(index){
-  const allies = ensureAllies();
-  if (!allies[index]) return false;
-  allies.splice(index, 1);
-  return true;
+function openAllyPage(){
+  if (state.inBattle) return;
+  modal.close();
+  setAllyPageVisible(true);
+  renderAllyPage();
 }
 
 function ensureStatuses(entity){
@@ -2752,6 +2848,7 @@ function learnSkill(skillKey){
 function setMarketPageVisible(show){
   const page = byId("marketPage");
   const skillPage = byId("skillShopPage");
+  const allyPage = byId("allyPage");
   const wrap = document.querySelector(".wrap");
   if (!page || !wrap) return;
   if (show) {
@@ -2761,6 +2858,10 @@ function setMarketPageVisible(show){
     if (skillPage) {
       skillPage.classList.add("hidden");
       skillPage.setAttribute("aria-hidden", "true");
+    }
+    if (allyPage) {
+      allyPage.classList.add("hidden");
+      allyPage.setAttribute("aria-hidden", "true");
     }
   } else {
     page.classList.add("hidden");
@@ -2772,6 +2873,7 @@ function setMarketPageVisible(show){
 function setSkillShopPageVisible(show){
   const page = byId("skillShopPage");
   const marketPage = byId("marketPage");
+  const allyPage = byId("allyPage");
   const wrap = document.querySelector(".wrap");
   if (!page || !wrap) return;
   if (show) {
@@ -2781,6 +2883,10 @@ function setSkillShopPageVisible(show){
     if (marketPage) {
       marketPage.classList.add("hidden");
       marketPage.setAttribute("aria-hidden", "true");
+    }
+    if (allyPage) {
+      allyPage.classList.add("hidden");
+      allyPage.setAttribute("aria-hidden", "true");
     }
   } else {
     page.classList.add("hidden");
@@ -3891,81 +3997,11 @@ function rest() {
 }
 
 function openRecruitModal(){
-  if (state.inBattle) return;
-  const p = state.player;
-  const allies = ensureAllies();
-  const level = p.level;
-  const slotsFilled = allies.length;
-  const slotsLeft = Math.max(0, MAX_ALLIES - slotsFilled);
-
-  const header = [{
-    title: `Slot Ally ${slotsFilled}/${MAX_ALLIES}`,
-    desc: slotsLeft ? "Pilih NPC untuk direkrut." : "Slot penuh. Lepas ally dulu.",
-    meta: ""
-  }];
-
-  const recruitChoices = RECRUIT_TEMPLATES.map((template) => {
-    const price = recruitCost(template, level);
-    const canHire = slotsLeft > 0 && p.gold >= price;
-    let meta = `${price} gold`;
-    if (!slotsLeft) meta += " (Slot penuh)";
-    else if (p.gold < price) meta += " (Gold kurang)";
-    const icon = allyAvatarIcon(template.name);
-    return {
-      title: `${icon} ${template.name} (Lv${level})`,
-      desc: template.desc,
-      meta,
-      value: canHire ? `hire:${template.id}` : undefined
-    };
-  });
-
-  const dismissChoices = allies.map((ally, idx) => ({
-    title: `${allyAvatarIcon(ally.name)} Lepas ${ally.name}`,
-    desc: `Kosongkan slot ally (${ally.role || "Ally"}).`,
-    meta: "",
-    value: `dismiss:${idx}`
-  }));
-
-  modal.open("Recruit Ally", header.concat(recruitChoices, dismissChoices), (pick) => {
-    if (String(pick).startsWith("hire:")) {
-      const id = String(pick).replace("hire:", "");
-      const template = RECRUIT_TEMPLATES.find((t) => t.id === id);
-      if (!template) return;
-      const price = recruitCost(template, level);
-      if (p.gold < price) {
-        addLog("WARN", "Gold tidak cukup.");
-        refresh(state);
-        return;
-      }
-      if (!addRecruit(buildRecruit(template, level))) {
-        addLog("WARN", "Slot ally penuh.");
-        refresh(state);
-        return;
-      }
-      p.gold -= price;
-      addLog("GOLD", `Rekrut ${template.name} (-${price} gold).`);
-      autosave(state);
-      (async () => {
-        try { await cloudTrySaveCurrentProfile(); } catch (e) {}
-      })();
-      refresh(state);
-      return;
-    }
-
-    if (String(pick).startsWith("dismiss:")) {
-      const idx = Number(String(pick).replace("dismiss:", ""));
-      const ally = allies[idx];
-      if (ally && dismissRecruit(idx)) {
-        addLog("INFO", `${ally.name} dilepas dari party.`);
-        autosave(state);
-        (async () => {
-          try { await cloudTrySaveCurrentProfile(); } catch (e) {}
-        })();
-        refresh(state);
-      }
-    }
-  });
+  // Backward compatibility alias: Recruit diganti menjadi Ally page.
+  openAllyPage();
 }
+
+
 
 /* ---------------------------- Battle actions ---------------------------- */
 
@@ -4773,12 +4809,12 @@ function bind() {
   const br=byId("btnRest"); if(br) br.onclick = rest;
   byId("btnInventory").onclick = openInventoryReadOnly;
   const btnRecruit = byId("btnRecruit");
-  if (btnRecruit) btnRecruit.onclick = openRecruitModal;
+  if (btnRecruit) btnRecruit.onclick = openAllyPage;
   const allySlotBadge = byId("allySlotBadge");
   if (allySlotBadge) {
     allySlotBadge.onclick = () => {
       if (state.inBattle) return;
-      openRecruitModal();
+      openAllyPage();
     };
   }
   const btnEnemyStats = byId("btnEnemyStats");
@@ -4796,6 +4832,16 @@ function bind() {
   if (marketBack) marketBack.onclick = () => setMarketPageVisible(false);
   const skillShopBack = byId("skillShopBack");
   if (skillShopBack) skillShopBack.onclick = () => setSkillShopPageVisible(false);
+  const allyBack = byId("allyBack");
+  if (allyBack) allyBack.onclick = () => setAllyPageVisible(false);
+  const allyDetailClose = byId("allyDetailClose");
+  if (allyDetailClose) allyDetailClose.onclick = closeAllyDetailPopup;
+  const allyDetailPopup = byId("allyDetailPopup");
+  if (allyDetailPopup) {
+    allyDetailPopup.addEventListener("click", (event) => {
+      if (event.target === allyDetailPopup) closeAllyDetailPopup();
+    });
+  }
   const playerStatLink = byId("playerStatLink");
   if (playerStatLink) playerStatLink.onclick = openStatsModal;
   const mailButton = byId("mailButton");
