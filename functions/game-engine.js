@@ -84,7 +84,7 @@ export function createBattleState(player) {
   };
 }
 
-function runEnemyTurn(state) {
+export function runEnemyTurn(state) {
   if (state.finished) return;
   state.turn = "enemy";
   const useRage = state.enemy.mp >= 5 && Math.random() < 0.25;
@@ -120,6 +120,10 @@ function completeWin(state) {
 }
 
 export function resolveBattleAction(state, action, skill = null) {
+  if (state.turn === "enemy") {
+    runEnemyTurn(state);
+  }
+
   if (state.finished) return state;
   if (state.turn !== "player") {
     throw new Error("Bukan giliran player.");
@@ -143,16 +147,35 @@ export function resolveBattleAction(state, action, skill = null) {
     }
     state.logs.push({ type: "info", text: `Gagal kabur. (Chance ${chance}%, Roll ${roll})` });
   } else if (action === "skill") {
-    if (!skill || typeof skill.mpCost !== "number" || typeof skill.power !== "number") {
+    if (!skill || typeof skill.name !== "string") {
       throw new Error("Data skill tidak valid.");
     }
-    if (state.player.mp < skill.mpCost) {
+
+    const normalizedName = skill.name.trim().toLowerCase();
+    const allowedSkills = Array.isArray(state.player.skills) ? state.player.skills : [];
+    const selectedSkill = allowedSkills.find((entry) => {
+      if (!entry || typeof entry !== "object" || typeof entry.name !== "string") return false;
+      return entry.name.trim().toLowerCase() === normalizedName;
+    });
+
+    if (!selectedSkill) {
+      throw new Error("Skill tidak tersedia.");
+    }
+
+    const mpCost = Number(selectedSkill.mpCost);
+    const power = Number(selectedSkill.power);
+    if (!Number.isFinite(mpCost) || !Number.isFinite(power) || mpCost < 0 || mpCost > 500 || power < 0 || power > 40) {
+      throw new Error("Stat skill tidak valid.");
+    }
+
+    if (state.player.mp < mpCost) {
       throw new Error("MP tidak cukup.");
     }
-    state.player.mp -= skill.mpCost;
-    const dmg = calcDamage(state.player.atk, state.enemy.def, skill.power, false);
+
+    state.player.mp -= mpCost;
+    const dmg = calcDamage(state.player.atk, state.enemy.def, Math.floor(power), false);
     state.enemy.hp = clamp(state.enemy.hp - dmg, 0, state.enemy.maxHp);
-    state.logs.push({ type: "you", text: `${skill.name || "Skill"}! Damage ${dmg}.` });
+    state.logs.push({ type: "you", text: `${selectedSkill.name || "Skill"}! Damage ${dmg}.` });
   } else {
     throw new Error("Action tidak didukung.");
   }

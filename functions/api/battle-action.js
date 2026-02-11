@@ -1,5 +1,5 @@
 import { json, authUserId, checkRateLimit } from "../_lib.js";
-import { resolveBattleAction } from "../game-engine.js";
+import { resolveBattleAction, runEnemyTurn } from "../game-engine.js";
 
 export async function onRequest({ request, env }) {
   if (request.method === "OPTIONS") {
@@ -40,8 +40,23 @@ export async function onRequest({ request, env }) {
     const state = JSON.parse(row.state);
     if (state.finished) return json({ ok: true, state, finished: true });
 
+    if (state.turn === "enemy") {
+      runEnemyTurn(state);
+      if (state.finished) {
+        const now = Math.floor(Date.now() / 1000);
+        await env.DB.prepare("UPDATE active_battles SET state = ?1, updated_at = ?2 WHERE user_id = ?3")
+          .bind(JSON.stringify(state), now, userId)
+          .run();
+        return json({ ok: true, state, finished: true });
+      }
+    }
+
+    const requestedSkill = body && typeof body.skill === "object" && body.skill !== null
+      ? { name: (body.skill.name || "").toString() }
+      : null;
+
     try {
-      resolveBattleAction(state, action, body.skill || null);
+      resolveBattleAction(state, action, requestedSkill);
     } catch (err) {
       return json({ message: err.message || "Action invalid" }, { status: 400 });
     }
