@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Text RPG Turn-Based (Modular)</title>
-  <link rel="stylesheet" href="./styles.css?v=v37" />
+  <link rel="stylesheet" href="./styles.css?v=v39" />
 </head>
 <body>
   
@@ -333,9 +333,13 @@
     <div class="battleResultCard">
       <div class="battleResultTitle" id="battleResultTitle">Victory</div>
       <div class="battleResultEnemy" id="battleResultEnemy"></div>
-      <div class="battleResultLine" id="battleResultGold">Gold +0</div>
-      <div class="battleResultLine" id="battleResultXp">XP +0</div>
-      <div class="battleResultLine" id="battleResultDrops">Drop: -</div>
+
+      <div class="battleRewardSection" aria-label="Battle rewards">
+        <div class="battleRewardGrid" id="battleRewardCoreGrid"></div>
+        <div class="battleDropTitle" id="battleDropTitle">Drop Item</div>
+        <div class="battleRewardGrid battleDropGrid" id="battleRewardDropGrid"></div>
+      </div>
+
       <button class="battleResultBtn" id="battleResultClose">Continue</button>
     </div>
   </div>
@@ -427,11 +431,11 @@
   <!-- Scripts (bundled, non-module) -->
   <script>
     // Cache-buster version (update when repackaging)
-    window.__APP_VER__ = "v18";
+    window.__APP_VER__ = "v20";
     window.__BUNDLE_LOADED__ = false;
   </script>
 
-  <script src="./js/bundle.js?v=v37" defer></script>
+  <script src="./js/bundle.js?v=v39" defer></script>
 
   <script>
     // If bundle didn't run, show hint in-menu (no DevTools needed)

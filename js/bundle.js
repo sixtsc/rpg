@@ -27,7 +27,11 @@ const ITEMS = {
   steelArmor: { name:"Steel Armor", kind:"gear", slot:"armor", desc:"Armor Lv8 dengan pertahanan tinggi.", def:7, level:8 },
   travelerPants: { name:"Traveler Pants", kind:"gear", slot:"pant", desc:"Celana Lv3 untuk perjalanan.", def:2, spd:1, level:3 },
   ironGreaves: { name:"Iron Greaves", kind:"gear", slot:"pant", desc:"Greaves Lv7 kokoh.", def:4, level:7 },
-  swiftBoots: { name:"Swift Boots", kind:"gear", slot:"shoes", desc:"Sepatu Lv5 meningkatkan kecepatan.", spd:2, level:5 }
+  swiftBoots: { name:"Swift Boots", kind:"gear", slot:"shoes", desc:"Sepatu Lv5 meningkatkan kecepatan.", spd:2, level:5 },
+  banditsDagger: { name:"Bandit's Dagger", kind:"gear", slot:"hand", desc:"Dagger bandit. Basic attack punya 25% chance memberi Poison 3% selama 1 turn.", atk:17, level:10, basicPoisonChance:25, poisonPct:3, poisonTurns:1 },
+  banditsHood: { name:"Bandit's Hood", kind:"gear", slot:"head", desc:"Hood bandit yang meningkatkan evasion.", evasion:4, level:10 },
+  banditsArmour: { name:"Bandit's Armour", kind:"gear", slot:"armor", desc:"Armor bandit dengan pertahanan tinggi dan sedikit speed.", def:10, spd:2, level:10 },
+  banditsBoots: { name:"Bandit's Boots", kind:"gear", slot:"shoes", desc:"Boots bandit yang sangat ringan.", spd:7, level:10 }
 };
 const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton"];
 const ENEMY_AVATARS = {
@@ -251,7 +255,7 @@ function newPlayer(){
     escapeChance:0,
     statuses: [],
     equipment: { hand:null, head:null, pant:null, armor:null, shoes:null },
-    equipmentBonus: { atk:0, def:0, spd:0 },
+    equipmentBonus: { atk:0, def:0, spd:0, evasion:0 },
 
     deprecatedSkillCooldown:0,
     xp:0, xpToLevel:50,
@@ -350,11 +354,12 @@ function normalizePlayer(p){
     p.equipment.shoes ??= null;
   }
   if (!p.equipmentBonus || typeof p.equipmentBonus !== "object") {
-    p.equipmentBonus = { atk:0, def:0, spd:0 };
+    p.equipmentBonus = { atk:0, def:0, spd:0, evasion:0 };
   } else {
     p.equipmentBonus.atk = Number(p.equipmentBonus.atk || 0);
     p.equipmentBonus.def = Number(p.equipmentBonus.def || 0);
     p.equipmentBonus.spd = Number(p.equipmentBonus.spd || 0);
+    p.equipmentBonus.evasion = Number(p.equipmentBonus.evasion || 0);
   }
   if (!Array.isArray(p.skills)) p.skills = [];
   p.skills = p.skills.map((skill) => {
@@ -416,7 +421,7 @@ function getItemRef(name, player){
 
 function calcEquipmentBonus(player){
   const p = player;
-  const bonus = { atk:0, def:0, spd:0 };
+  const bonus = { atk:0, def:0, spd:0, evasion:0 };
   if (!p || !p.equipment) return bonus;
   Object.values(p.equipment).forEach((name) => {
     const it = getItemRef(name, p);
@@ -424,6 +429,7 @@ function calcEquipmentBonus(player){
     if (typeof it.atk === "number") bonus.atk += it.atk;
     if (typeof it.def === "number") bonus.def += it.def;
     if (typeof it.spd === "number") bonus.spd += it.spd;
+    if (typeof it.evasion === "number") bonus.evasion += it.evasion;
   });
   return bonus;
 }
@@ -431,11 +437,12 @@ function calcEquipmentBonus(player){
 function applyEquipmentStats(player){
   const p = player;
   if (!p) return;
-  const prev = p.equipmentBonus || { atk:0, def:0, spd:0 };
+  const prev = p.equipmentBonus || { atk:0, def:0, spd:0, evasion:0 };
   const next = calcEquipmentBonus(p);
   p.atk = Math.max(0, (p.atk || 0) - (prev.atk || 0) + next.atk);
   p.def = Math.max(0, (p.def || 0) - (prev.def || 0) + next.def);
   p.spd = Math.max(0, (p.spd || 0) - (prev.spd || 0) + next.spd);
+  p.evasion = clamp((p.evasion || 0) - (prev.evasion || 0) + next.evasion, 0, 100);
   p.equipmentBonus = next;
 }
 
@@ -1078,20 +1085,84 @@ function pulseMarketGrid(){
   setTimeout(() => grid.classList.remove("marketPulse"), 450);
 }
 
+function getBattleRewardIcon(entry) {
+  if (!entry) return "./assets/icons/universal.svg";
+  if (entry.type === "gold") return "./assets/icons/coin.svg";
+  if (entry.type === "xp") return "./assets/icons/universal.svg";
+  const slot = entry.slot || "";
+  if (slot === "hand") return "./assets/icons/weapon.svg";
+  if (slot === "head") return "./assets/icons/head.svg";
+  if (slot === "armor") return "./assets/icons/armor.svg";
+  if (slot === "pant") return "./assets/icons/pant.svg";
+  if (slot === "shoes") return "./assets/icons/shoes.svg";
+  return "./assets/icons/universal.svg";
+}
+
+function createBattleRewardItem({ icon, name, amount }) {
+  const card = document.createElement("div");
+  card.className = "battleRewardItem";
+  card.innerHTML = `
+    <div class="battleRewardFrame">
+      <img class="battleRewardIcon" src="${escapeHtml(icon || "./assets/icons/universal.svg")}" alt="" />
+    </div>
+    <div class="battleRewardName">${escapeHtml(name || "Reward")}</div>
+    <div class="battleRewardAmount">${escapeHtml(amount || "")}</div>
+  `;
+  return card;
+}
+
 function showBattleResultOverlay(summary, onClose) {
   const backdrop = $("battleResultBackdrop");
   if (!backdrop) return;
   $("battleResultTitle").textContent = summary.outcome === "win" ? "Victory" : "Defeat";
   $("battleResultEnemy").textContent = summary.enemyName ? `Vs ${summary.enemyName}` : "";
-  $("battleResultGold").textContent = `Gold +${summary.gold || 0}`;
-  $("battleResultXp").textContent = `XP +${summary.xp || 0}`;
 
-  const dropEl = $("battleResultDrops");
+  const isWin = summary.outcome === "win";
+  const coreGrid = $("battleRewardCoreGrid");
+  const dropGrid = $("battleRewardDropGrid");
+  const dropTitle = $("battleDropTitle");
+  if (coreGrid) {
+    coreGrid.innerHTML = "";
+    if (isWin) {
+      coreGrid.appendChild(createBattleRewardItem({
+        icon: getBattleRewardIcon({ type: "gold" }),
+        name: "Gold",
+        amount: `+${summary.gold || 0}`,
+      }));
+      coreGrid.appendChild(createBattleRewardItem({
+        icon: getBattleRewardIcon({ type: "xp" }),
+        name: "EXP",
+        amount: `+${summary.xp || 0}`,
+      }));
+    } else {
+      const empty = document.createElement("div");
+      empty.className = "battleRewardItem battleRewardEmpty";
+      empty.innerHTML = `<div class="battleRewardName">Tidak ada reward karena kalah.</div>`;
+      coreGrid.appendChild(empty);
+    }
+  }
+
   const drops = Array.isArray(summary.drops) ? summary.drops : [];
-  if (!drops.length) {
-    dropEl.textContent = "Drop: -";
-  } else {
-    dropEl.textContent = `Drop: ${drops.map((d) => `${d.name} x${d.qty || 1}`).join(", ")}`;
+  if (dropTitle) dropTitle.style.display = isWin ? "block" : "none";
+  if (dropGrid) {
+    dropGrid.style.display = isWin ? "grid" : "none";
+    dropGrid.innerHTML = "";
+    if (isWin) {
+      if (!drops.length) {
+        const empty = document.createElement("div");
+        empty.className = "battleRewardItem battleRewardEmpty";
+        empty.innerHTML = `<div class="battleRewardName">Tidak ada drop item</div>`;
+        dropGrid.appendChild(empty);
+      } else {
+        drops.forEach((drop) => {
+          dropGrid.appendChild(createBattleRewardItem({
+            icon: getBattleRewardIcon(drop),
+            name: drop.name || "Item",
+            amount: `x${drop.qty || 1}`,
+          }));
+        });
+      }
+    }
   }
 
   backdrop.style.display = "flex";
@@ -1135,6 +1206,7 @@ function getEnemyQueue(){
 
 function getDefaultEnemyTargetIndex(queue){
   if (!Array.isArray(queue) || !queue.length) return 0;
+  if (queue.length === 3) return 0;
   return clamp(Math.floor(queue.length / 2), 0, queue.length - 1);
 }
 
@@ -1566,6 +1638,39 @@ function formatDamageText(res, dmg){
   return tags.length ? `${base} (${tags.join(" ")})` : base;
 }
 
+function ensureSkillFloatingDetail(){
+  let el = document.getElementById("skillFloatingDetail");
+  if (el) return el;
+  el = document.createElement("div");
+  el.id = "skillFloatingDetail";
+  el.className = "skillFloatingDetail";
+  document.body.appendChild(el);
+  return el;
+}
+
+function hideSkillFloatingDetail(){
+  const el = document.getElementById("skillFloatingDetail");
+  if (!el) return;
+  el.classList.remove("show");
+}
+
+function showSkillFloatingDetail(skill, anchorEl){
+  if (!skill || !anchorEl) return;
+  const el = ensureSkillFloatingDetail();
+  el.innerHTML = `
+    <div class="skillFloatingTitle">${escapeHtml(skill.name || "Skill")}</div>
+    <div class="skillFloatingDesc">${escapeHtml(skill.desc || "Tidak ada deskripsi.")}</div>
+    <div class="skillFloatingMeta">MP ${skill.mpCost || 0} • Power ${skill.power || 0} • CD ${skill.cooldown || 0} turn</div>
+  `;
+  const r = anchorEl.getBoundingClientRect();
+  const maxLeft = Math.max(8, window.innerWidth - 260);
+  const left = Math.min(maxLeft, Math.max(8, r.left + (r.width / 2) - 120));
+  const top = Math.max(8, r.top - 92);
+  el.style.left = `${left}px`;
+  el.style.top = `${top}px`;
+  el.classList.add("show");
+}
+
 function renderSkillSlots(){
   const grid = $("skillSlots");
   if (!grid) return;
@@ -1591,7 +1696,14 @@ function renderSkillSlots(){
       btn.innerHTML = `${icon}${cdBadge}`;
       btn.disabled = (state.turn !== "player") || p.mp < skill.mpCost || cdLeft > 0;
       btn.classList.toggle("cooldown", cdLeft > 0);
-      btn.onclick = () => useSkillAtIndex(i);
+      btn.onclick = () => {
+        if (btn.dataset.longPressTriggered === "true") {
+          delete btn.dataset.longPressTriggered;
+          return;
+        }
+        useSkillAtIndex(i);
+      };
+      bindLongPress(btn, () => showSkillFloatingDetail(skill, btn));
     } else {
       btn.textContent = "-";
       btn.disabled = true;
@@ -1601,6 +1713,7 @@ function renderSkillSlots(){
 }
 
 function useSkillAtIndex(idx){
+  hideSkillFloatingDetail();
   const p = state.player;
   const e = getTargetEnemy();
   if (!p || !e || !Array.isArray(p.skills)) return;
@@ -1677,6 +1790,11 @@ const STATUS_DEFS = {
   stun: {
     label: "Stun",
     desc: (turns) => `Restricted from action for ${turns} Turn.`,
+    kind: "debuff",
+  },
+  poison: {
+    label: "Poison",
+    desc: "Setiap akhir turn target, Max HP berkurang sebesar persentase poison.",
     kind: "debuff",
   },
 };
@@ -2300,13 +2418,28 @@ function addStatusEffect(entity, status){
   if (!entity || !status || !status.type) return;
   const list = ensureStatuses(entity);
   const existing = list.find((s) => s.type === status.type);
+  const keepGraceTick = status.type !== "poison";
   if (existing){
     existing.turns = Math.max(existing.turns || 0, status.turns || 0);
     existing.debuff = status.debuff ?? existing.debuff;
-    existing.justApplied = true;
+    if (typeof status.pct === "number") existing.pct = status.pct;
+    existing.justApplied = keepGraceTick;
   } else {
-    list.push({ ...status, justApplied: true });
+    list.push({ ...status, justApplied: keepGraceTick });
   }
+}
+
+function applyPoisonAtTurnEnd(entity){
+  if (!entity || !Array.isArray(entity.statuses) || entity.maxHp <= 1) return 0;
+  const poison = entity.statuses.find((s) => s.type === "poison" && (s.turns || 0) > 0);
+  if (!poison) return 0;
+  const pct = Math.max(0, Number(poison.pct || 0));
+  if (pct <= 0) return 0;
+  const reduce = Math.max(1, Math.floor((entity.maxHp || 0) * pct / 100));
+  const beforeMaxHp = entity.maxHp || 0;
+  entity.maxHp = Math.max(1, beforeMaxHp - reduce);
+  if (typeof entity.hp === "number") entity.hp = clamp(entity.hp, 0, entity.maxHp);
+  return beforeMaxHp - entity.maxHp;
 }
 
 function hasStatus(entity, type){
@@ -2315,6 +2448,11 @@ function hasStatus(entity, type){
 
 function tickStatuses(entity){
   if (!entity || !entity.statuses) return 0;
+  const poisonLoss = applyPoisonAtTurnEnd(entity);
+  if (poisonLoss > 0) {
+    const label = entity === state.player ? "Kamu" : (entity.name || "Target");
+    addLog("DEBUFF", `${label} terkena Poison: Max HP -${poisonLoss}.`);
+  }
   let removed = 0;
   entity.statuses = entity.statuses
     .map((s) => {
@@ -2414,6 +2552,7 @@ function formatItemStats(item){
   if (typeof item.atk === "number" && item.atk !== 0) stats.push(`ATK +${item.atk}`);
   if (typeof item.def === "number" && item.def !== 0) stats.push(`DEF +${item.def}`);
   if (typeof item.spd === "number" && item.spd !== 0) stats.push(`SPD +${item.spd}`);
+  if (typeof item.evasion === "number" && item.evasion !== 0) stats.push(`EVA +${item.evasion}%`);
   return stats.length ? stats.join(" | ") : "";
 }
 
@@ -3326,6 +3465,15 @@ function rollBattleDrops(enemy){
   const lvl = enemy?.level || 1;
   if (randInt(1, 100) <= 35) drops.push({ ...ITEMS.potion, qty: 1 });
   if (randInt(1, 100) <= (lvl >= 4 ? 28 : 18)) drops.push({ ...ITEMS.ether, qty: 1 });
+
+  const isStage10 = Number((state.currentStageName || "").replace(/\D+/g, "")) === 10;
+  const isBanditStageEnemy = enemy && (enemy.name === "Bandit" || enemy.name === "Leader Bandit");
+  if (isStage10 && isBanditStageEnemy) {
+    if (randInt(1, 100) <= 4) drops.push({ ...ITEMS.banditsDagger, qty: 1 });
+    if (randInt(1, 100) <= 5) drops.push({ ...ITEMS.banditsHood, qty: 1 });
+    if (randInt(1, 100) <= 4) drops.push({ ...ITEMS.banditsArmour, qty: 1 });
+    if (randInt(1, 100) <= 4) drops.push({ ...ITEMS.banditsBoots, qty: 1 });
+  }
   return drops;
 }
 
@@ -3685,8 +3833,16 @@ function startAdventureBattle(targetLevel, stageName){
   state.currentStageName = stageName;
   if (targetLevel === 8 || targetLevel === 10) {
     if (targetLevel === 10) {
+      const leaderBandit = genEnemyWithName(targetLevel, "Leader Bandit");
+      leaderBandit.maxHp = Math.round(leaderBandit.maxHp * 1.2);
+      leaderBandit.hp = leaderBandit.maxHp;
+      leaderBandit.atk = Math.round(leaderBandit.atk * 1.15);
+      leaderBandit.def = Math.round(leaderBandit.def * 1.1);
+      leaderBandit.spd = Math.round(leaderBandit.spd * 1.05);
+      leaderBandit.xpReward = Math.round(leaderBandit.xpReward * 1.25);
+      leaderBandit.goldReward = Math.round(leaderBandit.goldReward * 1.2);
       state.enemyQueue = [
-        genEnemyWithName(targetLevel, "Leader Bandit"),
+        leaderBandit,
         genEnemyWithName(targetLevel, "Bandit"),
         genEnemyWithName(targetLevel, "Bandit")
       ];
@@ -3836,6 +3992,19 @@ function openRecruitModal(){
 
 /* ---------------------------- Battle actions ---------------------------- */
 
+function tryApplyBasicAttackPoison(attacker, target){
+  if (!attacker || !target || !attacker.equipment || !attacker.inv) return;
+  const weaponName = attacker.equipment.hand;
+  if (!weaponName) return;
+  const weapon = attacker.inv[weaponName];
+  if (!weapon || !weapon.basicPoisonChance) return;
+  if (randInt(1, 100) > Number(weapon.basicPoisonChance || 0)) return;
+  const poisonPct = Math.max(1, Number(weapon.poisonPct || 0));
+  const poisonTurns = Math.max(1, Number(weapon.poisonTurns || 1));
+  addStatusEffect(target, { type: "poison", turns: poisonTurns, pct: poisonPct, debuff: true });
+  addLog("DEBUFF", `${target.name} terkena Poison ${poisonPct}% selama ${poisonTurns} turn.`);
+}
+
 function attack() {
   setTurn("player");
 
@@ -3854,6 +4023,7 @@ function attack() {
   if (res.dmg > 0) {
     e.hp = clamp(e.hp - res.dmg, 0, e.maxHp);
     playEnemyCritShake(targetIndex);
+    tryApplyBasicAttackPoison(p, e);
   }
   if (res.reflected > 0) {
     p.hp = clamp(p.hp - res.reflected, 0, p.maxHp);
@@ -4342,6 +4512,7 @@ function openEquipSelect(slot){
 const LONG_PRESS_DELAY = 520;
 function bindLongPress(el, onLongPress, delay = LONG_PRESS_DELAY) {
   if (!el || typeof onLongPress !== "function") return;
+  el._longPressCallback = onLongPress;
   if (el.dataset.longPressBound === "true") return;
   el.dataset.longPressBound = "true";
   let timer = null;
@@ -4354,11 +4525,15 @@ function bindLongPress(el, onLongPress, delay = LONG_PRESS_DELAY) {
     clearTimer();
     timer = setTimeout(() => {
       el.dataset.longPressTriggered = "true";
-      onLongPress();
+      if (typeof el._longPressCallback === "function") el._longPressCallback();
     }, delay);
   };
   const cancel = () => {
     clearTimer();
+    hideSkillFloatingDetail();
+    setTimeout(() => {
+      delete el.dataset.longPressTriggered;
+    }, 220);
   };
   el.addEventListener("touchstart", start, { passive: true });
   el.addEventListener("touchend", cancel);
