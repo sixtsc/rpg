@@ -1926,22 +1926,38 @@ body.inBattle .enemyMiniMeta .muted{
   padding:24px;
 }
 
+.allyPage{
+  padding-inline:14px;
+}
+
+.allyPageBody{
+  width:min(1180px, 100%);
+  margin-inline:auto;
+  padding:20px 12px;
+}
+
 .allyGrid{
+  --ally-card-width:240px;
+  --ally-card-height:220px;
   display:grid;
-  grid-template-columns:repeat(auto-fit, minmax(210px, 1fr));
-  grid-auto-rows:minmax(220px, auto);
+  grid-template-columns:repeat(auto-fill, minmax(var(--ally-card-width), var(--ally-card-width)));
+  grid-auto-rows:var(--ally-card-height);
   gap:16px;
+  justify-content:center;
   align-content:start;
-  max-height:calc((220px * 3) + (16px * 2));
+  min-height:calc((var(--ally-card-height) * 3) + (16px * 2));
+  max-height:calc((var(--ally-card-height) * 3) + (16px * 2));
   overflow-y:auto;
+  overflow-x:hidden;
   padding-right:4px;
 }
 .allyAvatarCard{
+  width:var(--ally-card-width);
+  height:var(--ally-card-height);
   border:1px solid rgba(124,161,255,0.4);
   border-radius:16px;
   background:radial-gradient(circle at top, rgba(111,157,255,0.3), rgba(22,30,52,0.94));
   color:var(--text);
-  min-height:220px;
   cursor:pointer;
   padding:14px;
   display:flex;
@@ -2117,9 +2133,15 @@ body.inBattle .enemyMiniMeta .muted{
 }
 
 @media (max-width: 720px){
+  .allyPage{
+    padding-inline:10px;
+  }
+  .allyPageBody{
+    padding:16px 8px;
+  }
   .allyGrid{
-    grid-auto-rows:minmax(200px, auto);
-    max-height:calc((200px * 3) + (16px * 2));
+    --ally-card-width:280px;
+    --ally-card-height:210px;
   }
   .allyDetailStats{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
   .allySkillGrid{ grid-template-columns:1fr; }
