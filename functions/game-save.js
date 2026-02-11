@@ -95,6 +95,11 @@ function estimateProgress(player) {
     xp,
     xpToLevel,
     stableXpScore,
+  if (!player) return { level: 0, gold: 0, totalXp: 0 };
+  return {
+    level: Number(player.level || 0),
+    gold: Number(player.gold || 0),
+    totalXp: Number(player.level || 0) * Number(player.xpToLevel || 0) + Number(player.xp || 0),
   };
 }
 
@@ -133,6 +138,7 @@ export function validateProgression(prevParsed, nextParsed, maxGain = { gold: 25
   }
 
   if (nextStats.stableXpScore - prevStats.stableXpScore > maxGain.xp) {
+  if (nextStats.totalXp - prevStats.totalXp > maxGain.xp) {
     return { ok: false, message: "Kenaikan XP terlalu besar." };
   }
 

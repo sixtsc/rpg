@@ -55,24 +55,26 @@ function u8FromB64(b64) {
   return out;
 }
 
-export async function hashPasswordPBKDF2(password, iterations = 180000) {
+export async function hashPasswordPBKDF2(password, iterations = 100000) {
+  const safeIterations = Math.min(Math.max(Number(iterations) || 100000, 100000), 100000);
   const enc = new TextEncoder();
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const key = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations, hash: "SHA-256" }, key, 256);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: safeIterations, hash: "SHA-256" }, key, 256);
   return {
     algo: "pbkdf2-sha256",
-    iterations,
+    iterations: safeIterations,
     saltB64: b64FromU8(salt),
     hashB64: b64FromU8(new Uint8Array(bits)),
   };
 }
 
-export async function verifyPBKDF2(password, saltB64, expectedHashB64, iterations = 180000) {
+export async function verifyPBKDF2(password, saltB64, expectedHashB64, iterations = 100000) {
+  const safeIterations = Math.min(Math.max(Number(iterations) || 100000, 1), 100000);
   const enc = new TextEncoder();
   const salt = u8FromB64(saltB64);
   const key = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations, hash: "SHA-256" }, key, 256);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: safeIterations, hash: "SHA-256" }, key, 256);
   const actual = b64FromU8(new Uint8Array(bits));
   return actual === expectedHashB64;
 }

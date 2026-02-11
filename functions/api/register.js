@@ -45,7 +45,7 @@ export async function onRequest({ request, env }) {
     if (exists) return json({ message: "Username sudah dipakai." }, { status: 409 });
 
     const id = randToken(16);
-    const pass = await hashPasswordPBKDF2(password, 180000);
+    const pass = await hashPasswordPBKDF2(password, 100000);
     const now = Math.floor(Date.now() / 1000);
 
     await env.DB

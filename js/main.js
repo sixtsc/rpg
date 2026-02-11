@@ -394,29 +394,30 @@ function runAway() {
   return false;
 }
 
-function useItem(name) {
+function useItem(id) {
   setTurn("player");
 
   const p = state.player;
-  const it = p.inv[name];
+  const it = p.inv[id];
 
   if (!it || it.qty <= 0) {
     addLog("WARN", "Item tidak ada/habis.");
     return false;
   }
+  const displayName = it.name || id;
 
   if (it.kind === "heal_hp") {
     const before = p.hp;
     p.hp = clamp(p.hp + it.amount, 0, p.maxHp);
-    addLog("ITEM", `Memakai ${name}. HP ${before}→${p.hp}`);
+    addLog("ITEM", `Memakai ${displayName}. HP ${before}→${p.hp}`);
   } else if (it.kind === "heal_mp") {
     const before = p.mp;
     p.mp = clamp(p.mp + it.amount, 0, p.maxMp);
-    addLog("ITEM", `Memakai ${name}. MP ${before}→${p.mp}`);
+    addLog("ITEM", `Memakai ${displayName}. MP ${before}→${p.mp}`);
   }
 
   it.qty -= 1;
-  if (it.qty <= 0) delete p.inv[name];
+  if (it.qty <= 0) delete p.inv[id];
 
   return true;
 }
@@ -469,14 +470,14 @@ function openItemModal() {
 
   modal.open(
     "Pilih Item",
-    keys.map((k) => ({
-      title: `${k} x${inv[k].qty}`,
-      desc: inv[k].desc,
-      meta: inv[k].kind === "heal_hp" ? `+${inv[k].amount} HP` : `+${inv[k].amount} MP`,
-      value: k,
+    keys.map((id) => ({
+      title: `${inv[id].name || id} x${inv[id].qty}`,
+      desc: inv[id].desc,
+      meta: inv[id].kind === "heal_hp" ? `+${inv[id].amount} HP` : `+${inv[id].amount} MP`,
+      value: id,
     })),
-    (name) => {
-      const ok = useItem(name);
+    (id) => {
+      const ok = useItem(id);
       if (ok) afterPlayerAction();
       else refresh(state);
     }
@@ -532,11 +533,11 @@ function openInventoryReadOnly() {
   modal.open(
     "Inventory",
     header.concat(
-      keys.map((k) => ({
-        title: `${k} x${inv[k].qty}`,
-        desc: inv[k].desc,
-        meta: inv[k].kind === "heal_hp" ? `+${inv[k].amount} HP` : `+${inv[k].amount} MP`,
-        value: k,
+      keys.map((id) => ({
+        title: `${inv[id].name || id} x${inv[id].qty}`,
+        desc: inv[id].desc,
+        meta: inv[id].kind === "heal_hp" ? `+${inv[id].amount} HP` : `+${inv[id].amount} MP`,
+        value: id,
       }))
     ),
     () => {}

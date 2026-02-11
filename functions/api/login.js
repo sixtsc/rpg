@@ -1,46 +1,12 @@
 import { json, randToken, sha256Hex, setCookie, verifyPBKDF2, hashPasswordPBKDF2, checkRateLimit, logSecurityEvent } from "../_lib.js";
 
-async function ensureUsersPasswordColumns(env) {
-  try {
-    await env.DB.prepare("ALTER TABLE users ADD COLUMN pass_algo TEXT NOT NULL DEFAULT 'legacy-sha256'").run();
-  } catch (err) {
-    if (!String(err?.message || "").toLowerCase().includes("duplicate column name")) {
-      throw err;
-    }
-  }
-
-  try {
-    await env.DB.prepare("ALTER TABLE users ADD COLUMN pass_iters INTEGER").run();
-  } catch (err) {
-    if (!String(err?.message || "").toLowerCase().includes("duplicate column name")) {
-      throw err;
-    }
-  }
-}
-
-async function loadUserByUsername(env, username) {
-  try {
-    return await env.DB
-      .prepare("SELECT id, pass_hash, pass_salt, pass_algo, pass_iters FROM users WHERE username = ?")
-      .bind(username)
-      .first();
-  } catch (err) {
-    const message = String(err?.message || "").toLowerCase();
-    if (!message.includes("no such column")) {
-      throw err;
-    }
-
-    await ensureUsersPasswordColumns(env);
-    return env.DB
-      .prepare("SELECT id, pass_hash, pass_salt, COALESCE(pass_algo, 'legacy-sha256') AS pass_algo, pass_iters FROM users WHERE username = ?")
-      .bind(username)
-      .first();
-  }
-}
-
 async function verifyPassword(user, password) {
   if (user.pass_algo === "pbkdf2-sha256") {
-    return verifyPBKDF2(password, user.pass_salt, user.pass_hash, Number(user.pass_iters || 180000));
+    try {
+      return await verifyPBKDF2(password, user.pass_salt, user.pass_hash, Number(user.pass_iters || 100000));
+    } catch {
+      return false;
+    }
   }
   const legacy = await sha256Hex(user.pass_salt + ":" + password);
   return legacy === user.pass_hash;
@@ -84,7 +50,10 @@ export async function onRequest({ request, env }) {
     const username = (body.username || "").toString().trim().toLowerCase();
     const password = (body.password || "").toString();
 
-    const user = await loadUserByUsername(env, username);
+    const user = await env.DB
+      .prepare("SELECT id, pass_hash, pass_salt, pass_algo, pass_iters FROM users WHERE username = ?")
+      .bind(username)
+      .first();
 
     if (!user) {
       await logSecurityEvent(env, null, "login_failed", `username=${username}`);
@@ -98,7 +67,7 @@ export async function onRequest({ request, env }) {
     }
 
     if (user.pass_algo !== "pbkdf2-sha256") {
-      const upgraded = await hashPasswordPBKDF2(password, 180000);
+      const upgraded = await hashPasswordPBKDF2(password, 100000);
       await env.DB
         .prepare("UPDATE users SET pass_hash = ?1, pass_salt = ?2, pass_algo = ?3, pass_iters = ?4 WHERE id = ?5")
         .bind(upgraded.hashB64, upgraded.saltB64, upgraded.algo, upgraded.iterations, user.id)

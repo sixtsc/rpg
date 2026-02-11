@@ -59,3 +59,7 @@ CREATE TABLE IF NOT EXISTS character_friends (
 CREATE INDEX IF NOT EXISTS idx_character_friends_req ON character_friends(requester_uid, status, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_character_friends_add ON character_friends(addressee_uid, status, updated_at DESC);
 ```
+
+## Troubleshooting login PBKDF2 di Cloudflare
+
+Jika muncul error terkait iterasi PBKDF2 (contoh: `iteration counts above 100000 are not supported`), gunakan iterasi `100000` pada implementasi auth backend.
