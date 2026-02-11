@@ -1,4 +1,5 @@
 import { json, authUserId } from "../_lib.js";
+import { normalizeProfile, applyCharacterUidsToProfile } from "../character-service.js";
 
 export async function onRequest({ request, env }) {
   if (request.method === "OPTIONS") {
@@ -22,20 +23,25 @@ export async function onRequest({ request, env }) {
   }
 
   try {
-  const userId = await authUserId(request, env);
-  if (!userId) return json({ error: "unauthorized", message: "Belum login." }, { status: 401 });
+    const userId = await authUserId(request, env);
+    if (!userId) return json({ error: "unauthorized", message: "Belum login." }, { status: 401 });
 
-  const row = await env.DB.prepare("SELECT data, version, updated_at FROM saves WHERE user_id = ?").bind(userId).first();
-  if (!row) return json({ ok: true, hasSave: false });
+    const row = await env.DB.prepare("SELECT data, version, updated_at FROM saves WHERE user_id = ?").bind(userId).first();
+    if (!row) return json({ ok: true, hasSave: false });
 
-  let parsed = row.data;
-  try {
-    parsed = JSON.parse(row.data);
-  } catch {
-    // keep raw string
-  }
+    let parsed = row.data;
+    try {
+      parsed = JSON.parse(row.data);
+    } catch {
+      // keep raw string
+    }
 
-  return json({ ok: true, hasSave: true, data: parsed, version: row.version, updated_at: row.updated_at });
+    const profile = normalizeProfile(parsed);
+    if (profile) {
+      parsed = await applyCharacterUidsToProfile(env, userId, profile);
+    }
+
+    return json({ ok: true, hasSave: true, data: parsed, version: row.version, updated_at: row.updated_at });
   } catch (e) {
     return json({ message: "Server error (cloud-load): " + (e?.message || String(e)) }, { status: 500 });
   }
