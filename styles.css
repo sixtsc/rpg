@@ -1928,62 +1928,64 @@ body.inBattle .enemyMiniMeta .muted{
 
 .allyGrid{
   display:grid;
-  grid-template-columns:repeat(auto-fill, minmax(118px, 1fr));
-  gap:12px;
+  grid-template-columns:repeat(auto-fit, minmax(210px, 1fr));
+  gap:16px;
 }
 .allyAvatarCard{
-  border:1px solid var(--line);
-  border-radius:12px;
-  background:linear-gradient(165deg, rgba(255,255,255,0.12), rgba(255,255,255,0.03));
+  border:1px solid rgba(124,161,255,0.4);
+  border-radius:16px;
+  background:radial-gradient(circle at top, rgba(111,157,255,0.3), rgba(22,30,52,0.94));
   color:var(--text);
-  min-height:150px;
+  min-height:220px;
   cursor:pointer;
-  padding:8px;
+  padding:14px;
   display:flex;
   flex-direction:column;
   align-items:center;
-  justify-content:space-between;
+  justify-content:flex-start;
+  gap:10px;
   transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
 .allyAvatarCard:hover{
   transform:translateY(-2px);
-  border-color:rgba(102,146,255,0.7);
-  box-shadow:0 8px 16px rgba(0,0,0,0.24);
+  border-color:rgba(151,184,255,0.95);
+  box-shadow:0 14px 24px rgba(0,0,0,0.32);
 }
 .allyAvatarLevel{
   width:100%;
   text-align:left;
   font-weight:800;
-  font-size:18px;
+  font-size:16px;
   color:#f4f6ff;
-  text-shadow:0 2px 4px rgba(0,0,0,0.5);
 }
 .allyAvatarPortrait{
-  width:74px;
-  height:74px;
-  border-radius:14px;
+  width:104px;
+  height:104px;
+  border-radius:20px;
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:40px;
-  border:1px solid rgba(255,255,255,0.3);
+  font-size:56px;
+  border:1px solid rgba(255,255,255,0.35);
   box-shadow:inset 0 -12px 18px rgba(0,0,0,0.2);
 }
 .allyAvatarName{
   width:100%;
   text-align:center;
+  font-size:22px;
+  font-weight:800;
+}
+.allyAvatarMeta{
   font-size:13px;
-  font-weight:700;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
+  font-weight:600;
+  color:var(--muted);
 }
 
 .allyDetailPopup{
   position:fixed;
   inset:0;
   z-index:10020;
-  background:rgba(3,7,18,0.65);
+  background:rgba(3,7,18,0.7);
   display:flex;
   align-items:center;
   justify-content:center;
@@ -1991,49 +1993,68 @@ body.inBattle .enemyMiniMeta .muted{
 }
 .allyDetailCard{
   position:relative;
-  width:min(420px, 100%);
+  width:min(780px, 100%);
+  max-height:min(90vh, 900px);
+  overflow:auto;
   border-radius:18px;
-  border:1px solid rgba(123,158,255,0.4);
+  border:1px solid rgba(123,158,255,0.45);
   background:linear-gradient(180deg, rgba(28,39,67,0.96), rgba(14,20,37,0.98));
   box-shadow:0 22px 45px rgba(0,0,0,0.45);
-  padding:18px 18px 16px;
-  text-align:center;
+  padding:20px;
 }
 .allyDetailClose{
   position:absolute;
   top:10px;
   right:10px;
-  width:30px;
-  height:30px;
+  width:34px;
+  height:34px;
   border-radius:8px;
   border:1px solid rgba(255,255,255,0.25);
   background:rgba(255,255,255,0.06);
   color:#fff;
   cursor:pointer;
 }
+.allyDetailHero{
+  display:flex;
+  gap:14px;
+  align-items:center;
+  margin-bottom:14px;
+}
+.allyDetailHeadline h3{ margin:0; font-size:28px; }
 .allyDetailAvatar{
-  width:84px;
-  height:84px;
-  margin:6px auto 10px;
+  width:98px;
+  height:98px;
   border-radius:18px;
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:44px;
+  font-size:48px;
   border:1px solid rgba(255,255,255,0.35);
 }
-.allyDetailCard h3{
-  margin:0;
-  font-size:24px;
+.allyDetailRole{ margin:4px 0; color:var(--muted); font-size:14px; }
+.allyDetailProgress{ margin:0 0 8px; font-size:12px; color:#c9d8ff; }
+.allyDetailLevelUp{
+  border:1px solid rgba(121,163,255,0.55);
+  background:rgba(87,129,238,0.25);
+  color:#f1f5ff;
+  border-radius:10px;
+  padding:8px 12px;
+  cursor:pointer;
+  font-weight:700;
 }
-.allyDetailRole{
-  margin:4px 0 12px;
-  color:var(--muted);
-  font-size:13px;
+.allyDetailLevelUp:disabled{ opacity:.5; cursor:not-allowed; }
+.allyDetailSection{
+  border:1px solid rgba(123,158,255,0.2);
+  background:rgba(255,255,255,0.03);
+  border-radius:12px;
+  padding:12px;
+  margin-bottom:12px;
 }
+.allyDetailSection h4{ margin:0 0 8px; font-size:14px; letter-spacing:.2px; }
+.allyDetailText{ margin:0; color:#d5def6; font-size:13px; line-height:1.45; }
 .allyDetailStats{
   display:grid;
-  grid-template-columns:repeat(2, minmax(0, 1fr));
+  grid-template-columns:repeat(3, minmax(0, 1fr));
   gap:8px;
 }
 .allyDetailStat{
@@ -2043,14 +2064,58 @@ body.inBattle .enemyMiniMeta .muted{
   padding:8px;
   text-align:left;
 }
-.allyDetailStatLabel{
-  display:block;
-  font-size:11px;
-  color:var(--muted);
+.allyDetailStatLabel{ display:block; font-size:11px; color:var(--muted); }
+.allyDetailStatValue{ font-size:15px; font-weight:700; }
+.allySkillGrid{
+  margin-top:8px;
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:8px;
 }
-.allyDetailStatValue{
-  font-size:15px;
+.allySkillCard{
+  border:1px solid rgba(138,168,255,0.28);
+  border-radius:10px;
+  padding:10px;
+  background:rgba(30,43,78,0.55);
+}
+.allySkillCard h5{ margin:0 0 5px; font-size:13px; }
+.allySkillCard p{ margin:0; font-size:12px; color:#cfdbff; }
+.allySkillCard.passive{ margin-top:8px; }
+.allySkillCooldown{
+  display:inline-block;
+  margin-top:6px;
+  font-size:11px;
+  color:#a7bcff;
   font-weight:700;
+}
+.allyEquipmentGrid{ display:grid; gap:8px; }
+.allyEquipItem{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:center;
+  border:1px solid rgba(138,168,255,0.28);
+  border-radius:10px;
+  padding:10px;
+  background:rgba(30,43,78,0.4);
+}
+.allyEquipItem p{ margin:3px 0 0; color:#d2ddff; font-size:12px; }
+.allyEquipActions{ display:flex; gap:6px; }
+.allyEquipActions button{
+  border:1px solid rgba(138,168,255,0.4);
+  border-radius:8px;
+  background:rgba(61,97,192,0.28);
+  color:#fff;
+  cursor:pointer;
+  padding:6px 8px;
+  font-size:12px;
+}
+
+@media (max-width: 720px){
+  .allyDetailStats{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .allySkillGrid{ grid-template-columns:1fr; }
+  .allyDetailHero{ align-items:flex-start; }
+  .allyDetailHeadline h3{ font-size:24px; }
 }
 .skillShopLabel{
   font-size:12px;
