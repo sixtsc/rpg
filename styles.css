@@ -1929,7 +1929,12 @@ body.inBattle .enemyMiniMeta .muted{
 .allyGrid{
   display:grid;
   grid-template-columns:repeat(auto-fit, minmax(210px, 1fr));
+  grid-auto-rows:minmax(220px, auto);
   gap:16px;
+  align-content:start;
+  max-height:calc((220px * 3) + (16px * 2));
+  overflow-y:auto;
+  padding-right:4px;
 }
 .allyAvatarCard{
   border:1px solid rgba(124,161,255,0.4);
@@ -2112,6 +2117,10 @@ body.inBattle .enemyMiniMeta .muted{
 }
 
 @media (max-width: 720px){
+  .allyGrid{
+    grid-auto-rows:minmax(200px, auto);
+    max-height:calc((200px * 3) + (16px * 2));
+  }
   .allyDetailStats{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
   .allySkillGrid{ grid-template-columns:1fr; }
   .allyDetailHero{ align-items:flex-start; }
