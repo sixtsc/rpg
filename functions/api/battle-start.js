@@ -1,5 +1,5 @@
 import { json, authUserId, checkRateLimit } from "../_lib.js";
-import { createBattleState } from "../game-engine.js";
+import { createBattleState, runEnemyTurn } from "../game-engine.js";
 
 export async function onRequest({ request, env }) {
   if (request.method === "OPTIONS") {
@@ -31,6 +31,9 @@ export async function onRequest({ request, env }) {
     if (!player) return json({ message: "Data player invalid." }, { status: 400 });
 
     const battle = createBattleState(player);
+    if (battle.turn === "enemy") {
+      runEnemyTurn(battle);
+    }
     const now = Math.floor(Date.now() / 1000);
 
     await env.DB
