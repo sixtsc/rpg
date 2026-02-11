@@ -73,6 +73,28 @@ export function validateSavePayload(data) {
 }
 
 function estimateProgress(player) {
+  if (!player) {
+    return {
+      level: 0,
+      gold: 0,
+      xp: 0,
+      xpToLevel: 0,
+      stableXpScore: 0,
+    };
+  }
+
+  const level = Number(player.level || 0);
+  const gold = Number(player.gold || 0);
+  const xp = Number(player.xp || 0);
+  const xpToLevel = Number(player.xpToLevel || 0);
+  const stableXpScore = level * 1000000 + xp;
+
+  return {
+    level,
+    gold,
+    xp,
+    xpToLevel,
+    stableXpScore,
   if (!player) return { level: 0, gold: 0, totalXp: 0 };
   return {
     level: Number(player.level || 0),
@@ -107,6 +129,15 @@ export function validateProgression(prevParsed, nextParsed, maxGain = { gold: 25
     return { ok: false, message: "Kenaikan gold terlalu besar." };
   }
 
+  if (nextStats.xpToLevel < prevStats.xpToLevel) {
+    return { ok: false, message: "xpToLevel tidak boleh turun di cloud save." };
+  }
+
+  if (nextStats.stableXpScore < prevStats.stableXpScore) {
+    return { ok: false, message: "Progress XP tidak boleh mundur." };
+  }
+
+  if (nextStats.stableXpScore - prevStats.stableXpScore > maxGain.xp) {
   if (nextStats.totalXp - prevStats.totalXp > maxGain.xp) {
     return { ok: false, message: "Kenaikan XP terlalu besar." };
   }
