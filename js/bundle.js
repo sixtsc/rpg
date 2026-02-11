@@ -2552,6 +2552,7 @@ function formatItemStats(item){
   if (typeof item.atk === "number" && item.atk !== 0) stats.push(`ATK +${item.atk}`);
   if (typeof item.def === "number" && item.def !== 0) stats.push(`DEF +${item.def}`);
   if (typeof item.spd === "number" && item.spd !== 0) stats.push(`SPD +${item.spd}`);
+  if (typeof item.evasion === "number" && item.evasion !== 0) stats.push(`EVA +${item.evasion}%`);
   return stats.length ? stats.join(" | ") : "";
 }
 
