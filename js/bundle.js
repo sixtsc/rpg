@@ -186,7 +186,9 @@ function resolveAttack(att, def, basePower, opts = {}) {
   const atkPower = hasStatus(att, "strengthen")
     ? Math.round((att.atk || 0) * 1.2)
     : (att.atk || 0);
-  let dmg = calcDamage(atkPower, def.def, basePower, false);
+  const guardDefBoost = hasStatus(def, "guardStance") ? Math.round((def.def || 0) * 0.35) : 0;
+  const effectiveDef = (def.def || 0) + guardDefBoost;
+  let dmg = calcDamage(atkPower, effectiveDef, basePower, false);
 
   const critChance = clamp(att.critChance || 0, 0, 100);
   const rollCrit = randInt(1, 100);
@@ -1849,6 +1851,11 @@ const STATUS_DEFS = {
   strengthen: {
     label: "Strengthen",
     desc: "Increases all output damage by X%.",
+    kind: "buff",
+  },
+  guardStance: {
+    label: "Guard Stance",
+    desc: "Meningkatkan DEF signifikan selama beberapa turn.",
     kind: "buff",
   },
   stun: {
@@ -4102,7 +4109,7 @@ function alliesAct(done){
         playEnemyCritShake(targetIndex);
       }
       if (skill?.type === "buff") {
-        addStatusEffect(ally, { type: "strengthen", turns: 2, debuff: false });
+        addStatusEffect(ally, { type: "guardStance", turns: 2, debuff: false });
       }
 
       if (res.reflected > 0) {
@@ -4866,32 +4873,57 @@ function openEnemyStatsModal(enemy = state.enemy) {
 
 function openAllyStatsModal(ally) {
   if (!ally) return;
-  const skillRows = [];
-  const basic = ally.basicAttack || {};
-  skillRows.push({
-    title: `Basic • ${basic.name || "Basic Attack"}`,
-    descHtml: `${escapeHtml(basic.desc || "-")}<br><span class="muted">Cooldown: -</span>`,
-    meta: ""
-  });
-  (ally.activeSkills || []).forEach((skill, idx) => {
-    skillRows.push({
-      title: `Active ${idx + 1} • ${skill.name || "Skill"}`,
-      descHtml: `${escapeHtml(skill.desc || "-")}<br><span class="muted">MP ${skill.mpCost || 0} • Power ${skill.power || 0} • CD ${(skill.cdLeft || 0)}/${skill.cooldown || 0}</span>`,
-      meta: (skill.cdLeft || 0) > 0 ? "Cooldown" : "Ready"
-    });
-  });
-  const passive = ally.passiveSkill || {};
-  skillRows.push({
-    title: `Passive • ${passive.name || "Passive"}`,
-    descHtml: `${escapeHtml(passive.desc || "-")}<br><span class="muted">Selalu aktif</span>`,
-    meta: "Passive"
-  });
 
-  modal.open(
-    `${ally.name} Stats`,
-    buildCombatStatRows(ally).concat(skillRows),
-    () => {}
-  );
+  const buildSkillCards = () => {
+    const cards = [];
+    const basic = ally.basicAttack || {};
+    cards.push({
+      title: `Basic • ${basic.name || "Basic Attack"}`,
+      descHtml: `${escapeHtml(basic.desc || "-")}<br><span class="muted">CD - • Basic Attack</span>`,
+      meta: "READY",
+      value: undefined,
+      className: "allySkillRow allySkillCardRow",
+      keepOpen: true,
+      skillRef: { name: basic.name || "Basic Attack", desc: basic.desc || "-", mpCost: 0, power: 2, cooldown: 0 }
+    });
+
+    (ally.activeSkills || []).forEach((skill, idx) => {
+      cards.push({
+        title: `Active ${idx + 1} • ${skill.name || "Skill"}`,
+        descHtml: `${escapeHtml(skill.desc || "-")}<br><span class="muted">MP ${skill.mpCost || 0} • Power ${skill.power || 0} • CD ${skill.cdLeft || 0}/${skill.cooldown || 0}</span>`,
+        meta: (skill.cdLeft || 0) > 0 ? `CD ${skill.cdLeft}` : "READY",
+        value: undefined,
+        className: "allySkillRow allySkillCardRow",
+        keepOpen: true,
+        skillRef: skill
+      });
+    });
+
+    const passive = ally.passiveSkill || {};
+    cards.push({
+      title: `Passive • ${passive.name || "Passive"}`,
+      descHtml: `${escapeHtml(passive.desc || "-")}<br><span class="muted">Selalu aktif</span>`,
+      meta: "PASSIVE",
+      value: undefined,
+      className: "allySkillRow allySkillCardRow",
+      keepOpen: true,
+      skillRef: { name: passive.name || "Passive", desc: passive.desc || "-", mpCost: 0, power: 0, cooldown: 0 }
+    });
+
+    return cards;
+  };
+
+  const choices = buildSkillCards().concat(buildCombatStatRows(ally));
+
+  modal.open(`${ally.name} Stats`, choices, () => {});
+
+  const skillRows = Array.from(document.querySelectorAll('#modalBody .choice.allySkillRow'));
+  const skillData = choices.filter((c) => String(c.className || "").includes("allySkillRow"));
+  skillRows.forEach((row, idx) => {
+    const skill = skillData[idx]?.skillRef;
+    if (!skill) return;
+    bindLongPress(row, () => showSkillFloatingDetail(skill, row));
+  });
 }
 
 function openStatsModal() {

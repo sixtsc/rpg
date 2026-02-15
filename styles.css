@@ -3087,3 +3087,24 @@ body.inTown .grid{ grid-template-columns: 1fr !important; }
   font-size:10px;
   color:#a7b2cf;
 }
+
+/* Ally long-press skill cards in stats modal */
+.modalBody.statsGrid .choice.allySkillRow{
+  border:1px solid rgba(111, 154, 255, 0.45);
+  background:linear-gradient(180deg, rgba(46,64,116,0.6), rgba(23,32,60,0.65));
+  border-radius:12px;
+  padding:10px;
+}
+.modalBody.statsGrid .choice.allySkillRow .desc{
+  display:block;
+  font-size:11px;
+  line-height:1.35;
+}
+.modalBody.statsGrid .choice.allySkillRow .right{
+  display:block;
+  font-weight:800;
+  color:#b9d0ff;
+}
+.modalBody.statsGrid .choice.allySkillRow .titleRow b{
+  font-size:13px;
+}
