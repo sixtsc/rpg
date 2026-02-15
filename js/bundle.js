@@ -52,7 +52,7 @@ const GLENN_BASE = {
   id: "glenn",
   name: "Glenn",
   role: "Knight Vanguard",
-  level: 1,
+  level: 0,
   maxHp: 66,
   maxMp: 20,
   hp: 66,
@@ -71,8 +71,8 @@ const GLENN_BASE = {
   story: "Glenn adalah mantan penjaga gerbang utara yang meninggalkan pos demi melindungi desa-desa kecil dari serangan bandit.",
   basicAttack: { name: "Iron Slash", desc: "Serangan pedang standar yang konsisten untuk membuka pertarungan." },
   activeSkills: [
-    { name: "Shield Break", desc: "Tebasan berat yang menurunkan DEF target sebesar 15% selama 2 turn.", cooldown: 3 },
-    { name: "Guard Stance", desc: "Menaikkan DEF Glenn 25% selama 2 turn dan memulihkan 8 MP.", cooldown: 4 }
+    { name: "Shield Break", desc: "Tebasan berat yang menurunkan DEF target sebesar 15% selama 2 turn.", power: 6, mpCost: 4, cooldown: 3, type: "debuff" },
+    { name: "Guard Stance", desc: "Menaikkan DEF Glenn 25% selama 2 turn dan memulihkan 8 MP.", power: 3, mpCost: 6, cooldown: 4, type: "buff" }
   ],
   passiveSkill: { name: "Last Bastion", desc: "Saat HP di bawah 35%, DEF bertambah 20% otomatis." },
   xp: 0,
@@ -233,8 +233,8 @@ function dodgeChance(p,e){
 
 
 /* ===== state.js ===== */
-function createStarterAlly(level = 1){
-  const lv = Math.max(1, Number(level) || 1);
+function createStarterAlly(level = 0){
+  const lv = clamp(Number(level) || 0, 0, MAX_LEVEL);
   const maxHp = GLENN_BASE.maxHp + (lv - 1) * 10;
   const maxMp = GLENN_BASE.maxMp + (lv - 1) * 4;
   return {
@@ -288,7 +288,7 @@ function newPlayer(){
     xp:0, xpToLevel:50,
     gold:0,
     gems:0,
-    allies: [createStarterAlly(1)],
+    allies: [createStarterAlly(0)],
     skills:[{ ...SKILLS.fireball, cdLeft:0 }],
     skillSlots: ["Fireball", null, null, null, null, null, null, null],
     inv: { "Potion": { ...ITEMS.potion, qty:2 }, "Ether": { ...ITEMS.ether, qty:1 } }
@@ -297,7 +297,7 @@ function newPlayer(){
 
 function normalizeAlly(ally){
   if (!ally) return null;
-  const level = clamp(Number(ally.level) || 1, 1, MAX_LEVEL);
+  const level = clamp(Number(ally.level) || 0, 0, MAX_LEVEL);
   const maxHp = Math.max(1, Number(ally.maxHp) || 1);
   const maxMp = Math.max(0, Number(ally.maxMp) || 0);
   const hpRaw = Number(ally.hp);
@@ -336,9 +336,13 @@ function normalizeAlly(ally){
       ? ally.activeSkills.slice(0, 2).map((skill, idx) => ({
         name: skill?.name || GLENN_BASE.activeSkills[idx]?.name || `Active ${idx + 1}`,
         desc: skill?.desc || GLENN_BASE.activeSkills[idx]?.desc || "",
-        cooldown: Math.max(1, Number(skill?.cooldown) || 1)
+        cooldown: Math.max(1, Number(skill?.cooldown) || 1),
+        cdLeft: Math.max(0, Number(skill?.cdLeft) || 0),
+        power: Math.max(1, Number(skill?.power) || Number(GLENN_BASE.activeSkills[idx]?.power || 4)),
+        mpCost: Math.max(0, Number(skill?.mpCost) || Number(GLENN_BASE.activeSkills[idx]?.mpCost || 0)),
+        type: skill?.type || GLENN_BASE.activeSkills[idx]?.type || "damage"
       }))
-      : GLENN_BASE.activeSkills.map((skill) => ({ ...skill })),
+      : GLENN_BASE.activeSkills.map((skill) => ({ ...skill, cdLeft: 0 })),
     passiveSkill: {
       name: ally.passiveSkill?.name || GLENN_BASE.passiveSkill.name,
       desc: ally.passiveSkill?.desc || GLENN_BASE.passiveSkill.desc
@@ -365,6 +369,7 @@ function normalizePlayer(p){
 
   if (!Array.isArray(p.allies)) p.allies = [];
   p.allies = p.allies.map(normalizeAlly).filter(Boolean).slice(0, 1);
+  if (typeof p._allyStarterInit !== "boolean") p._allyStarterInit = false;
 
   // Base stats
   if (typeof p.gender !== "string") p.gender = "male";
@@ -1334,7 +1339,7 @@ function renderAllyRow() {
 
     if (ally) {
       nameEl.textContent = ally.name || `NPC ${slotIndex}`;
-      lvlEl.textContent = `Lv${ally.level || 1}`;
+      lvlEl.textContent = `Lv${ally.level ?? 0}`;
       subEl.textContent = "";
       subEl.style.display = "none";
       hpText.textContent = `${ally.hp}/${ally.maxHp}`;
@@ -2404,10 +2409,14 @@ function ensureAllies(){
   state.player.allies = state.player.allies.map(normalizeAlly).filter(Boolean);
   if (state.player.allies.length > 1) state.player.allies = [state.player.allies[0]];
   if (!state.player.allies.length) {
-    state.player.allies.push(normalizeAlly(createStarterAlly(1)));
+    state.player.allies.push(normalizeAlly(createStarterAlly(0)));
   }
   if (state.player.allies[0] && state.player.allies[0].id !== "glenn") {
-    state.player.allies[0] = normalizeAlly({ ...createStarterAlly(1), ...state.player.allies[0], id:"glenn", name:"Glenn" });
+    state.player.allies[0] = normalizeAlly({ ...createStarterAlly(0), ...state.player.allies[0], id:"glenn", name:"Glenn", level:0, xp:0 });
+  }
+  if (!state.player._allyStarterInit) {
+    state.player.allies[0] = normalizeAlly({ ...createStarterAlly(0), id:"glenn", name:"Glenn" });
+    state.player._allyStarterInit = true;
   }
   applyEquipmentStats(state.player.allies[0]);
   state.allies = state.player.allies;
@@ -2490,7 +2499,7 @@ function getEligibleAllyGear(slot, ally){
   const inv = state.player?.inv || {};
   return Object.keys(inv).map((name) => ({ name, item: inv[name] }))
     .filter(({ item }) => item && item.kind === "gear" && item.slot === slot && (item.qty || 0) > 0)
-    .filter(({ item }) => (ally?.level || 1) >= Number(item.level || 1));
+    .filter(({ item }) => (Number(ally?.level) || 0) >= Number(item.level || 1));
 }
 
 function equipItemForAlly(allyIndex, slot, itemName){
@@ -2499,7 +2508,7 @@ function equipItemForAlly(allyIndex, slot, itemName){
   const inv = state.player?.inv || {};
   const item = inv[itemName];
   if (!item || item.kind !== "gear" || item.slot !== slot || (item.qty || 0) <= 0) return false;
-  if ((ally.level || 1) < Number(item.level || 1)) return false;
+  if ((Number(ally.level) || 0) < Number(item.level || 1)) return false;
   ally.equipment[slot] = itemName;
   applyEquipmentStats(ally);
   autosave(state);
@@ -2518,8 +2527,8 @@ function unequipAllySlot(allyIndex, slot){
 function levelUpAlly(allyIndex){
   const ally = ensureAllies()[allyIndex];
   if (!ally) return { ok:false, message:"Ally tidak ditemukan." };
-  if ((ally.level || 1) >= MAX_LEVEL) return { ok:false, message:"Level Glenn sudah maksimal." };
-  const cost = ally.level * 120;
+  if ((ally.level || 0) >= MAX_LEVEL) return { ok:false, message:"Level Glenn sudah maksimal." };
+  const cost = (ally.level + 1) * 120;
   if ((state.player.gold || 0) < cost) return { ok:false, message:`Gold tidak cukup. Butuh ${cost}.` };
 
   state.player.gold -= cost;
@@ -2560,7 +2569,7 @@ function openAllyDetailPopup(ally, idx = 0){
     avatar.style.background = visual.background;
   }
   if (name) name.textContent = ally.name || `Ally ${idx + 1}`;
-  if (role) role.textContent = `${ally.role || "Ally"} • Lv ${ally.level || 1}/10`;
+  if (role) role.textContent = `${ally.role || "Ally"} • Lv ${ally.level ?? 0}/10`;
   if (stats) {
     const rows = [
       ["HP", `${ally.hp}/${ally.maxHp}`],
@@ -2593,7 +2602,7 @@ function openAllyDetailPopup(ally, idx = 0){
     passive.innerHTML = `<h5>${escapeHtml(ally.passiveSkill?.name || "Passive")}</h5><p>${escapeHtml(ally.passiveSkill?.desc || "-")}</p>`;
   }
   if (progress) {
-    progress.textContent = `Progress Level: Lv ${ally.level || 1}/10`;
+    progress.textContent = `Progress Level: Lv ${ally.level ?? 0}/10`;
   }
   if (equipment) {
     const slots = ["hand", "head", "armor", "pant", "shoes"];
@@ -2642,8 +2651,8 @@ function openAllyDetailPopup(ally, idx = 0){
     });
   }
   if (levelBtn) {
-    levelBtn.textContent = (ally.level || 1) >= MAX_LEVEL ? "Level Max (Lv10)" : `Level Up (Cost ${ally.level * 120} Gold)`;
-    levelBtn.disabled = (ally.level || 1) >= MAX_LEVEL;
+    levelBtn.textContent = (Number(ally.level) || 0) >= MAX_LEVEL ? "Level Max (Lv10)" : `Level Up (Cost ${(Number(ally.level) + 1) * 120} Gold)`;
+    levelBtn.disabled = (Number(ally.level) || 0) >= MAX_LEVEL;
     levelBtn.onclick = () => {
       const result = levelUpAlly(idx);
       addLog(result.ok ? "INFO" : "WARN", result.message);
@@ -2679,7 +2688,7 @@ function renderAllyPage(){
     card.type = "button";
     card.className = "allyAvatarCard";
     card.innerHTML = `
-      <div class="allyAvatarLevel">${escapeHtml(String(ally.level || 1))}</div>
+      <div class="allyAvatarLevel">${escapeHtml(String(ally.level ?? 0))}</div>
       <div class="allyAvatarPortrait" style="background:${escapeHtml(visual.background)}">${escapeHtml(visual.icon)}</div>
       <div class="allyAvatarName">${escapeHtml(ally.name || `Ally ${idx + 1}`)}</div>
       <div class="allyAvatarMeta">${escapeHtml(ally.role || "Ally")}</div>
@@ -3596,6 +3605,14 @@ function setTurn(turn) {
         if (s && typeof s.cdLeft === "number" && s.cdLeft < 0) s.cdLeft = 0;
       });
     }
+    const allies = ensureAllies();
+    allies.forEach((ally) => {
+      if (!Array.isArray(ally?.activeSkills)) return;
+      ally.activeSkills.forEach((skill) => {
+        if (skill && typeof skill.cdLeft === "number" && skill.cdLeft > 0) skill.cdLeft -= 1;
+        if (skill && typeof skill.cdLeft === "number" && skill.cdLeft < 0) skill.cdLeft = 0;
+      });
+    });
   }
 }
 
@@ -3994,6 +4011,15 @@ function alliesAct(done){
     if (done) done();
     return;
   }
+
+  const pickAllySkill = (ally) => {
+    const skills = Array.isArray(ally?.activeSkills) ? ally.activeSkills : [];
+    const ready = skills.filter((skill) => skill && (skill.cdLeft || 0) <= 0 && (ally.mp || 0) >= (skill.mpCost || 0));
+    if (!ready.length) return null;
+    if (ready.length === 1) return ready[0];
+    return Math.random() < 0.55 ? ready[0] : ready[1];
+  };
+
   const maxSpd = Math.max(...allies.map((ally) => Number(ally.spd) || 0), 0);
   const baseDelay = 260;
   const orderGap = ALLY_ACTION_GAP_MS;
@@ -4014,28 +4040,46 @@ function alliesAct(done){
       }
       const targetIndex = getEnemyIndex(currentTarget);
       if (targetIndex < 0) return;
-      const res = resolveAttack(ally, currentTarget, 2);
+
+      const skill = pickAllySkill(ally);
+      let basePower = 2;
+      if (skill) {
+        ally.mp = clamp((ally.mp || 0) - (skill.mpCost || 0), 0, ally.maxMp || 0);
+        skill.cdLeft = skill.cooldown || 0;
+        basePower = Math.max(2, Number(skill.power) || 2);
+        addLog("SKILL", `${ally.name} • ${skill.name}`);
+        showEnemyDamageText(skill.name, targetIndex);
+      }
+
+      const res = resolveAttack(ally, currentTarget, basePower);
       if (res.missed) {
         addLog("ALLY", `${ally.name} meleset.`);
         tickStatuses(ally);
         refresh(state);
         return;
       }
+
       if (res.dmg > 0) {
         currentTarget.hp = clamp(currentTarget.hp - res.dmg, 0, currentTarget.maxHp);
         playEnemyCritShake(targetIndex);
       }
+      if (skill?.type === "buff") {
+        addStatusEffect(ally, { type: "strengthen", turns: 2, debuff: false });
+      }
+
       if (res.reflected > 0) {
         ally.hp = clamp(ally.hp - res.reflected, 0, ally.maxHp);
         addLog("ALLY", `${ally.name} terkena pantulan ${res.reflected} damage.`);
       }
-      addLog("ALLY", `${ally.name} menyerang! Damage ${res.dmg}.`);
+      addLog("ALLY", `${ally.name} ${skill ? `menggunakan ${skill.name}` : "menyerang"}! Damage ${res.dmg}.`);
       tickStatuses(ally);
-      showEnemyDamageText(formatDamageText(res, res.dmg), targetIndex);
+      setTimeout(() => {
+        showEnemyDamageText(formatDamageText(res, res.dmg), targetIndex);
+      }, skill ? 260 : 0);
       refresh(state);
     }, delay);
   });
-  if (done) setTimeout(done, lastDelay + ALLY_ACTION_GAP_MS);
+  if (done) setTimeout(done, lastDelay + ALLY_ACTION_GAP_MS + 300);
 }
 
 function afterPlayerAction() {
@@ -4784,9 +4828,30 @@ function openEnemyStatsModal(enemy = state.enemy) {
 
 function openAllyStatsModal(ally) {
   if (!ally) return;
+  const skillRows = [];
+  const basic = ally.basicAttack || {};
+  skillRows.push({
+    title: `Basic • ${basic.name || "Basic Attack"}`,
+    descHtml: `${escapeHtml(basic.desc || "-")}<br><span class="muted">Cooldown: -</span>`,
+    meta: ""
+  });
+  (ally.activeSkills || []).forEach((skill, idx) => {
+    skillRows.push({
+      title: `Active ${idx + 1} • ${skill.name || "Skill"}`,
+      descHtml: `${escapeHtml(skill.desc || "-")}<br><span class="muted">MP ${skill.mpCost || 0} • Power ${skill.power || 0} • CD ${(skill.cdLeft || 0)}/${skill.cooldown || 0}</span>`,
+      meta: (skill.cdLeft || 0) > 0 ? "Cooldown" : "Ready"
+    });
+  });
+  const passive = ally.passiveSkill || {};
+  skillRows.push({
+    title: `Passive • ${passive.name || "Passive"}`,
+    descHtml: `${escapeHtml(passive.desc || "-")}<br><span class="muted">Selalu aktif</span>`,
+    meta: "Passive"
+  });
+
   modal.open(
     `${ally.name} Stats`,
-    buildCombatStatRows(ally),
+    buildCombatStatRows(ally).concat(skillRows),
     () => {}
   );
 }
