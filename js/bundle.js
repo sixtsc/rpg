@@ -2656,6 +2656,13 @@ function openAllyDetailPopup(ally, idx = 0){
     levelBtn.onclick = () => {
       const result = levelUpAlly(idx);
       addLog(result.ok ? "INFO" : "WARN", result.message);
+      if (!result.ok && String(result.message || "").includes("Gold tidak cukup")) {
+        modal.open(
+          "Gold Tidak Cukup",
+          [{ title: "Tutup", desc: result.message, value: "close" }],
+          () => modal.close()
+        );
+      }
       openAllyDetailPopup(ensureAllies()[idx], idx);
       renderAllyPage();
     };
@@ -3757,6 +3764,36 @@ function gainXp(amount) {
   }
 }
 
+function gainAllyXp(amount) {
+  const allies = ensureAllies();
+  if (!allies.length || amount <= 0) return;
+
+  const share = Math.max(1, Math.floor(amount * 0.7));
+  allies.forEach((ally) => {
+    if (!ally) return;
+    if ((ally.level || 0) >= MAX_LEVEL) {
+      ally.xp = ally.xpToLevel;
+      return;
+    }
+    ally.xp = (ally.xp || 0) + share;
+    while ((ally.level || 0) < MAX_LEVEL && ally.xp >= (ally.xpToLevel || 1)) {
+      ally.xp -= ally.xpToLevel;
+      ally.level += 1;
+      ally.xpToLevel = Math.round((ally.xpToLevel || 50) * 1.2);
+      ally.maxHp += 10;
+      ally.maxMp += 4;
+      ally.atk += 2;
+      ally.def += 2;
+      ally.spd += 1;
+      ally.hp = ally.maxHp;
+      ally.mp = ally.maxMp;
+      applyEquipmentStats(ally);
+      addLog("ALLY", `${ally.name} naik ke Lv${ally.level} dari EXP battle!`);
+    }
+    if ((ally.level || 0) >= MAX_LEVEL) ally.xp = ally.xpToLevel;
+  });
+}
+
 function rollBattleDrops(enemy){
   const drops = [];
   const lvl = enemy?.level || 1;
@@ -3797,6 +3834,7 @@ function winBattle() {
   p.gold += goldGain;
 
   gainXp(xpGain);
+  gainAllyXp(xpGain);
   grantDropsToPlayer(drops);
 
   if (Array.isArray(state.enemyQueue) && state.enemyQueue.length > 1) {
