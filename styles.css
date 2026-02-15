@@ -1185,7 +1185,7 @@ body.inBattle .enemyMiniMeta .muted{
   align-items:flex-end;
   justify-content:center;
   padding:14px;
-  z-index:999;
+  z-index:11050;
 }
 
 .modal{
