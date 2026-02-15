@@ -2109,28 +2109,6 @@ body.inBattle .enemyMiniMeta .muted{
   color:#a7bcff;
   font-weight:700;
 }
-.allyEquipmentGrid{ display:grid; gap:8px; }
-.allyEquipItem{
-  display:flex;
-  justify-content:space-between;
-  gap:10px;
-  align-items:center;
-  border:1px solid rgba(138,168,255,0.28);
-  border-radius:10px;
-  padding:10px;
-  background:rgba(30,43,78,0.4);
-}
-.allyEquipItem p{ margin:3px 0 0; color:#d2ddff; font-size:12px; }
-.allyEquipActions{ display:flex; gap:6px; }
-.allyEquipActions button{
-  border:1px solid rgba(138,168,255,0.4);
-  border-radius:8px;
-  background:rgba(61,97,192,0.28);
-  color:#fff;
-  cursor:pointer;
-  padding:6px 8px;
-  font-size:12px;
-}
 
 @media (max-width: 720px){
   .allyPage{

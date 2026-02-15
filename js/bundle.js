@@ -349,19 +349,8 @@ function normalizeAlly(ally){
       name: ally.passiveSkill?.name || GLENN_BASE.passiveSkill.name,
       desc: ally.passiveSkill?.desc || GLENN_BASE.passiveSkill.desc
     },
-    equipment: {
-      hand: ally.equipment?.hand ?? null,
-      head: ally.equipment?.head ?? null,
-      pant: ally.equipment?.pant ?? null,
-      armor: ally.equipment?.armor ?? null,
-      shoes: ally.equipment?.shoes ?? null
-    },
-    equipmentBonus: {
-      atk: Number(ally.equipmentBonus?.atk || 0),
-      def: Number(ally.equipmentBonus?.def || 0),
-      spd: Number(ally.equipmentBonus?.spd || 0),
-      evasion: Number(ally.equipmentBonus?.evasion || 0)
-    }
+    equipment: { hand:null, head:null, pant:null, armor:null, shoes:null },
+    equipmentBonus: { atk:0, def:0, spd:0, evasion:0 }
   };
 }
 
@@ -2425,7 +2414,6 @@ function ensureAllies(){
     state.player.allies[0] = normalizeAlly({ ...createStarterAlly(0), id:"glenn", name:"Glenn" });
     state.player._allyStarterInit = true;
   }
-  applyEquipmentStats(state.player.allies[0]);
   state.allies = state.player.allies;
   return state.allies;
 }
@@ -2498,38 +2486,6 @@ function setAllyPageVisible(show){
 }
 
 
-function getAllySlotLabel(slot){
-  return ({ hand:"Weapon", head:"Head", armor:"Armor", pant:"Pants", shoes:"Shoes" })[slot] || slot;
-}
-
-function getEligibleAllyGear(slot, ally){
-  const inv = state.player?.inv || {};
-  return Object.keys(inv).map((name) => ({ name, item: inv[name] }))
-    .filter(({ item }) => item && item.kind === "gear" && item.slot === slot && (item.qty || 0) > 0)
-    .filter(({ item }) => (Number(ally?.level) || 0) >= Number(item.level || 1));
-}
-
-function equipItemForAlly(allyIndex, slot, itemName){
-  const ally = ensureAllies()[allyIndex];
-  if (!ally || !ally.equipment) return false;
-  const inv = state.player?.inv || {};
-  const item = inv[itemName];
-  if (!item || item.kind !== "gear" || item.slot !== slot || (item.qty || 0) <= 0) return false;
-  if ((Number(ally.level) || 0) < Number(item.level || 1)) return false;
-  ally.equipment[slot] = itemName;
-  applyEquipmentStats(ally);
-  autosave(state);
-  return true;
-}
-
-function unequipAllySlot(allyIndex, slot){
-  const ally = ensureAllies()[allyIndex];
-  if (!ally || !ally.equipment || !ally.equipment[slot]) return false;
-  ally.equipment[slot] = null;
-  applyEquipmentStats(ally);
-  autosave(state);
-  return true;
-}
 
 function levelUpAlly(allyIndex){
   const ally = ensureAllies()[allyIndex];
@@ -2549,7 +2505,6 @@ function levelUpAlly(allyIndex){
   ally.spd += 1;
   ally.hp = ally.maxHp;
   ally.mp = ally.maxMp;
-  applyEquipmentStats(ally);
   autosave(state);
   refresh(state);
   return { ok:true, message:`Glenn naik ke level ${ally.level}!` };
@@ -2568,7 +2523,6 @@ function openAllyDetailPopup(ally, idx = 0){
   const basic = byId("allyBasicAttack");
   const active = byId("allyActiveSkills");
   const passive = byId("allyPassiveSkill");
-  const equipment = byId("allyEquipmentGrid");
   const levelBtn = byId("allyDetailLevelUp");
   const progress = byId("allyDetailProgress");
   if (avatar) {
@@ -2610,52 +2564,6 @@ function openAllyDetailPopup(ally, idx = 0){
   }
   if (progress) {
     progress.textContent = `Progress Level: Lv ${ally.level ?? 0}/10`;
-  }
-  if (equipment) {
-    const slots = ["hand", "head", "armor", "pant", "shoes"];
-    equipment.innerHTML = slots.map((slot) => {
-      const equippedName = ally.equipment?.[slot] || "Kosong";
-      return `
-        <div class="allyEquipItem" data-slot="${slot}">
-          <div>
-            <b>${getAllySlotLabel(slot)}</b>
-            <p>${escapeHtml(equippedName)}</p>
-          </div>
-          <div class="allyEquipActions">
-            <button type="button" data-action="equip" data-slot="${slot}">Equip</button>
-            <button type="button" data-action="unequip" data-slot="${slot}">Lepas</button>
-          </div>
-        </div>
-      `;
-    }).join("");
-    equipment.querySelectorAll("button").forEach((btn) => {
-      btn.onclick = () => {
-        const action = btn.dataset.action;
-        const slot = btn.dataset.slot;
-        if (!slot) return;
-        if (action === "unequip") {
-          if (unequipAllySlot(idx, slot)) openAllyDetailPopup(ensureAllies()[idx], idx);
-          return;
-        }
-        const options = getEligibleAllyGear(slot, ally);
-        if (!options.length) {
-          modal.open("Equipment Glenn", [{ title:"Tutup", desc:`Tidak ada item ${getAllySlotLabel(slot)} yang memenuhi syarat level.`, value:"close" }], () => modal.close());
-          return;
-        }
-        const choices = options.map(({ name, item }) => ({
-          title: name,
-          desc: formatItemStats(item) || "Gear siap dipakai.",
-          meta: `Lv ${item.level || 1}`,
-          value: name
-        })).concat({ title:"Batal", desc:"Tutup", value:"cancel" });
-        modal.open(`Equip ${getAllySlotLabel(slot)}`, choices, (picked) => {
-          if (!picked || picked === "cancel") return modal.close();
-          equipItemForAlly(idx, slot, picked);
-          modal.close();
-          openAllyDetailPopup(ensureAllies()[idx], idx);
-        });
-      };
-    });
   }
   if (levelBtn) {
     levelBtn.textContent = (Number(ally.level) || 0) >= MAX_LEVEL ? "Level Max (Lv10)" : `Level Up (Cost ${(Number(ally.level) + 1) * 120} Gold)`;
@@ -3794,8 +3702,7 @@ function gainAllyXp(amount) {
       ally.spd += 1;
       ally.hp = ally.maxHp;
       ally.mp = ally.maxMp;
-      applyEquipmentStats(ally);
-      addLog("ALLY", `${ally.name} naik ke Lv${ally.level} dari EXP battle!`);
+          addLog("ALLY", `${ally.name} naik ke Lv${ally.level} dari EXP battle!`);
     }
     if ((ally.level || 0) >= MAX_LEVEL) ally.xp = ally.xpToLevel;
   });
