@@ -1195,7 +1195,7 @@ body.inBattle .enemyMiniMeta .muted{
   align-items:flex-end;
   justify-content:center;
   padding:14px;
-  z-index:999;
+  z-index:11050;
 }
 
 .modal{
@@ -1841,14 +1841,16 @@ body.inBattle .enemyMiniMeta .muted{
 
 /* --- Market Page (standalone) --- */
 .marketPage,
-.skillShopPage{
+.skillShopPage,
+.allyPage{
   min-height:100vh;
   padding:32px 24px 48px;
   background:var(--bg);
   color:var(--text);
 }
 .marketPageHeader,
-.skillShopPageHeader{
+.skillShopPageHeader,
+.allyPageHeader{
   display:grid;
   grid-template-columns:1fr auto;
   grid-template-rows:auto auto;
@@ -1914,21 +1916,241 @@ body.inBattle .enemyMiniMeta .muted{
   justify-content:center;
 }
 .marketPageHeader h2,
-.skillShopPageHeader h2{
+.skillShopPageHeader h2,
+.allyPageHeader h2{
   margin:0 0 6px;
   font-size:28px;
 }
 .marketPageHeader p,
-.skillShopPageHeader p{
+.skillShopPageHeader p,
+.allyPageHeader p{
   margin:0;
   color:var(--muted);
 }
 .marketPageBody,
-.skillShopBody{
+.skillShopBody,
+.allyPageBody{
   background:var(--card);
   border:1px solid var(--line);
   border-radius:16px;
   padding:24px;
+}
+
+.allyPage{
+  padding-inline:14px;
+}
+
+.allyPageBody{
+  width:min(1180px, 100%);
+  margin-inline:auto;
+  padding:20px 12px;
+}
+
+.allyGrid{
+  --ally-card-width:168px;
+  --ally-card-height:178px;
+  display:grid;
+  grid-template-columns:repeat(3, var(--ally-card-width));
+  grid-auto-rows:var(--ally-card-height);
+  gap:12px;
+  justify-content:center;
+  align-content:start;
+  min-height:calc((var(--ally-card-height) * 3) + (12px * 2));
+  max-height:calc((var(--ally-card-height) * 3) + (12px * 2));
+  overflow-y:auto;
+  overflow-x:hidden;
+  padding-right:4px;
+}
+.allyAvatarCard{
+  width:var(--ally-card-width);
+  height:var(--ally-card-height);
+  border:1px solid rgba(124,161,255,0.4);
+  border-radius:16px;
+  background:radial-gradient(circle at top, rgba(111,157,255,0.3), rgba(22,30,52,0.94));
+  color:var(--text);
+  cursor:pointer;
+  padding:14px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  gap:10px;
+  transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.allyAvatarCard:hover{
+  transform:translateY(-2px);
+  border-color:rgba(151,184,255,0.95);
+  box-shadow:0 14px 24px rgba(0,0,0,0.32);
+}
+.allyAvatarLevel{
+  width:100%;
+  text-align:left;
+  font-weight:800;
+  font-size:16px;
+  color:#f4f6ff;
+}
+.allyAvatarPortrait{
+  width:74px;
+  height:74px;
+  border-radius:20px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:40px;
+  border:1px solid rgba(255,255,255,0.35);
+  box-shadow:inset 0 -12px 18px rgba(0,0,0,0.2);
+}
+.allyAvatarName{
+  width:100%;
+  text-align:center;
+  font-size:18px;
+  font-weight:800;
+}
+.allyAvatarMeta{
+  font-size:13px;
+  font-weight:600;
+  color:var(--muted);
+}
+
+.allyDetailPopup{
+  position:fixed;
+  inset:0;
+  z-index:10020;
+  background:rgba(3,7,18,0.7);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+}
+.allyDetailCard{
+  position:relative;
+  width:min(780px, 100%);
+  max-height:min(90vh, 900px);
+  overflow:auto;
+  border-radius:18px;
+  border:1px solid rgba(123,158,255,0.45);
+  background:linear-gradient(180deg, rgba(28,39,67,0.96), rgba(14,20,37,0.98));
+  box-shadow:0 22px 45px rgba(0,0,0,0.45);
+  padding:20px;
+}
+.allyDetailClose{
+  position:absolute;
+  top:10px;
+  right:10px;
+  width:34px;
+  height:34px;
+  border-radius:8px;
+  border:1px solid rgba(255,255,255,0.25);
+  background:rgba(255,255,255,0.06);
+  color:#fff;
+  cursor:pointer;
+}
+.allyDetailHero{
+  display:flex;
+  gap:14px;
+  align-items:center;
+  margin-bottom:14px;
+}
+.allyDetailHeadline h3{ margin:0; font-size:28px; }
+.allyDetailAvatar{
+  width:98px;
+  height:98px;
+  border-radius:18px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:48px;
+  border:1px solid rgba(255,255,255,0.35);
+}
+.allyDetailRole{ margin:4px 0; color:var(--muted); font-size:14px; }
+.allyDetailProgress{ margin:0 0 8px; font-size:12px; color:#c9d8ff; }
+.allyDetailLevelUp{
+  border:1px solid rgba(121,163,255,0.55);
+  background:rgba(87,129,238,0.25);
+  color:#f1f5ff;
+  border-radius:10px;
+  padding:8px 12px;
+  cursor:pointer;
+  font-weight:700;
+}
+.allyDetailLevelUp:disabled{ opacity:.5; cursor:not-allowed; }
+.allyDetailSection{
+  border:1px solid rgba(123,158,255,0.2);
+  background:rgba(255,255,255,0.03);
+  border-radius:12px;
+  padding:12px;
+  margin-bottom:12px;
+}
+.allyDetailSection h4{ margin:0 0 8px; font-size:14px; letter-spacing:.2px; }
+.allyDetailText{ margin:0; color:#d5def6; font-size:13px; line-height:1.45; }
+.allyDetailStats{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:8px;
+}
+.allyDetailStat{
+  border:1px solid var(--line);
+  background:rgba(255,255,255,0.04);
+  border-radius:10px;
+  padding:8px;
+  text-align:left;
+}
+.allyDetailStatLabel{ display:block; font-size:11px; color:var(--muted); }
+.allyDetailStatValue{ font-size:15px; font-weight:700; }
+.allySkillGrid{
+  margin-top:8px;
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:8px;
+}
+.allySkillCard{
+  border:1px solid rgba(138,168,255,0.28);
+  border-radius:10px;
+  padding:10px;
+  background:rgba(30,43,78,0.55);
+}
+.allySkillCard h5{ margin:0 0 5px; font-size:13px; }
+.allySkillCard p{ margin:0; font-size:12px; color:#cfdbff; }
+.allySkillCard.passive{ margin-top:8px; }
+.allySkillCooldown{
+  display:inline-block;
+  margin-top:6px;
+  font-size:11px;
+  color:#a7bcff;
+  font-weight:700;
+}
+
+@media (max-width: 720px){
+  .allyPage{
+    padding-inline:10px;
+  }
+  .allyPageBody{
+    padding:16px 8px;
+  }
+  .allyGrid{
+    --ally-card-width:112px;
+    --ally-card-height:154px;
+    grid-template-columns:repeat(3, var(--ally-card-width));
+    gap:8px;
+    min-height:calc((var(--ally-card-height) * 3) + (8px * 2));
+    max-height:calc((var(--ally-card-height) * 3) + (8px * 2));
+  }
+  .allyAvatarCard{
+    padding:10px;
+    gap:8px;
+  }
+  .allyAvatarPortrait{
+    width:58px;
+    height:58px;
+    font-size:30px;
+  }
+  .allyAvatarName{
+    font-size:16px;
+  }
+  .allyDetailStats{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .allySkillGrid{ grid-template-columns:1fr; }
+  .allyDetailHero{ align-items:flex-start; }
+  .allyDetailHeadline h3{ font-size:24px; }
 }
 .skillShopLabel{
   font-size:12px;
@@ -2852,4 +3074,56 @@ body.inTown .grid{ grid-template-columns: 1fr !important; }
   margin-top:6px;
   font-size:10px;
   color:#a7b2cf;
+}
+
+/* Ally long-press skill cards in stats modal */
+.modalBody.statsGrid .choice.allySkillRow{
+  border:1px solid rgba(111, 154, 255, 0.45);
+  background:linear-gradient(180deg, rgba(46,64,116,0.6), rgba(23,32,60,0.65));
+  border-radius:12px;
+  padding:10px;
+}
+.modalBody.statsGrid .choice.allySkillRow .desc{
+  display:block;
+  font-size:11px;
+  line-height:1.35;
+}
+.modalBody.statsGrid .choice.allySkillRow .right{
+  display:block;
+  font-weight:800;
+  color:#b9d0ff;
+}
+.modalBody.statsGrid .choice.allySkillRow .titleRow b{
+  font-size:13px;
+}
+
+
+.allyXpWrap{
+  margin:6px 0 10px;
+  width:min(360px, 100%);
+}
+.allyXpMeta{
+  display:flex;
+  justify-content:space-between;
+  font-size:11px;
+  color:#cfe0ff;
+  margin-bottom:5px;
+}
+.allyXpBar{ height:10px; }
+
+.modalBody.statsGrid .choice.allySkillRow .skillIconWrap{
+  width:38px !important;
+  height:38px !important;
+  border-radius:10px !important;
+  border:1px solid rgba(140,170,255,0.45) !important;
+  background:linear-gradient(180deg, rgba(33,54,103,0.8), rgba(18,29,58,0.9)) !important;
+  display:inline-flex !important;
+  align-items:center;
+  justify-content:center;
+  padding:6px !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.15);
+}
+.modalBody.statsGrid .choice.allySkillRow .skillIcon{
+  width:22px;
+  height:22px;
 }

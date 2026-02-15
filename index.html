@@ -139,7 +139,7 @@
               <div class="damageText" id="playerDamage"></div>
               <div class="allySlotBadge" id="allySlotBadge">
                 <span class="allySlotIcon" aria-hidden="true">🤝</span>
-                <span id="allySlotText">0/2</span>
+                <span id="allySlotText">0/1</span>
               </div>
               <div class="sectionTitle">
                 <div class="playerTitle">
@@ -307,7 +307,7 @@
               <div class="battlePrimary">
                 <button class="primary" id="btnExplore">Adventure</button>
                 <button id="btnInventory">Inventory</button>
-                <button id="btnRecruit">Recruit</button>
+                <button id="btnRecruit">Ally</button>
                 <button id="btnProfile">Profile</button>
                 <button id="btnShop">Shop</button>
                 <button class="good" id="btnMenu">Menu</button>
@@ -413,6 +413,76 @@
       <div class="skillShopGrid" id="skillShopItemsGrid"></div>
     </div>
   </section>
+
+  <section id="allyPage" class="allyPage hidden" aria-hidden="true">
+    <div class="allyPageHeader">
+      <div class="marketCurrency" aria-label="Mata uang saat ini">
+        <div class="pill currencyPill">
+          <img class="currencyIcon" src="./assets/icons/coin.svg" alt="" />
+          <span id="allyPageGoldValue">0</span>
+        </div>
+        <div class="pill currencyPill">
+          <img class="currencyIcon" src="./assets/icons/gem.svg" alt="" />
+          <span id="allyPageGemValue">0</span>
+        </div>
+      </div>
+      <div class="marketTitle">
+        <h2>Ally</h2>
+        <p>Kelola Glenn: level, equipment, skill, dan lore karakter.</p>
+      </div>
+      <div class="marketActions">
+        <button class="marketBackBtn" id="allyBack" type="button" aria-label="Tutup">
+          <span aria-hidden="true">✕</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="allyPageBody">
+      <div id="allyGrid" class="allyGrid" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <div id="allyDetailPopup" class="allyDetailPopup hidden" aria-hidden="true">
+    <div class="allyDetailCard" role="dialog" aria-modal="true" aria-labelledby="allyDetailName">
+      <button id="allyDetailClose" class="allyDetailClose" type="button" aria-label="Tutup">✕</button>
+      <div class="allyDetailHero">
+        <div class="allyDetailAvatar" id="allyDetailAvatar">A</div>
+        <div class="allyDetailHeadline">
+          <h3 id="allyDetailName">Ally</h3>
+          <p id="allyDetailRole" class="allyDetailRole">Role</p>
+          <p id="allyDetailProgress" class="allyDetailProgress">Progress Level</p>
+          <div class="allyXpWrap">
+            <div class="allyXpMeta"><span>XP</span><span id="allyDetailXpText">0/0</span></div>
+            <div class="bar allyXpBar"><div id="allyDetailXpBar" class="fill xp" style="width:0%"></div></div>
+          </div>
+          <button id="allyDetailLevelUp" class="allyDetailLevelUp" type="button">Level Up</button>
+        </div>
+      </div>
+
+      <div class="allyDetailSection">
+        <h4>Stat</h4>
+        <div class="allyDetailStats" id="allyDetailStats"></div>
+      </div>
+
+      <div class="allyDetailSection">
+        <h4>Deskripsi</h4>
+        <p id="allyDetailDesc" class="allyDetailText"></p>
+      </div>
+
+      <div class="allyDetailSection">
+        <h4>Story</h4>
+        <p id="allyDetailStory" class="allyDetailText"></p>
+      </div>
+
+      <div class="allyDetailSection">
+        <h4>Skill Set</h4>
+        <div id="allyBasicAttack" class="allySkillCard"></div>
+        <div id="allyActiveSkills" class="allySkillGrid"></div>
+        <div id="allyPassiveSkill" class="allySkillCard passive"></div>
+      </div>
+
+    </div>
+  </div>
 
   <!-- Modal (tetap satu kali) -->
   <div class="modalBackdrop" id="modalBackdrop">
