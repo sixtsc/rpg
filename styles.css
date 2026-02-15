@@ -1937,16 +1937,16 @@ body.inBattle .enemyMiniMeta .muted{
 }
 
 .allyGrid{
-  --ally-card-width:240px;
-  --ally-card-height:220px;
+  --ally-card-width:168px;
+  --ally-card-height:178px;
   display:grid;
-  grid-template-columns:repeat(auto-fill, minmax(var(--ally-card-width), var(--ally-card-width)));
+  grid-template-columns:repeat(3, var(--ally-card-width));
   grid-auto-rows:var(--ally-card-height);
-  gap:16px;
+  gap:12px;
   justify-content:center;
   align-content:start;
-  min-height:calc((var(--ally-card-height) * 3) + (16px * 2));
-  max-height:calc((var(--ally-card-height) * 3) + (16px * 2));
+  min-height:calc((var(--ally-card-height) * 3) + (12px * 2));
+  max-height:calc((var(--ally-card-height) * 3) + (12px * 2));
   overflow-y:auto;
   overflow-x:hidden;
   padding-right:4px;
@@ -1980,20 +1980,20 @@ body.inBattle .enemyMiniMeta .muted{
   color:#f4f6ff;
 }
 .allyAvatarPortrait{
-  width:104px;
-  height:104px;
+  width:74px;
+  height:74px;
   border-radius:20px;
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:56px;
+  font-size:40px;
   border:1px solid rgba(255,255,255,0.35);
   box-shadow:inset 0 -12px 18px rgba(0,0,0,0.2);
 }
 .allyAvatarName{
   width:100%;
   text-align:center;
-  font-size:22px;
+  font-size:18px;
   font-weight:800;
 }
 .allyAvatarMeta{
@@ -2140,8 +2140,24 @@ body.inBattle .enemyMiniMeta .muted{
     padding:16px 8px;
   }
   .allyGrid{
-    --ally-card-width:280px;
-    --ally-card-height:210px;
+    --ally-card-width:112px;
+    --ally-card-height:154px;
+    grid-template-columns:repeat(3, var(--ally-card-width));
+    gap:8px;
+    min-height:calc((var(--ally-card-height) * 3) + (8px * 2));
+    max-height:calc((var(--ally-card-height) * 3) + (8px * 2));
+  }
+  .allyAvatarCard{
+    padding:10px;
+    gap:8px;
+  }
+  .allyAvatarPortrait{
+    width:58px;
+    height:58px;
+    font-size:30px;
+  }
+  .allyAvatarName{
+    font-size:16px;
   }
   .allyDetailStats{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
   .allySkillGrid{ grid-template-columns:1fr; }
