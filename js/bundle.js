@@ -2525,6 +2525,8 @@ function openAllyDetailPopup(ally, idx = 0){
   const passive = byId("allyPassiveSkill");
   const levelBtn = byId("allyDetailLevelUp");
   const progress = byId("allyDetailProgress");
+  const xpText = byId("allyDetailXpText");
+  const xpBar = byId("allyDetailXpBar");
   if (avatar) {
     avatar.textContent = visual.icon;
     avatar.style.background = visual.background;
@@ -2565,6 +2567,11 @@ function openAllyDetailPopup(ally, idx = 0){
   if (progress) {
     progress.textContent = `Progress Level: Lv ${ally.level ?? 0}/10`;
   }
+  const currentXp = Math.max(0, Number(ally.xp) || 0);
+  const nextXp = Math.max(1, Number(ally.xpToLevel) || 1);
+  const xpPct = (Number(ally.level) || 0) >= MAX_LEVEL ? 100 : clamp((currentXp / nextXp) * 100, 0, 100);
+  if (xpText) xpText.textContent = (Number(ally.level) || 0) >= MAX_LEVEL ? "MAX" : `${currentXp}/${nextXp}`;
+  if (xpBar) xpBar.style.width = `${xpPct}%`;
   if (levelBtn) {
     levelBtn.textContent = (Number(ally.level) || 0) >= MAX_LEVEL ? "Level Max (Lv10)" : `Level Up (Cost ${(Number(ally.level) + 1) * 120} Gold)`;
     levelBtn.disabled = (Number(ally.level) || 0) >= MAX_LEVEL;
@@ -4778,6 +4785,15 @@ function openEnemyStatsModal(enemy = state.enemy) {
   );
 }
 
+function getAllySkillIconSrc(skill, fallback = "./assets/icons/universal.svg") {
+  const n = String(skill?.name || "").toLowerCase();
+  if (n.includes("guard")) return "./assets/icons/earth.svg";
+  if (n.includes("shield")) return "./assets/icons/physical.svg";
+  if (n.includes("slash") || n.includes("attack")) return "./assets/icons/physical.svg";
+  if (n.includes("bastion") || n.includes("passive")) return "./assets/icons/universal.svg";
+  return fallback;
+}
+
 function openAllyStatsModal(ally) {
   if (!ally) return;
 
@@ -4786,6 +4802,7 @@ function openAllyStatsModal(ally) {
     const basic = ally.basicAttack || {};
     cards.push({
       title: `Basic • ${basic.name || "Basic Attack"}`,
+      icon: getAllySkillIconSrc(basic, "./assets/icons/physical.svg"),
       descHtml: `${escapeHtml(basic.desc || "-")}<br><span class="muted">CD - • Basic Attack</span>`,
       meta: "READY",
       value: undefined,
@@ -4797,6 +4814,7 @@ function openAllyStatsModal(ally) {
     (ally.activeSkills || []).forEach((skill, idx) => {
       cards.push({
         title: `Active ${idx + 1} • ${skill.name || "Skill"}`,
+        icon: getAllySkillIconSrc(skill, "./assets/icons/physical.svg"),
         descHtml: `${escapeHtml(skill.desc || "-")}<br><span class="muted">MP ${skill.mpCost || 0} • Power ${skill.power || 0} • CD ${skill.cdLeft || 0}/${skill.cooldown || 0}</span>`,
         meta: (skill.cdLeft || 0) > 0 ? `CD ${skill.cdLeft}` : "READY",
         value: undefined,
@@ -4809,6 +4827,7 @@ function openAllyStatsModal(ally) {
     const passive = ally.passiveSkill || {};
     cards.push({
       title: `Passive • ${passive.name || "Passive"}`,
+      icon: getAllySkillIconSrc(passive, "./assets/icons/universal.svg"),
       descHtml: `${escapeHtml(passive.desc || "-")}<br><span class="muted">Selalu aktif</span>`,
       meta: "PASSIVE",
       value: undefined,
