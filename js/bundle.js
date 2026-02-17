@@ -1718,9 +1718,20 @@ function showSkillFloatingDetail(skill, anchorEl){
     <div class="skillFloatingMeta">MP ${skill.mpCost || 0} • DMG ${skill.power || 0} • CD ${skill.cooldown || 0} turn</div>
   `;
   const r = anchorEl.getBoundingClientRect();
-  const maxLeft = Math.max(8, window.innerWidth - 260);
-  const left = Math.min(maxLeft, Math.max(8, r.left + (r.width / 2) - 120));
-  const top = Math.max(8, r.top - 92);
+  const vw = window.innerWidth || document.documentElement.clientWidth || 360;
+  const vh = window.innerHeight || document.documentElement.clientHeight || 640;
+  const margin = 8;
+  const bubbleW = Math.min(240, vw - margin * 2);
+  const bubbleH = el.offsetHeight || 92;
+
+  const left = Math.max(margin, Math.min(vw - bubbleW - margin, r.left + (r.width / 2) - (bubbleW / 2)));
+
+  const aboveTop = r.top - bubbleH - 10;
+  const belowTop = r.bottom + 10;
+  const top = aboveTop >= margin
+    ? aboveTop
+    : Math.min(vh - bubbleH - margin, Math.max(margin, belowTop));
+
   el.style.left = `${left}px`;
   el.style.top = `${top}px`;
   el.classList.add("show");
