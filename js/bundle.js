@@ -187,7 +187,8 @@ function resolveAttack(att, def, basePower, opts = {}) {
     ? Math.round((att.atk || 0) * 1.2)
     : (att.atk || 0);
   const guardDefBoost = hasStatus(def, "guardStance") ? Math.round((def.def || 0) * 0.35) : 0;
-  const effectiveDef = (def.def || 0) + guardDefBoost;
+  const armorBreakPenalty = hasStatus(def, "armorBreak") ? Math.round((def.def || 0) * 0.15) : 0;
+  const effectiveDef = Math.max(0, (def.def || 0) + guardDefBoost - armorBreakPenalty);
   let dmg = calcDamage(atkPower, effectiveDef, basePower, false);
 
   const critChance = clamp(att.critChance || 0, 0, 100);
@@ -1358,7 +1359,7 @@ function renderAllyRow() {
         delete avatarBox.dataset.allyId;
       }
       applyAllyAvatar(avatarBox, ally);
-      renderStatusBadges(isAlive ? ally : null, statusWrap);
+      renderAllySkillCooldownBadges(isAlive ? ally : null, statusWrap);
       bindLongPress(card, () => {
         const currentAllies = Array.isArray(state.allies) ? state.allies : [];
         const currentAlly = currentAllies[i];
@@ -1381,7 +1382,7 @@ function renderAllyRow() {
       delete card.dataset.allyId;
       delete avatarBox.dataset.allyId;
       applyAllyAvatar(avatarBox, null);
-      renderStatusBadges(null, statusWrap);
+      renderAllySkillCooldownBadges(null, statusWrap);
     }
   });
 }
@@ -1858,6 +1859,11 @@ const STATUS_DEFS = {
     desc: "Meningkatkan DEF signifikan selama beberapa turn.",
     kind: "buff",
   },
+  armorBreak: {
+    label: "Armor Break",
+    desc: "Menurunkan DEF target sebesar 15% selama beberapa turn.",
+    kind: "debuff",
+  },
   stun: {
     label: "Stun",
     desc: (turns) => `Restricted from action for ${turns} Turn.`,
@@ -1917,6 +1923,43 @@ function renderStatusBadges(entity, container) {
     container.appendChild(btn);
   });
 }
+function renderAllySkillCooldownBadges(ally, container) {
+  if (!container) return;
+  const skills = Array.isArray(ally?.activeSkills) ? ally.activeSkills : [];
+  const cooldownSkills = skills
+    .map((skill) => ({ skill, cdLeft: Math.max(0, Number(skill?.cdLeft) || 0) }))
+    .filter((entry) => entry.cdLeft > 0);
+
+  if (!cooldownSkills.length) {
+    container.innerHTML = "";
+    container.style.display = "none";
+    return;
+  }
+
+  container.innerHTML = "";
+  container.style.display = "flex";
+  cooldownSkills.forEach(({ skill, cdLeft }) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "statusBadge cooldown";
+    btn.setAttribute("aria-label", `${skill?.name || "Skill"} cooldown ${cdLeft} turn`);
+    btn.title = `${skill?.name || "Skill"} cooldown ${cdLeft} turn${cdLeft > 1 ? "s" : ""}`;
+    btn.innerHTML = `
+      <span class="statusBadgeIcon" aria-hidden="true"><img src="./assets/icons/cooldown.svg" alt="" /></span>
+      <span class="statusBadgeTurns">${cdLeft}</span>
+    `;
+    btn.onclick = (event) => {
+      event.stopPropagation();
+      modal.open(
+        `Cooldown: ${skill?.name || "Skill"}`,
+        [{ title: "Detail", desc: `Sisa cooldown ${cdLeft} turn.`, meta: "", value: undefined, className: "readonly" }],
+        () => {}
+      );
+    };
+    container.appendChild(btn);
+  });
+}
+
 function setBar(el, cur, max) {
   const pctRaw = max <= 0 ? 0 : (cur / max) * 100;
   const pct = clamp(pctRaw, 0, 100);
@@ -4038,6 +4081,9 @@ function alliesAct(done){
       }
       if (skill?.type === "buff") {
         addStatusEffect(ally, { type: "guardStance", turns: 2, debuff: false });
+      }
+      if (skill?.type === "debuff") {
+        addStatusEffect(currentTarget, { type: "armorBreak", turns: 2, debuff: true });
       }
 
       if (res.reflected > 0) {

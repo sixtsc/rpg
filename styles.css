@@ -1800,6 +1800,25 @@ body.inBattle .enemyMiniMeta .muted{
   border-color:rgba(255,120,120,0.65);
   box-shadow:0 0 0 1px rgba(255,120,120,0.35) inset;
 }
+.statusBadge.cooldown{
+  border-color:rgba(255,211,130,0.7);
+  box-shadow:0 0 0 1px rgba(255,173,79,0.35) inset;
+}
+.statusBadge.cooldown .statusBadgeIcon{
+  width:14px;
+  height:14px;
+  background:transparent;
+  border-radius:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.statusBadge.cooldown .statusBadgeIcon img{
+  width:12px;
+  height:12px;
+  object-fit:contain;
+  opacity:0.95;
+}
 .statusBadgeIcon{
   width:14px;
   height:14px;
@@ -3078,7 +3097,7 @@ body.inTown .grid{ grid-template-columns: 1fr !important; }
 
 /* Ally long-press skill cards in stats modal */
 .modalBody.statsGrid .choice.allySkillRow{
-  border:1px solid rgba(111, 154, 255, 0.45);
+  border:1px solid #2a3c52;
   background:linear-gradient(180deg, rgba(46,64,116,0.6), rgba(23,32,60,0.65));
   border-radius:12px;
   padding:10px;
@@ -3112,11 +3131,11 @@ body.inTown .grid{ grid-template-columns: 1fr !important; }
 .allyXpBar{ height:10px; }
 
 .modalBody.statsGrid .choice.allySkillRow .skillIconWrap{
-  width:42px !important;
-  height:42px !important;
-  min-width:42px !important;
-  min-height:42px !important;
-  border-radius:12px !important;
+  width:48px !important;
+  height:48px !important;
+  min-width:48px !important;
+  min-height:48px !important;
+  border-radius:10px !important;
   border:none !important;
   background-image:url("./assets/ui/skill-frame.png") !important;
   background-size:100% 100% !important;
@@ -3129,7 +3148,7 @@ body.inTown .grid{ grid-template-columns: 1fr !important; }
   box-shadow:none !important;
   position:relative;
   overflow:visible;
-  flex:0 0 42px;
+  flex:0 0 48px;
 }
 .modalBody.statsGrid .choice.allySkillRow .skillIcon{
   width:0;
@@ -3138,8 +3157,8 @@ body.inTown .grid{ grid-template-columns: 1fr !important; }
 }
 .modalBody.statsGrid .choice.allySkillRow .allySkillCooldownBadge{
   position:absolute;
-  right:-5px;
-  bottom:-5px;
+  right:-4px;
+  bottom:-4px;
   min-width:18px;
   height:18px;
   border-radius:999px;
