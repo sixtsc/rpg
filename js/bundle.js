@@ -2021,7 +2021,10 @@ const modal = {
 
       const left = document.createElement("div");
       left.className = "left";
-      const iconHtml = c.icon ? `<span class="skillIconWrap"><img class="skillIcon" src="${escapeHtml(c.icon)}" alt="" /></span>` : "";
+      const iconWrapClass = ["skillIconWrap", c.iconFrameOnly ? "frameOnly" : ""].filter(Boolean).join(" ");
+      const iconHtml = (c.icon || c.iconFrameOnly)
+        ? `<span class="${iconWrapClass}">${c.icon ? `<img class="skillIcon" src="${escapeHtml(c.icon)}" alt="" />` : ""}${c.cooldownBadge ? `<span class="skillCooldown allySkillCooldownBadge">${escapeHtml(String(c.cooldownBadge))}</span>` : ""}</span>`
+        : "";
       const descHtml = c.descHtml ? String(c.descHtml) : escapeHtml(c.desc || "");
       left.innerHTML = `
         <div class="titleRow">${iconHtml}<b>${escapeHtml(c.title)}</b></div>
@@ -4802,7 +4805,7 @@ function openAllyStatsModal(ally) {
     const basic = ally.basicAttack || {};
     cards.push({
       title: `Basic • ${basic.name || "Basic Attack"}`,
-      icon: getAllySkillIconSrc(basic, "./assets/icons/physical.svg"),
+      iconFrameOnly: true,
       descHtml: `${escapeHtml(basic.desc || "-")}<br><span class="muted">CD - • Basic Attack</span>`,
       meta: "READY",
       value: undefined,
@@ -4814,7 +4817,8 @@ function openAllyStatsModal(ally) {
     (ally.activeSkills || []).forEach((skill, idx) => {
       cards.push({
         title: `Active ${idx + 1} • ${skill.name || "Skill"}`,
-        icon: getAllySkillIconSrc(skill, "./assets/icons/physical.svg"),
+        iconFrameOnly: true,
+        cooldownBadge: (skill.cdLeft || 0) > 0 ? `${skill.cdLeft}` : "",
         descHtml: `${escapeHtml(skill.desc || "-")}<br><span class="muted">MP ${skill.mpCost || 0} • Power ${skill.power || 0} • CD ${skill.cdLeft || 0}/${skill.cooldown || 0}</span>`,
         meta: (skill.cdLeft || 0) > 0 ? `CD ${skill.cdLeft}` : "READY",
         value: undefined,
@@ -4827,7 +4831,7 @@ function openAllyStatsModal(ally) {
     const passive = ally.passiveSkill || {};
     cards.push({
       title: `Passive • ${passive.name || "Passive"}`,
-      icon: getAllySkillIconSrc(passive, "./assets/icons/universal.svg"),
+      iconFrameOnly: true,
       descHtml: `${escapeHtml(passive.desc || "-")}<br><span class="muted">Selalu aktif</span>`,
       meta: "PASSIVE",
       value: undefined,
@@ -4849,6 +4853,8 @@ function openAllyStatsModal(ally) {
     const skill = skillData[idx]?.skillRef;
     if (!skill) return;
     bindLongPress(row, () => showSkillFloatingDetail(skill, row));
+    const iconWrap = row.querySelector('.skillIconWrap');
+    if (iconWrap) bindLongPress(iconWrap, () => showSkillFloatingDetail(skill, row));
   });
 }
 
