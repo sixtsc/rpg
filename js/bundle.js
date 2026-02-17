@@ -4204,8 +4204,15 @@ function startAdventureBattle(targetLevel, stageName){
   state.playerDefending = false;
   state.battleTurn = 0;
   clearStatuses(state.enemy);
+  clearStatuses(state.player);
   ensureStatuses(state.enemy);
   ensureStatuses(state.player);
+  const allies = ensureAllies();
+  allies.forEach((ally) => {
+    if (!ally) return;
+    clearStatuses(ally);
+    ensureStatuses(ally);
+  });
   addLog("INFO", `Stage ${stageName}: Musuh muncul: ${state.enemy.name} (Lv${state.enemy.level})`);
 
   if (state.enemy.spd > state.player.spd) {
@@ -4871,6 +4878,18 @@ function openAllyStatsModal(ally) {
       skillRef: { name: basic.name || "Basic Attack", desc: basic.desc || "-", mpCost: 0, power: 2, cooldown: 0 }
     });
 
+    const passive = ally.passiveSkill || {};
+    cards.push({
+      title: `Passive • ${passive.name || "Passive"}`,
+      iconFrameOnly: true,
+      descHtml: `${escapeHtml(passive.desc || "-")}<br><span class="muted">Selalu aktif</span>`,
+      meta: "PASSIVE",
+      value: undefined,
+      className: "allySkillRow allySkillCardRow",
+      keepOpen: true,
+      skillRef: { name: passive.name || "Passive", desc: passive.desc || "-", mpCost: 0, power: 0, cooldown: 0 }
+    });
+
     (ally.activeSkills || []).forEach((skill, idx) => {
       cards.push({
         title: `Active ${idx + 1} • ${skill.name || "Skill"}`,
@@ -4883,18 +4902,6 @@ function openAllyStatsModal(ally) {
         keepOpen: true,
         skillRef: skill
       });
-    });
-
-    const passive = ally.passiveSkill || {};
-    cards.push({
-      title: `Passive • ${passive.name || "Passive"}`,
-      iconFrameOnly: true,
-      descHtml: `${escapeHtml(passive.desc || "-")}<br><span class="muted">Selalu aktif</span>`,
-      meta: "PASSIVE",
-      value: undefined,
-      className: "allySkillRow allySkillCardRow",
-      keepOpen: true,
-      skillRef: { name: passive.name || "Passive", desc: passive.desc || "-", mpCost: 0, power: 0, cooldown: 0 }
     });
 
     return cards;
