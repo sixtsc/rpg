@@ -4437,16 +4437,13 @@ function alliesAct(done){
     const delay = baseDelay + (index * orderGap) + speedLag;
     lastDelay = Math.max(lastDelay, delay);
     setTimeout(() => {
-      const currentTarget = getTargetEnemy();
-      if (!currentTarget || ally.hp <= 0) return;
+      if (ally.hp <= 0) return;
       if (hasStatus(ally, "stun")) {
         addLog("ALLY", `${ally.name} terkena Stun dan tidak bisa bergerak.`);
         tickStatuses(ally);
         refresh(state);
         return;
       }
-      const targetIndex = getEnemyIndex(currentTarget);
-      if (targetIndex < 0) return;
 
       let skill = pickAllySkill(ally);
       let basePower = 3;
@@ -4490,7 +4487,21 @@ function alliesAct(done){
       }
 
       let res = null;
+      let targetIndex = -1;
       if (!usedSupportSkill) {
+        const currentTarget = getTargetEnemy();
+        if (!currentTarget) {
+          tickStatuses(ally);
+          refresh(state);
+          return;
+        }
+        targetIndex = getEnemyIndex(currentTarget);
+        if (targetIndex < 0) {
+          tickStatuses(ally);
+          refresh(state);
+          return;
+        }
+
         res = resolveAttack(ally, currentTarget, basePower);
         if (res.missed) {
           addLog("ALLY", `${ally.name} meleset.`);
