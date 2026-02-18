@@ -336,15 +336,19 @@ function normalizeAlly(ally){
       desc: ally.basicAttack?.desc || GLENN_BASE.basicAttack.desc
     },
     activeSkills: Array.isArray(ally.activeSkills) && ally.activeSkills.length
-      ? ally.activeSkills.slice(0, 2).map((skill, idx) => ({
-        name: skill?.name || GLENN_BASE.activeSkills[idx]?.name || `Active ${idx + 1}`,
-        desc: skill?.desc || GLENN_BASE.activeSkills[idx]?.desc || "",
-        cooldown: Math.max(1, Number(skill?.cooldown) || 1),
-        cdLeft: Math.max(0, Number(skill?.cdLeft) || 0),
-        power: Math.max(1, Number(skill?.power) || Number(GLENN_BASE.activeSkills[idx]?.power || 4)),
-        mpCost: Math.max(0, Number(skill?.mpCost) || Number(GLENN_BASE.activeSkills[idx]?.mpCost || 0)),
-        type: skill?.type || GLENN_BASE.activeSkills[idx]?.type || "damage"
-      }))
+      ? ally.activeSkills.slice(0, 2).map((skill, idx) => {
+        const skillName = skill?.name || GLENN_BASE.activeSkills[idx]?.name || `Active ${idx + 1}`;
+        const baseRef = GLENN_BASE.activeSkills.find((baseSkill) => baseSkill.name === skillName) || GLENN_BASE.activeSkills[idx] || {};
+        return {
+          name: skillName,
+          desc: baseRef.desc || skill?.desc || "",
+          cooldown: Math.max(1, Number(baseRef.cooldown) || Number(skill?.cooldown) || 1),
+          cdLeft: Math.max(0, Number(skill?.cdLeft) || 0),
+          power: Math.max(1, Number(baseRef.power) || Number(skill?.power) || 4),
+          mpCost: Math.max(0, Number(baseRef.mpCost) || Number(skill?.mpCost) || 0),
+          type: baseRef.type || skill?.type || "damage"
+        };
+      })
       : GLENN_BASE.activeSkills.map((skill) => ({ ...skill, cdLeft: 0 })),
     passiveSkill: {
       name: ally.passiveSkill?.name || GLENN_BASE.passiveSkill.name,
