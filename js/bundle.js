@@ -4038,7 +4038,6 @@ function alliesAct(done){
         skill.cdLeft = skill.cooldown || 0;
         basePower = Math.max(3, Number(skill.power) || 3);
         addLog("SKILL", `${ally.name} • ${skill.name}`);
-        showEnemyDamageText(skill.name, targetIndex);
       }
 
       const res = resolveAttack(ally, currentTarget, basePower);
