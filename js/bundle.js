@@ -399,12 +399,13 @@ function normalizeAlly(ally){
         const baseRef = (baseAlly.activeSkills || []).find((baseSkill) => baseSkill.name === skillName) || baseAlly.activeSkills?.[idx] || {};
         return {
           name: skillName,
-          desc: skill?.desc || baseRef.desc || "",
-          cooldown: Math.max(1, Number(skill?.cooldown) || Number(baseRef.cooldown) || 1),
+          // Lock gameplay-critical values to base template to avoid legacy save corruption.
+          desc: baseRef.desc || skill?.desc || "",
+          cooldown: Math.max(1, Number(baseRef.cooldown) || Number(skill?.cooldown) || 1),
           cdLeft: Math.max(0, Number(skill?.cdLeft) || 0),
-          power: Math.max(1, Number(skill?.power) || Number(baseRef.power) || 4),
-          mpCost: Math.max(0, Number(skill?.mpCost) || Number(baseRef.mpCost) || 0),
-          type: skill?.type || baseRef.type || "damage"
+          power: Math.max(1, Number(baseRef.power) || Number(skill?.power) || 4),
+          mpCost: Math.max(1, Number(baseRef.mpCost) || Number(skill?.mpCost) || 1),
+          type: baseRef.type || skill?.type || "damage"
         };
       })
       : (baseAlly.activeSkills || []).map((skill) => ({ ...skill, cdLeft: 0 })),
