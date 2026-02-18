@@ -291,7 +291,9 @@ function newPlayer(){
     xp:0, xpToLevel:50,
     gold:0,
     gems:0,
-    allies: [createStarterAlly(0)],
+    allies: [],
+    glennUnlocked: false,
+    highestStageCleared: 0,
     skills:[{ ...SKILLS.fireball, cdLeft:0 }],
     skillSlots: ["Fireball", null, null, null, null, null, null, null],
     inv: { "Potion": { ...ITEMS.potion, qty:2 }, "Ether": { ...ITEMS.ether, qty:1 } }
@@ -365,6 +367,8 @@ function normalizePlayer(p){
 
   if (!Array.isArray(p.allies)) p.allies = [];
   p.allies = p.allies.map(normalizeAlly).filter(Boolean).slice(0, 1);
+  if (typeof p.glennUnlocked !== "boolean") p.glennUnlocked = p.allies.some((ally) => ally?.id === "glenn" || ally?.name === "Glenn");
+  p.highestStageCleared = Math.max(0, Number(p.highestStageCleared) || 0);
   if (typeof p._allyStarterInit !== "boolean") p._allyStarterInit = false;
 
   // Base stats
@@ -2576,18 +2580,36 @@ const byId = (id) => document.getElementById(id);
 
 const state = newState();
 
+function hasGlennUnlockRequirements(){
+  const player = state.player;
+  if (!player) return false;
+  return (Number(player.level) || 0) >= 9 && (Number(player.highestStageCleared) || 0) >= 7;
+}
+
+function ensureGlennUnlockState({ source = "" } = {}){
+  if (!state.player) return false;
+  if (state.player.glennUnlocked) return true;
+  if (!hasGlennUnlockRequirements()) return false;
+  state.player.glennUnlocked = true;
+  addLog("ALLY", `Glenn terbuka! (${source || "Syarat terpenuhi"})`);
+  return true;
+}
+
 function ensureAllies(){
   if (!state.player) return [];
+  ensureGlennUnlockState();
   if (!Array.isArray(state.player.allies)) state.player.allies = [];
   state.player.allies = state.player.allies.map(normalizeAlly).filter(Boolean);
   if (state.player.allies.length > 1) state.player.allies = [state.player.allies[0]];
-  if (!state.player.allies.length) {
+  if (!state.player.glennUnlocked) {
+    state.player.allies = [];
+  } else if (!state.player.allies.length) {
     state.player.allies.push(normalizeAlly(createStarterAlly(0)));
   }
-  if (state.player.allies[0] && state.player.allies[0].id !== "glenn") {
+  if (state.player.glennUnlocked && state.player.allies[0] && state.player.allies[0].id !== "glenn") {
     state.player.allies[0] = normalizeAlly({ ...createStarterAlly(0), ...state.player.allies[0], id:"glenn", name:"Glenn", level:0, xp:0 });
   }
-  if (!state.player._allyStarterInit) {
+  if (state.player.glennUnlocked && !state.player._allyStarterInit) {
     state.player.allies[0] = normalizeAlly({ ...createStarterAlly(0), id:"glenn", name:"Glenn" });
     state.player._allyStarterInit = true;
   }
@@ -2785,7 +2807,10 @@ function renderAllyPage(){
   if (!grid) return;
   const allies = Array.isArray(state.player?.allies) ? state.player.allies : [];
   if (!allies.length) {
-    grid.innerHTML = `<div class="marketEmptyState"><h3>Belum ada ally</h3><p>Karakter ally belum tersedia.</p></div>`;
+    const p = state.player || {};
+    const stageProgress = Math.min(7, Number(p.highestStageCleared) || 0);
+    const levelProgress = Math.min(9, Number(p.level) || 0);
+    grid.innerHTML = `<div class="marketEmptyState"><h3>Glenn masih terkunci</h3><p>Syarat: clear Stage 7 & capai level 9.</p><p>Progress: Stage ${stageProgress}/7 • Lv ${levelProgress}/9</p></div>`;
     return;
   }
   grid.innerHTML = "";
@@ -3840,6 +3865,7 @@ function levelUp() {
   const dhp = p.maxHp - prevMaxHp;
   const dmp = p.maxMp - prevMaxMp;
   addLog("LEVEL", `Naik ke Lv${p.level}! HP/MP Meningkat +${dhp}/+${dmp}. +${STAT_POINTS_PER_LEVEL} Stat Points.`);
+  ensureGlennUnlockState({ source: "Sampai level 9" });
 }
 
 function gainXp(amount) {
@@ -4017,6 +4043,12 @@ function winBattle() {
     addLog("TURN", "Kamu lebih cepat!");
     refresh(state);
     return;
+  }
+
+  const stageNumber = Number((state.currentStageName || "").replace(/\D+/g, ""));
+  if (Number.isFinite(stageNumber) && stageNumber > 0) {
+    state.player.highestStageCleared = Math.max(Number(state.player.highestStageCleared) || 0, stageNumber);
+    ensureGlennUnlockState({ source: `Stage ${stageNumber} clear` });
   }
 
   const summary = { outcome: "win", gold: goldGain, xp: xpGain, drops, enemyName: e.name, expProgress };
