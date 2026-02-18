@@ -4424,8 +4424,12 @@ function alliesAct(done){
       let basePower = 3;
       let usedSupportSkill = false;
       if (skill) {
+        const baseAlly = ALLY_BASES[String(ally?.id || "").toLowerCase()] || {};
+        const baseSkill = (baseAlly.activeSkills || []).find((s) => s?.name === skill.name);
+        const cooldownMax = Math.max(1, Number(skill.cooldown) || Number(baseSkill?.cooldown) || 1);
+        skill.cooldown = cooldownMax;
         ally.mp = clamp((ally.mp || 0) - (skill.mpCost || 0), 0, ally.maxMp || 0);
-        skill.cdLeft = skill.cooldown || 0;
+        skill.cdLeft = cooldownMax;
         basePower = Math.max(3, Number(skill.power) || 3);
         addLog("SKILL", `${ally.name} • ${skill.name}`);
       }
@@ -5294,11 +5298,11 @@ function openAllyStatsModal(ally) {
       cards.push({
         title: `Active ${idx + 1} • ${skill.name || "Skill"}`,
         iconFrameOnly: true,
-        cooldownBadge: `CD ${cdLeft}/${cdMax}`,
+        cooldownBadge: cdLeft > 0 ? `${cdLeft}` : "",
         descHtml: `${escapeHtml(skill.desc || "-")}<br><span class="muted">MP ${skill.mpCost || 0} • Power ${skill.power || 0} • CD ${cdLeft}/${cdMax}</span>`,
-        meta: cdLeft > 0 ? `COOLDOWN ${cdLeft}` : "READY",
+        meta: cdLeft > 0 ? `CD ${cdLeft}` : "READY",
         value: undefined,
-        className: `allySkillRow allySkillCardRow${cdLeft > 0 ? " skillOnCooldown" : ""}`,
+        className: "allySkillRow allySkillCardRow",
         keepOpen: true,
         skillRef: skill
       });

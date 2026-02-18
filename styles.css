@@ -3297,25 +3297,20 @@ body.inTown .grid{ grid-template-columns: 1fr !important; }
 }
 .modalBody.statsGrid .choice.allySkillRow .allySkillCooldownBadge{
   position:absolute;
-  right:-6px;
-  top:-6px;
-  min-width:28px;
-  height:16px;
+  right:3px;
+  bottom:2px;
+  min-width:14px;
+  height:14px;
   border-radius:999px;
-  padding:0 5px;
+  padding:0 3px;
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:8px;
+  font-size:9px;
   font-weight:900;
-  color:#fff2de;
-  background:rgba(17,24,39,0.92);
-  border:1px solid rgba(255,179,118,0.8);
-  box-shadow:0 2px 6px rgba(0,0,0,0.45);
-  text-shadow:0 1px 2px rgba(0,0,0,0.75);
-  line-height:1;
-}
-
-.modalBody.statsGrid .choice.allySkillRow.skillOnCooldown .titleRow b{
   color:#ffd3a8;
+  background:transparent;
+  border:none;
+  box-shadow:none;
+  text-shadow:0 1px 2px rgba(0,0,0,0.75);
 }
