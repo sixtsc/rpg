@@ -104,7 +104,7 @@ const ELARA_BASE = {
   escapeChance: 0,
   manaRegen: 0,
   description: "Elf support dengan sihir alam yang menjaga ritme tim tetap stabil.",
-  story: "Elara adalah elf yang diselamatkan player saat diculik bandit di Stage 10 untuk dijual. Setelah bebas, ia memutuskan membantu perjalananmu.",
+  story: "Elara adalah elf pengembara yang pernah kehilangan klannya, lalu menemukan harapan baru saat bertemu denganmu.",
   basicAttack: { name: "Nature Bolt", desc: "Serangan sihir ringan yang memulihkan fokus Elara." },
   activeSkills: [
     { name: "Healing Bloom", desc: "Memulihkan HP party sebesar 18% dari Max HP Elara.", power: 8, mpCost: 6, cooldown: 3, type: "heal" },
@@ -359,6 +359,7 @@ function normalizeAlly(ally){
     ...ally,
     id: ally.id || baseAlly.id,
     level,
+    equipped: ally.equipped !== false,
     rarity: Math.max(1, Number(ally.rarity) || Number(baseAlly.rarity) || 1),
     maxHp,
     maxMp,
@@ -1585,7 +1586,7 @@ function updateAllySlotBadge() {
   if (!badgeText) return;
   const allies = Array.isArray(state.allies) ? state.allies : [];
   const filled = allies.filter(Boolean).length;
-  const totalSlots = 1;
+  const totalSlots = MAX_ALLIES;
   badgeText.textContent = `${filled}/${totalSlots}`;
 }
 
@@ -2682,9 +2683,14 @@ function ensureAllies(){
     .filter(Boolean)
     .concat(Array.from(allyMap.entries()).filter(([id]) => !["glenn", "elara"].includes(id)).map(([, ally]) => ally));
 
-  state.player.allies = ordered.slice(0, MAX_ALLIES);
-  state.allies = state.player.allies;
+  state.player.allies = ordered.slice(0, MAX_ALLIES).map((ally) => normalizeAlly(ally));
+  state.allies = state.player.allies.filter((ally) => ally && ally.equipped !== false);
   return state.allies;
+}
+
+function getRosterAllies(){
+  ensureAllies();
+  return Array.isArray(state.player?.allies) ? state.player.allies : [];
 }
 
 function restoreAllies(){
@@ -2764,7 +2770,7 @@ function setAllyPageVisible(show){
 
 
 function levelUpAlly(allyIndex){
-  const ally = ensureAllies()[allyIndex];
+  const ally = getRosterAllies()[allyIndex];
   if (!ally) return { ok:false, message:"Ally tidak ditemukan." };
   if ((ally.level || 0) >= MAX_LEVEL) return { ok:false, message:"Level Glenn sudah maksimal." };
   const cost = (ally.level + 1) * 120;
@@ -2786,6 +2792,17 @@ function levelUpAlly(allyIndex){
   return { ok:true, message:`Glenn naik ke level ${ally.level}!` };
 }
 
+function toggleAllyEquip(allyIndex){
+  const roster = getRosterAllies();
+  const ally = roster[allyIndex];
+  if (!ally) return { ok:false, message:"Ally tidak ditemukan." };
+  ally.equipped = !(ally.equipped !== false);
+  ensureAllies();
+  autosave(state);
+  refresh(state);
+  return { ok:true, message: `${ally.name} ${ally.equipped ? "dipakai" : "disimpan"}.` };
+}
+
 function openAllyDetailPopup(ally, idx = 0){
   const popup = byId("allyDetailPopup");
   if (!popup || !ally) return;
@@ -2801,6 +2818,7 @@ function openAllyDetailPopup(ally, idx = 0){
   const active = byId("allyActiveSkills");
   const passive = byId("allyPassiveSkill");
   const levelBtn = byId("allyDetailLevelUp");
+  const equipBtn = byId("allyDetailEquip");
   const progress = byId("allyDetailProgress");
   const xpText = byId("allyDetailXpText");
   const xpBar = byId("allyDetailXpBar");
@@ -2830,6 +2848,9 @@ function openAllyDetailPopup(ally, idx = 0){
   if (desc) desc.textContent = ally.description || "Belum ada deskripsi.";
   if (story) story.textContent = ally.story || "Belum ada story.";
   if (basic) basic.innerHTML = `<h5>${escapeHtml(ally.basicAttack?.name || "Basic Attack")}</h5><p>${escapeHtml(ally.basicAttack?.desc || "-")}</p>`;
+  if (passive) {
+    passive.innerHTML = `<h5>${escapeHtml(ally.passiveSkill?.name || "Passive")}</h5><p>${escapeHtml(ally.passiveSkill?.desc || "-")}</p>`;
+  }
   if (active) {
     active.innerHTML = (ally.activeSkills || []).slice(0, 2).map((skill, i) => `
       <div class="allySkillCard">
@@ -2838,9 +2859,6 @@ function openAllyDetailPopup(ally, idx = 0){
         <span class="allySkillCooldown">Cooldown ${escapeHtml(String(skill.cooldown || 1))} turn</span>
       </div>
     `).join("");
-  }
-  if (passive) {
-    passive.innerHTML = `<h5>${escapeHtml(ally.passiveSkill?.name || "Passive")}</h5><p>${escapeHtml(ally.passiveSkill?.desc || "-")}</p>`;
   }
   if (progress) {
     progress.textContent = `Progress Level: Lv ${ally.level ?? 0}/10`;
@@ -2863,7 +2881,17 @@ function openAllyDetailPopup(ally, idx = 0){
           () => modal.close()
         );
       }
-      openAllyDetailPopup(ensureAllies()[idx], idx);
+      openAllyDetailPopup(getRosterAllies()[idx], idx);
+      renderAllyPage();
+    };
+  }
+  if (equipBtn) {
+    equipBtn.textContent = ally.equipped !== false ? "Unequip" : "Equip";
+    equipBtn.classList.toggle("active", ally.equipped !== false);
+    equipBtn.onclick = () => {
+      const result = toggleAllyEquip(idx);
+      addLog(result.ok ? "INFO" : "WARN", result.message);
+      openAllyDetailPopup(getRosterAllies()[idx], idx);
       renderAllyPage();
     };
   }
@@ -2882,7 +2910,7 @@ function renderAllyPage(){
   ensureAllies();
   const grid = byId("allyGrid");
   if (!grid) return;
-  const allies = Array.isArray(state.player?.allies) ? state.player.allies : [];
+  const allies = getRosterAllies();
   if (!allies.length) {
     const p = state.player || {};
     const stageProgress = Math.min(7, Number(p.highestStageCleared) || 0);
@@ -2901,6 +2929,7 @@ function renderAllyPage(){
       <div class="allyAvatarLevel">${escapeHtml(String(ally.level ?? 0))}</div>
       <div class="allyAvatarPortrait" style="background:${escapeHtml(visual.background)}">${escapeHtml(visual.icon)}</div>
       <div class="allyAvatarName">${escapeHtml(ally.name || `Ally ${idx + 1}`)}</div>
+      <div class="allyAvatarUsage">${escapeHtml(ally.equipped !== false ? "Dipakai" : "Disimpan")}</div>
       <div class="allyAvatarRarity">${escapeHtml(formatRarity(ally))}</div>
     `;
     card.onclick = () => openAllyDetailPopup(ally, idx);

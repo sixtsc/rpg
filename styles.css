@@ -2045,6 +2045,12 @@ body.inBattle .enemyMiniMeta .muted{
   font-size:18px;
   font-weight:800;
 }
+.allyAvatarUsage{
+  font-size:12px;
+  font-weight:700;
+  color:#9edbbf;
+  letter-spacing:.2px;
+}
 .allyAvatarRarity{
   font-size:12px;
   font-weight:700;
@@ -2117,6 +2123,24 @@ body.inBattle .enemyMiniMeta .muted{
 }
 .allyDetailRole{ margin:4px 0; color:var(--muted); font-size:14px; }
 .allyDetailProgress{ margin:0 0 8px; font-size:12px; color:#c9d8ff; }
+.allyDetailActions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.allyDetailEquip{
+  border:1px solid rgba(120,221,171,0.5);
+  background:rgba(50,158,116,0.2);
+  color:#e9fff4;
+  border-radius:10px;
+  padding:8px 12px;
+  cursor:pointer;
+  font-weight:700;
+}
+.allyDetailEquip.active{
+  background:rgba(58,182,132,0.34);
+  border-color:rgba(120,240,188,0.75);
+}
 .allyDetailLevelUp{
   border:1px solid rgba(121,163,255,0.55);
   background:rgba(87,129,238,0.25);
