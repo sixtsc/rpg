@@ -1429,6 +1429,7 @@ function renderAllyRow() {
     }
 
     if (ally) {
+      const prevHp = (typeof ally._prevHp === "number") ? ally._prevHp : ally.hp;
       nameEl.textContent = ally.name || `NPC ${slotIndex}`;
       lvlEl.textContent = `Lv${ally.level ?? 0}`;
       subEl.textContent = "";
@@ -1437,6 +1438,17 @@ function renderAllyRow() {
       mpText.textContent = `${ally.mp}/${ally.maxMp}`;
       setBar(hpBar, ally.hp, ally.maxHp);
       setBar(mpBar, ally.mp, ally.maxMp);
+      const hpBarWrap = hpBar.parentElement;
+      if (hpBarWrap && ally.hp < prevHp) {
+        if (hpBarWrap._hpPulseTimer) clearTimeout(hpBarWrap._hpPulseTimer);
+        hpBarWrap.classList.remove("hpPulse");
+        void hpBarWrap.offsetWidth;
+        hpBarWrap.classList.add("hpPulse");
+        hpBarWrap._hpPulseTimer = setTimeout(() => {
+          hpBarWrap.classList.remove("hpPulse");
+        }, 360);
+      }
+      ally._prevHp = ally.hp;
       card.classList.remove("empty");
       card.classList.add("active");
       card.style.display = "flex";
@@ -2271,11 +2283,24 @@ function refresh(state) {
   if (allyPageGemValue) allyPageGemValue.textContent = `${p.gems || 0}`;
 
   // Player bars
+  const prevPlayerHp = (typeof p._prevHp === "number") ? p._prevHp : p.hp;
   $("hpText").textContent = `${p.hp}/${p.maxHp}`;
   $("mpText").textContent = `${p.mp}/${p.maxMp}`;
   $("xpText").textContent = (p.level >= MAX_LEVEL) ? "MAX" : `${p.xp}/${p.xpToLevel}`;
 
-  setBar($("hpBar"), p.hp, p.maxHp);
+  const playerHpBar = $("hpBar");
+  setBar(playerHpBar, p.hp, p.maxHp);
+  const playerHpBarWrap = playerHpBar ? playerHpBar.parentElement : null;
+  if (playerHpBarWrap && p.hp < prevPlayerHp) {
+    if (playerHpBarWrap._hpPulseTimer) clearTimeout(playerHpBarWrap._hpPulseTimer);
+    playerHpBarWrap.classList.remove("hpPulse");
+    void playerHpBarWrap.offsetWidth;
+    playerHpBarWrap.classList.add("hpPulse");
+    playerHpBarWrap._hpPulseTimer = setTimeout(() => {
+      playerHpBarWrap.classList.remove("hpPulse");
+    }, 360);
+  }
+  p._prevHp = p.hp;
   setBar($("mpBar"), p.mp, p.maxMp);
   setBar($("xpBar"), (p.level >= MAX_LEVEL ? p.xpToLevel : p.xp), p.xpToLevel);
   renderSkillSlots();
