@@ -129,6 +129,7 @@ const MAX_ALLIES = 2;
 const TURN_DELAY_MS = 650;
 const ALLY_ACTION_GAP_MS = 420;
 const ENEMY_ACTION_GAP_MS = 360;
+const AUTO_TURN_DELAY_MS = 380;
 function genEnemy(plv){
   const lvl = clamp(plv + pick([-1,0,0,1]), 1, MAX_LEVEL);
   const name = pick(ENEMY_NAMES);
@@ -530,6 +531,9 @@ function newState(){
     skillShopCategory: "fire",
     inventoryCategory: "item",
     playerDefending: false,
+    autoBattleEnabled: false,
+    autoBattleUseConsumable: false,
+    _autoBattlePending: false,
     turn: "town",
     battleTurn: 0 // "town" | "player" | "enemy"
   };
@@ -652,6 +656,7 @@ function resetToEmptyProfile(){
   state.enemy = null;
   state.inBattle = false;
   state.playerDefending = false;
+  setAutoBattleEnabled(false);
   setTurn("town");
   state.battleTurn = 0;
   refresh(state);
@@ -2248,6 +2253,7 @@ const modal = {
 
   close() {
     $("modalBackdrop").style.display = "none";
+    window.dispatchEvent(new Event("rpg:modal-closed"));
   },
 
   bind() {
@@ -2276,6 +2282,29 @@ function refresh(state) {
   if (battleHintEl) {
     battleHintEl.style.display = "none";
     battleHintEl.textContent = "";
+  }
+
+  const autoLabel = state.autoBattleEnabled ? "Auto: ON" : "Auto: OFF";
+  const btnAutoBattle = $("btnAutoBattle");
+  if (btnAutoBattle) {
+    btnAutoBattle.textContent = autoLabel;
+  }
+
+  const btnAutoBattleFloating = $("btnAutoBattleFloating");
+  if (btnAutoBattleFloating) {
+    btnAutoBattleFloating.classList.toggle("active", !!state.autoBattleEnabled);
+    btnAutoBattleFloating.setAttribute("aria-label", autoLabel);
+    btnAutoBattleFloating.setAttribute("title", autoLabel);
+  }
+
+  const autoItemLabel = state.autoBattleUseConsumable ? "Auto Item: ON" : "Auto Item: OFF";
+  const btnAutoBattleSettingsFloating = $("btnAutoBattleSettingsFloating");
+  if (btnAutoBattleSettingsFloating) {
+    const showSetting = !!state.inBattle && !!state.autoBattleEnabled;
+    btnAutoBattleSettingsFloating.style.display = showSetting ? "inline-flex" : "none";
+    btnAutoBattleSettingsFloating.classList.toggle("on", !!state.autoBattleUseConsumable);
+    btnAutoBattleSettingsFloating.setAttribute("aria-label", autoItemLabel);
+    btnAutoBattleSettingsFloating.setAttribute("title", autoItemLabel);
   }
 
   // Player title + name
@@ -2456,7 +2485,7 @@ function refresh(state) {
 
     // Buttons visibility
     $("townBtns").style.display = "none";
-    $("battleBtns").style.display = state.turn === "player" ? "flex" : "none";
+    $("battleBtns").style.display = (state.turn === "player" && !state.autoBattleEnabled) ? "flex" : "none";
     if (state.battleResult) {
       $("battleBtns").classList.add("disabled");
       $("battleBtns").querySelectorAll("button").forEach((b) => { b.disabled = true; });
@@ -2579,6 +2608,7 @@ function refresh(state) {
 const byId = (id) => document.getElementById(id);
 
 const state = newState();
+let autoBattleTimer = null;
 
 function hasGlennUnlockRequirements(){
   const player = state.player;
@@ -3725,6 +3755,42 @@ function openSkillLearnDetail(skillKey){
 
 /* ----------------------------- Core helpers ----------------------------- */
 
+function clearAutoBattleTimer(){
+  if (autoBattleTimer) {
+    clearTimeout(autoBattleTimer);
+    autoBattleTimer = null;
+  }
+  state._autoBattlePending = false;
+}
+
+function setAutoBattleEnabled(enabled){
+  state.autoBattleEnabled = !!enabled;
+  if (!state.autoBattleEnabled) clearAutoBattleTimer();
+}
+
+function setAutoBattleUseConsumable(enabled){
+  state.autoBattleUseConsumable = !!enabled;
+}
+
+function isActionModalOpen(){
+  const backdrop = byId("modalBackdrop");
+  return !!(backdrop && backdrop.style.display !== "none");
+}
+
+function scheduleAutoBattleTurn(){
+  clearAutoBattleTimer();
+  if (!state.autoBattleEnabled || !state.inBattle || state.turn !== "player" || !getTargetEnemy()) return;
+  if (state.battleResult) return;
+  if (isActionModalOpen()) return;
+
+  state._autoBattlePending = true;
+  autoBattleTimer = setTimeout(() => {
+    autoBattleTimer = null;
+    state._autoBattlePending = false;
+    performAutoBattleTurn();
+  }, AUTO_TURN_DELAY_MS);
+}
+
 function setTurn(turn) {
   const prev = state.turn;
   state.turn = turn; // "town" | "player" | "enemy"
@@ -3747,6 +3813,9 @@ function setTurn(turn) {
       });
     });
   }
+
+  if (turn === "player") scheduleAutoBattleTurn();
+  else clearAutoBattleTimer();
 }
 
 function prepareTurn(turn){
@@ -4585,6 +4654,116 @@ function useItem(name) {
   return true;
 }
 
+function getAutoHealItemName(){
+  const inv = state.player?.inv || {};
+  return Object.keys(inv).find((name) => {
+    const item = inv[name];
+    return item && item.qty > 0 && item.kind === "heal_hp";
+  });
+}
+
+function getAutoSkillCandidates(player){
+  if (!player || !Array.isArray(player.skills)) return [];
+  const byName = new Map(player.skills.filter(Boolean).map((skill, idx) => [skill.name, { skill, idx }]));
+  if (!Array.isArray(player.skillSlots) || !player.skillSlots.length) {
+    return player.skills
+      .map((skill, idx) => ({ skill, idx }))
+      .filter(({ skill }) => !!skill);
+  }
+
+  const picked = [];
+  player.skillSlots.forEach((slotName) => {
+    if (!slotName || !byName.has(slotName)) return;
+    const candidate = byName.get(slotName);
+    if (!candidate) return;
+    if (picked.some((entry) => entry.idx === candidate.idx)) return;
+    picked.push(candidate);
+  });
+  return picked;
+}
+
+function pickAutoSkillIndex(){
+  const p = state.player;
+  const ranked = getAutoSkillCandidates(p)
+    .filter(({ skill }) => skill && (skill.cdLeft || 0) <= 0 && p.mp >= (skill.mpCost || 0))
+    .sort((a, b) => (b.skill.power || 0) - (a.skill.power || 0));
+  return ranked.length ? ranked[0].idx : -1;
+}
+
+function castSkillByIndex(idx){
+  const p = state.player;
+  const s = p?.skills?.[idx];
+  if (!p || !s) return false;
+  if ((s.cdLeft || 0) > 0) return false;
+  if (p.mp < s.mpCost) return false;
+
+  setTurn("player");
+  p.mp -= s.mpCost;
+
+  const target = getTargetEnemy();
+  if (!target) return false;
+  const targetIndex = getEnemyIndex(target);
+  const res = resolveAttack(p, target, s.power);
+  if (res.missed) {
+    playEnemyDodgeFade(targetIndex);
+    showEnemyDamageText("MISS", targetIndex);
+  } else {
+    if (res.dmg > 0) {
+      target.hp = clamp(target.hp - res.dmg, 0, target.maxHp);
+      playEnemyCritShake(targetIndex);
+    }
+    if (res.reflected > 0) {
+      p.hp = clamp(p.hp - res.reflected, 0, p.maxHp);
+      playCritShake("player");
+      showDamageText("player", `-${res.reflected} (REFLECT)`);
+    }
+    showEnemyDamageText(formatDamageText(res, res.dmg), targetIndex);
+  }
+
+  s.cdLeft = s.cooldown || 0;
+
+  if (p.hp <= 0) {
+    loseBattle();
+    return true;
+  }
+
+  return true;
+}
+
+function performAutoBattleTurn(){
+  if (!state.autoBattleEnabled || !state.inBattle || state.turn !== "player") return;
+  if (isActionModalOpen()) return;
+  if (state._autoBattlePending) return;
+
+  const p = state.player;
+  const target = getTargetEnemy();
+  if (!p || !target || target.hp <= 0) return;
+
+  const hpRatio = p.maxHp > 0 ? (p.hp / p.maxHp) : 1;
+  if (state.autoBattleUseConsumable && hpRatio <= 0.35) {
+    const healName = getAutoHealItemName();
+    if (healName) {
+      const ok = useItem(healName);
+      if (ok) {
+        afterPlayerAction();
+        return;
+      }
+    }
+  }
+
+  const skillIdx = pickAutoSkillIndex();
+  if (skillIdx >= 0) {
+    const used = castSkillByIndex(skillIdx);
+    if (used) {
+      afterPlayerAction();
+      return;
+    }
+  }
+
+  attack();
+  afterPlayerAction();
+}
+
 function openSkillModal() {
   const p = state.player;
   if (!p || !getTargetEnemy()) return;
@@ -4603,54 +4782,12 @@ function openSkillModal() {
   });
 
   modal.open("Skill", choices, (idx) => {
-    setTurn("player");
-    const s = p.skills[idx];
-
-    const cdLeft = s.cdLeft || 0;
-    if (cdLeft > 0) {
-      addLog("WARN", `${s.name} cooldown ${cdLeft} turn.`);
+    const used = castSkillByIndex(idx);
+    if (!used) {
+      addLog("WARN", "Skill tidak bisa dipakai.");
       refresh(state);
       return;
     }
-
-    if (p.mp < s.mpCost) {
-      addLog("WARN", "MP tidak cukup.");
-      refresh(state);
-      return;
-    }
-
-    p.mp -= s.mpCost;
-
-    const target = getTargetEnemy();
-    if (!target) return;
-    const targetIndex = getEnemyIndex(target);
-    const res = resolveAttack(p, target, s.power);
-    if (res.missed) {
-      playEnemyDodgeFade(targetIndex);
-      showEnemyDamageText("MISS", targetIndex);
-    } else {
-      if (res.dmg > 0) {
-        target.hp = clamp(target.hp - res.dmg, 0, target.maxHp);
-        playEnemyCritShake(targetIndex);
-      }
-      if (res.reflected > 0) {
-        p.hp = clamp(p.hp - res.reflected, 0, p.maxHp);
-        playCritShake("player");
-      }
-      showEnemyDamageText(formatDamageText(res, res.dmg), targetIndex);
-      if (res.reflected > 0) {
-        showDamageText("player", `-${res.reflected} (REFLECT)`);
-      }
-    }
-
-    // Set per-skill cooldown
-    s.cdLeft = s.cooldown || 0;
-
-    if (p.hp <= 0) {
-      loseBattle();
-      return;
-    }
-
     afterPlayerAction();
   });
 }
@@ -5338,6 +5475,11 @@ function openTownMenu(){
 
 function bind() {
   modal.bind();
+  window.addEventListener("rpg:modal-closed", () => {
+    if (!state.autoBattleEnabled) return;
+    if (!state.inBattle || state.turn !== "player") return;
+    scheduleAutoBattleTurn();
+  });
   const appRoot = document.querySelector(".wrap");
   if (appRoot) {
     appRoot.addEventListener("contextmenu", (event) => {
@@ -5479,6 +5621,30 @@ function bind() {
     charge();
   };
 
+  const toggleAutoBattle = () => {
+    if (!state.inBattle) return;
+    setAutoBattleEnabled(!state.autoBattleEnabled);
+    addLog("INFO", state.autoBattleEnabled ? "Auto Battle aktif." : "Auto Battle nonaktif.");
+    if (state.autoBattleEnabled && state.turn === "player") scheduleAutoBattleTurn();
+    refresh(state);
+  };
+
+  const btnAutoBattle = byId("btnAutoBattle");
+  if (btnAutoBattle) btnAutoBattle.onclick = toggleAutoBattle;
+
+  const btnAutoBattleFloating = byId("btnAutoBattleFloating");
+  if (btnAutoBattleFloating) btnAutoBattleFloating.onclick = toggleAutoBattle;
+
+  const btnAutoBattleSettingsFloating = byId("btnAutoBattleSettingsFloating");
+  if (btnAutoBattleSettingsFloating) {
+    btnAutoBattleSettingsFloating.onclick = () => {
+      if (!state.inBattle || !state.autoBattleEnabled) return;
+      setAutoBattleUseConsumable(!state.autoBattleUseConsumable);
+      addLog("INFO", state.autoBattleUseConsumable ? "Auto Battle: consumable aktif." : "Auto Battle: consumable nonaktif.");
+      refresh(state);
+    };
+  }
+
   const runBackdrop = byId("runConfirmBackdrop");
   const runConfirm = byId("btnRunConfirm");
   const runCancel = byId("btnRunCancel");
@@ -5536,6 +5702,7 @@ function applyLoaded(payload){
   state.enemyTargetIndex = 0;
   state.inBattle = false;
   state.playerDefending = false;
+  setAutoBattleEnabled(false);
   setTurn("town");
   state.battleTurn = 0;
 
@@ -5568,6 +5735,7 @@ function startNewGame(slotIdx){
   state.enemyTargetIndex = 0;
   state.inBattle = false;
   state.playerDefending = false;
+  setAutoBattleEnabled(false);
   setTurn("town");
   state.battleTurn = 0;
 
@@ -5813,6 +5981,7 @@ function handleCreateCharacter(){
   state.enemy = null;
   state.inBattle = false;
   state.playerDefending = false;
+  setAutoBattleEnabled(false);
   setTurn("town");
   state.battleTurn = 0;
 
@@ -5841,6 +6010,7 @@ function enterTownWithSlot(slotIdx){
   state.enemy = null;
   state.inBattle = false;
   state.playerDefending = false;
+  setAutoBattleEnabled(false);
   setTurn("town");
   state.battleTurn = 0;
 
@@ -5913,6 +6083,7 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
   state.enemy = null;
   state.inBattle = false;
   state.playerDefending = false;
+  setAutoBattleEnabled(false);
   setTurn("town");
   state.battleTurn = 0;
 

@@ -141,6 +141,7 @@ export const modal = {
 
   close() {
     $("modalBackdrop").style.display = "none";
+    window.dispatchEvent(new Event("rpg:modal-closed"));
   },
 
   bind() {
@@ -163,6 +164,29 @@ export function refresh(state) {
   const btnStatsTown = $("btnStats");
   if (btnStatsTown) {
     btnStatsTown.textContent = "Stats";
+  }
+
+  const autoLabel = state.autoBattleEnabled ? "Auto: ON" : "Auto: OFF";
+  const btnAutoBattle = $("btnAutoBattle");
+  if (btnAutoBattle) {
+    btnAutoBattle.textContent = autoLabel;
+  }
+
+  const btnAutoBattleFloating = $("btnAutoBattleFloating");
+  if (btnAutoBattleFloating) {
+    btnAutoBattleFloating.classList.toggle("active", !!state.autoBattleEnabled);
+    btnAutoBattleFloating.setAttribute("aria-label", autoLabel);
+    btnAutoBattleFloating.setAttribute("title", autoLabel);
+  }
+
+  const autoItemLabel = state.autoBattleUseConsumable ? "Auto Item: ON" : "Auto Item: OFF";
+  const btnAutoBattleSettingsFloating = $("btnAutoBattleSettingsFloating");
+  if (btnAutoBattleSettingsFloating) {
+    const showSetting = !!state.inBattle && !!state.autoBattleEnabled;
+    btnAutoBattleSettingsFloating.style.display = showSetting ? "inline-flex" : "none";
+    btnAutoBattleSettingsFloating.classList.toggle("on", !!state.autoBattleUseConsumable);
+    btnAutoBattleSettingsFloating.setAttribute("aria-label", autoItemLabel);
+    btnAutoBattleSettingsFloating.setAttribute("title", autoItemLabel);
   }
 
   // Log hint / Turn indicator
@@ -233,7 +257,7 @@ export function refresh(state) {
 
     // Buttons visibility
     $("townBtns").style.display = "none";
-    $("battleBtns").style.display = state.turn === "player" ? "flex" : "none";
+    $("battleBtns").style.display = (state.turn === "player" && !state.autoBattleEnabled) ? "flex" : "none";
 
     const enemyBtns = $("enemyBtns");
     if (enemyBtns) enemyBtns.style.display = "flex";
