@@ -4383,16 +4383,16 @@ function handleEnemyDefeat(){
 }
 
 function resolveAllySkillValues(ally, skill){
-  if (!ally || !skill) return { mpCost: 0, cooldown: 1, cdLeft: 0 };
+  if (!ally || !skill) return { mpCost: 1, cooldown: 1, cdLeft: 0 };
   const baseAlly = ALLY_BASES[String(ally?.id || "").toLowerCase()] || {};
   const skillList = Array.isArray(ally?.activeSkills) ? ally.activeSkills : [];
   const skillIdx = skillList.indexOf(skill);
-  const baseSkill = (baseAlly.activeSkills || []).find((s) => s?.name === skill.name)
-    || (skillIdx >= 0 ? (baseAlly.activeSkills || [])[skillIdx] : null)
-    || {};
+  const idxBaseSkill = skillIdx >= 0 ? (baseAlly.activeSkills || [])[skillIdx] : null;
+  const nameBaseSkill = (baseAlly.activeSkills || []).find((s) => s?.name === skill.name) || null;
+  const baseSkill = idxBaseSkill || nameBaseSkill || {};
 
   const rawMpCost = Number(skill.mpCost);
-  const baseMpCost = Math.max(0, Number(baseSkill.mpCost) || 0);
+  const baseMpCost = Math.max(1, Number(baseSkill.mpCost) || 1);
   const mpCost = rawMpCost > 0 ? rawMpCost : baseMpCost;
 
   const rawCooldown = Number(skill.cooldown);
