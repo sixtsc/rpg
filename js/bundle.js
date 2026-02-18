@@ -4663,11 +4663,29 @@ function getAutoHealItemName(){
   });
 }
 
+function getAutoSkillCandidates(player){
+  if (!player || !Array.isArray(player.skills)) return [];
+  const byName = new Map(player.skills.filter(Boolean).map((skill, idx) => [skill.name, { skill, idx }]));
+  if (!Array.isArray(player.skillSlots) || !player.skillSlots.length) {
+    return player.skills
+      .map((skill, idx) => ({ skill, idx }))
+      .filter(({ skill }) => !!skill);
+  }
+
+  const picked = [];
+  player.skillSlots.forEach((slotName) => {
+    if (!slotName || !byName.has(slotName)) return;
+    const candidate = byName.get(slotName);
+    if (!candidate) return;
+    if (picked.some((entry) => entry.idx === candidate.idx)) return;
+    picked.push(candidate);
+  });
+  return picked;
+}
+
 function pickAutoSkillIndex(){
   const p = state.player;
-  if (!p || !Array.isArray(p.skills)) return -1;
-  const ranked = p.skills
-    .map((skill, idx) => ({ skill, idx }))
+  const ranked = getAutoSkillCandidates(p)
     .filter(({ skill }) => skill && (skill.cdLeft || 0) <= 0 && p.mp >= (skill.mpCost || 0))
     .sort((a, b) => (b.skill.power || 0) - (a.skill.power || 0));
   return ranked.length ? ranked[0].idx : -1;

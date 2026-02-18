@@ -418,6 +418,27 @@ function openRecruitModal() {
   );
 }
 
+
+function getAutoSkillCandidates(player) {
+  if (!player || !Array.isArray(player.skills)) return [];
+  const byName = new Map(player.skills.filter(Boolean).map((skill, idx) => [skill.name, { skill, idx }]));
+  if (!Array.isArray(player.skillSlots) || !player.skillSlots.length) {
+    return player.skills
+      .map((skill, idx) => ({ skill, idx }))
+      .filter(({ skill }) => !!skill);
+  }
+
+  const picked = [];
+  player.skillSlots.forEach((slotName) => {
+    if (!slotName || !byName.has(slotName)) return;
+    const candidate = byName.get(slotName);
+    if (!candidate) return;
+    if (picked.some((entry) => entry.idx === candidate.idx)) return;
+    picked.push(candidate);
+  });
+  return picked;
+}
+
 function performAutoBattleTurn() {
   if (!state.autoBattleEnabled || !state.inBattle || state.turn !== "player") return;
   if (isActionModalOpen()) return;
@@ -440,9 +461,8 @@ function performAutoBattleTurn() {
     }
   }
 
-  const usableSkills = (p.skills || [])
-    .map((skill, idx) => ({ skill, idx }))
-    .filter(({ skill }) => skill && p.mp >= (skill.mpCost || 0));
+  const usableSkills = getAutoSkillCandidates(p)
+    .filter(({ skill }) => skill && (skill.cdLeft || 0) <= 0 && p.mp >= (skill.mpCost || 0));
 
   if (usableSkills.length) {
     const selected = usableSkills.sort((a, b) => (b.skill.power || 0) - (a.skill.power || 0))[0];
