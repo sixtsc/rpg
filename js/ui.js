@@ -183,7 +183,7 @@ export function refresh(state) {
   if (btnAutoBattleSettingsFloating) {
     const showSetting = !!state.inBattle && !!state.autoBattleEnabled;
     btnAutoBattleSettingsFloating.style.display = showSetting ? "inline-flex" : "none";
-    btnAutoBattleSettingsFloating.classList.toggle("off", !state.autoBattleUseConsumable);
+    btnAutoBattleSettingsFloating.classList.toggle("on", !!state.autoBattleUseConsumable);
     btnAutoBattleSettingsFloating.setAttribute("aria-label", autoItemLabel);
     btnAutoBattleSettingsFloating.setAttribute("title", autoItemLabel);
   }

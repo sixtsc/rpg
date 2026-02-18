@@ -156,7 +156,7 @@ body.inBattle .autoBattleFloating{
   box-shadow:0 8px 20px rgba(0,0,0,.35);
 }
 
-.autoBattleSettingsFloating.off{
+.autoBattleSettingsFloating.on{
   border-color:rgba(255, 170, 120, 0.85);
   background:rgba(52, 32, 18, 0.9);
   color:#ffe1c5;
