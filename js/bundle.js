@@ -71,8 +71,8 @@ const GLENN_BASE = {
   story: "Glenn adalah mantan penjaga gerbang utara yang meninggalkan pos demi melindungi desa-desa kecil dari serangan bandit.",
   basicAttack: { name: "Iron Slash", desc: "Serangan pedang standar yang konsisten untuk membuka pertarungan." },
   activeSkills: [
-    { name: "Shield Break", desc: "Tebasan berat yang menurunkan DEF target sebesar 15% selama 2 turn.", power: 6, mpCost: 4, cooldown: 3, type: "debuff" },
-    { name: "Guard Stance", desc: "Menaikkan DEF Glenn 25% selama 2 turn dan memulihkan 8 MP.", power: 3, mpCost: 6, cooldown: 4, type: "buff" }
+    { name: "Shield Break", desc: "Tebasan berat yang menurunkan DEF target sebesar 15% selama 2 turn.", power: 10, mpCost: 4, cooldown: 3, type: "debuff" },
+    { name: "Guard Stance", desc: "Menaikkan DEF Glenn 25% selama 2 turn dan memulihkan 8 MP.", power: 6, mpCost: 6, cooldown: 4, type: "buff" }
   ],
   passiveSkill: { name: "Last Bastion", desc: "Saat HP di bawah 35%, DEF bertambah 20% otomatis." },
   xp: 0,
@@ -4021,11 +4021,11 @@ function alliesAct(done){
       if (targetIndex < 0) return;
 
       const skill = pickAllySkill(ally);
-      let basePower = 2;
+      let basePower = 3;
       if (skill) {
         ally.mp = clamp((ally.mp || 0) - (skill.mpCost || 0), 0, ally.maxMp || 0);
         skill.cdLeft = skill.cooldown || 0;
-        basePower = Math.max(2, Number(skill.power) || 2);
+        basePower = Math.max(3, Number(skill.power) || 3);
         addLog("SKILL", `${ally.name} • ${skill.name}`);
         showEnemyDamageText(skill.name, targetIndex);
       }
@@ -4175,6 +4175,11 @@ function startAdventureBattle(targetLevel, stageName){
     if (!ally) return;
     clearStatuses(ally);
     ensureStatuses(ally);
+    if (Array.isArray(ally.activeSkills)) {
+      ally.activeSkills.forEach((skill) => {
+        if (skill) skill.cdLeft = 0;
+      });
+    }
   });
   addLog("INFO", `Stage ${stageName}: Musuh muncul: ${state.enemy.name} (Lv${state.enemy.level})`);
 
