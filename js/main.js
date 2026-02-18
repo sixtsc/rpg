@@ -78,7 +78,6 @@ function endBattle(reason) {
   state.inBattle = false;
   state.enemy = null;
   state.playerDefending = false;
-  setAutoBattleEnabled(false);
   setTurn("town");
   state.battleTurn = 0;
 
@@ -245,7 +244,6 @@ function afterPlayerAction() {
 function explore() {
   if (state.inBattle) return;
 
-  setAutoBattleEnabled(false);
   state.enemy = genEnemy(state.player.level);
   state.inBattle = true;
   state._animateEnemyIn = true;

@@ -532,7 +532,7 @@ function newState(){
     inventoryCategory: "item",
     playerDefending: false,
     autoBattleEnabled: false,
-    autoBattleUseConsumable: true,
+    autoBattleUseConsumable: false,
     _autoBattlePending: false,
     turn: "town",
     battleTurn: 0 // "town" | "player" | "enemy"
@@ -3883,7 +3883,6 @@ function finalizeBattle(reason){
   state.enemy = null;
   state.playerDefending = false;
   clearStatuses(state.player);
-  setAutoBattleEnabled(false);
   setTurn("town");
   state.battleTurn = 0;
 
@@ -4476,7 +4475,6 @@ function startAdventureBattle(targetLevel, stageName){
     state.enemy = genEnemy(targetLevel);
     state.enemyTargetIndex = getDefaultEnemyTargetIndex([state.enemy]);
   }
-  setAutoBattleEnabled(false);
   state.inBattle = true;
   state._animateEnemyIn = true;
   state.playerDefending = false;
