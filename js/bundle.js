@@ -729,9 +729,11 @@ const mailboxState = {
 
 function hasUnclaimedMailboxRewards(items) {
   if (!Array.isArray(items)) return false;
+  const now = Math.floor(Date.now() / 1000);
   return items.some((item) => {
     const attachments = Array.isArray(item?.attachments) ? item.attachments : [];
-    return attachments.length > 0 && !item?.claimed_at;
+    const isExpired = Number(item?.expires_at || 0) > 0 && Number(item.expires_at) <= now;
+    return attachments.length > 0 && !item?.claimed_at && !isExpired;
   });
 }
 
