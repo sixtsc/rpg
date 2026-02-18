@@ -130,6 +130,31 @@ const TURN_DELAY_MS = 650;
 const ALLY_ACTION_GAP_MS = 420;
 const ENEMY_ACTION_GAP_MS = 360;
 const AUTO_TURN_DELAY_MS = 380;
+const LOGIN_CYCLE_DAYS = 30;
+
+function dayNumberUtc(ts = Date.now()) {
+  return Math.floor(ts / 86400000);
+}
+
+function dayKeyUtc(ts = Date.now()) {
+  const d = new Date(ts);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+}
+
+function weekKeyUtc(ts = Date.now()) {
+  const d = new Date(ts);
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
+}
+
+function getDailyLoginReward(day){
+  if (day % 7 === 0) return { gold: 400, gems: 2 };
+  if (day % 5 === 0) return { gold: 250, gems: 1 };
+  return { gold: 120, gems: 0 };
+}
 function genEnemy(plv){
   const lvl = clamp(plv + pick([-1,0,0,1]), 1, MAX_LEVEL);
   const name = pick(ENEMY_NAMES);
@@ -295,6 +320,10 @@ function newPlayer(){
     allies: [],
     glennUnlocked: false,
     highestStageCleared: 0,
+    loginCycleStartDay: dayNumberUtc(),
+    loginClaimedDays: [],
+    questDaily: { key: dayKeyUtc(), wins: 0, claimed: false },
+    questWeekly: { key: weekKeyUtc(), wins: 0, claimed: false },
     skills:[{ ...SKILLS.fireball, cdLeft:0 }],
     skillSlots: ["Fireball", null, null, null, null, null, null, null],
     inv: { "Potion": { ...ITEMS.potion, qty:2 }, "Ether": { ...ITEMS.ether, qty:1 } }
@@ -455,6 +484,10 @@ function normalizePlayer(p){
   if (typeof p.level !== "number") p.level = 1;
   if (typeof p.name !== "string") p.name = "Hero";
   if (typeof p.gems !== "number") p.gems = 0;
+  if (typeof p.loginCycleStartDay !== "number") p.loginCycleStartDay = dayNumberUtc();
+  if (!Array.isArray(p.loginClaimedDays)) p.loginClaimedDays = [];
+  if (!p.questDaily || typeof p.questDaily !== "object") p.questDaily = { key: dayKeyUtc(), wins: 0, claimed: false };
+  if (!p.questWeekly || typeof p.questWeekly !== "object") p.questWeekly = { key: weekKeyUtc(), wins: 0, claimed: false };
 
   applyDerivedStats(p);
   applyEquipmentStats(p);
@@ -2266,6 +2299,7 @@ const modal = {
 // TURN INDICATOR: state.turn = "player" | "enemy" | "town"
 function refresh(state) {
   const p = state.player;
+  if (p && typeof ensureQuestState === "function") ensureQuestState();
   const inBattle = state.inBattle && state.enemy;
 
   const turnCountEl = $("turnCount");
@@ -2623,6 +2657,34 @@ function ensureGlennUnlockState({ source = "" } = {}){
   state.player.glennUnlocked = true;
   addLog("ALLY", `Glenn terbuka! (${source || "Syarat terpenuhi"})`);
   return true;
+}
+
+function ensureQuestState(){
+  const p = state.player;
+  if (!p) return;
+
+  const todayNum = dayNumberUtc();
+  if (typeof p.loginCycleStartDay !== "number") p.loginCycleStartDay = todayNum;
+  if (!Array.isArray(p.loginClaimedDays)) p.loginClaimedDays = [];
+
+  const cycleAge = todayNum - p.loginCycleStartDay;
+  if (!Number.isFinite(cycleAge) || cycleAge < 0 || cycleAge >= LOGIN_CYCLE_DAYS) {
+    p.loginCycleStartDay = todayNum;
+    p.loginClaimedDays = [];
+  }
+
+  const dailyKey = dayKeyUtc();
+  const weeklyKey = weekKeyUtc();
+  if (!p.questDaily || typeof p.questDaily !== "object") p.questDaily = { key: dailyKey, wins: 0, claimed: false };
+  if (!p.questWeekly || typeof p.questWeekly !== "object") p.questWeekly = { key: weeklyKey, wins: 0, claimed: false };
+
+  if (p.questDaily.key !== dailyKey) p.questDaily = { key: dailyKey, wins: 0, claimed: false };
+  if (p.questWeekly.key !== weeklyKey) p.questWeekly = { key: weeklyKey, wins: 0, claimed: false };
+
+  p.questDaily.wins = Math.max(0, Number(p.questDaily.wins) || 0);
+  p.questWeekly.wins = Math.max(0, Number(p.questWeekly.wins) || 0);
+  p.questDaily.claimed = !!p.questDaily.claimed;
+  p.questWeekly.claimed = !!p.questWeekly.claimed;
 }
 
 function ensureAllies(){
@@ -4083,6 +4145,9 @@ function winBattle() {
 
   gainXp(xpGain);
   gainAllyXp(xpGain);
+  ensureQuestState();
+  p.questDaily.wins += 1;
+  p.questWeekly.wins += 1;
   grantDropsToPlayer(drops);
   const expProgress = collectBattleExpProgress(beforePlayer, beforeAllies, xpGain);
 
@@ -4886,6 +4951,141 @@ function applyAttributeDelta(statKey, delta){
   return true;
 }
 
+function openDailyLoginPage(){
+  ensureQuestState();
+  const p = state.player;
+  const todayNum = dayNumberUtc();
+  const todayOffset = Math.max(0, todayNum - p.loginCycleStartDay);
+  const rows = [{ title: "Back", desc: "Kembali ke Mission.", meta: "", value: "back", className: "subMenuBack" }];
+
+  for (let i = 0; i < LOGIN_CYCLE_DAYS; i += 1) {
+    const day = i + 1;
+    const reward = getDailyLoginReward(day);
+    const claimed = p.loginClaimedDays.includes(day);
+    const isToday = i === todayOffset;
+    const label = claimed ? "✅ Claimed" : (isToday ? "Hari ini" : (i < todayOffset ? "Terlewat" : "Belum tersedia"));
+    rows.push({
+      title: `Day ${day}`,
+      desc: `Reward: ${reward.gold} Gold${reward.gems ? ` + ${reward.gems} Gems` : ""}`,
+      meta: label,
+      value: isToday ? `claim:${day}` : "",
+      allowClick: isToday,
+      buttons: [{ text: "Claim", value: `claim:${day}`, disabled: claimed }],
+      keepOpen: true,
+    });
+  }
+
+  modal.open("Daily Login (Reset 30 Hari)", rows, (pick) => {
+    if (pick === "back") return openQuestPage();
+    const m = String(pick || "").match(/^claim:(\d+)$/);
+    if (!m) return;
+    ensureQuestState();
+    const claimDay = Number(m[1]);
+    const nowOffset = Math.max(0, dayNumberUtc() - p.loginCycleStartDay);
+    if (claimDay !== nowOffset + 1) {
+      addLog("WARN", "Hanya bisa claim reward hari ini.");
+      return openDailyLoginPage();
+    }
+    if (p.loginClaimedDays.includes(claimDay)) {
+      addLog("INFO", "Reward login hari ini sudah di-claim.");
+      return openDailyLoginPage();
+    }
+
+    const reward = getDailyLoginReward(claimDay);
+    p.loginClaimedDays.push(claimDay);
+    p.gold = (p.gold || 0) + reward.gold;
+    p.gems = (p.gems || 0) + reward.gems;
+    addLog("REWARD", `Daily Login Day ${claimDay}: +${reward.gold} Gold${reward.gems ? ` + ${reward.gems} Gems` : ""}`);
+    autosave(state);
+    refresh(state);
+    openDailyLoginPage();
+  });
+}
+
+function openDailyQuestPage(){
+  ensureQuestState();
+  const q = state.player.questDaily;
+  const targetWins = 3;
+  const ready = q.wins >= targetWins;
+  modal.open(
+    "Daily Quest",
+    [
+      { title: "Back", desc: "Kembali ke Mission.", meta: "", value: "back", className: "subMenuBack" },
+      {
+        title: "Menangkan 3 Battle",
+        desc: `Progress: ${Math.min(q.wins, targetWins)}/${targetWins}`,
+        meta: q.claimed ? "✅ Selesai" : (ready ? "Siap claim" : "Belum selesai"),
+        buttons: [{ text: "Claim", value: "claim", disabled: q.claimed || !ready }],
+        keepOpen: true,
+      }
+    ],
+    (pick) => {
+      if (pick === "back") return openQuestPage();
+      if (pick !== "claim") return;
+      ensureQuestState();
+      if (state.player.questDaily.claimed || state.player.questDaily.wins < targetWins) return openDailyQuestPage();
+      state.player.questDaily.claimed = true;
+      state.player.gold = (state.player.gold || 0) + 300;
+      state.player.gems = (state.player.gems || 0) + 1;
+      addLog("REWARD", "Daily Quest selesai: +300 Gold, +1 Gems.");
+      autosave(state);
+      refresh(state);
+      openDailyQuestPage();
+    }
+  );
+}
+
+function openWeeklyQuestPage(){
+  ensureQuestState();
+  const q = state.player.questWeekly;
+  const targetWins = 20;
+  const ready = q.wins >= targetWins;
+  modal.open(
+    "Weekly Quest",
+    [
+      { title: "Back", desc: "Kembali ke Mission.", meta: "", value: "back", className: "subMenuBack" },
+      {
+        title: "Menangkan 20 Battle",
+        desc: `Progress: ${Math.min(q.wins, targetWins)}/${targetWins}`,
+        meta: q.claimed ? "✅ Selesai" : (ready ? "Siap claim" : "Belum selesai"),
+        buttons: [{ text: "Claim", value: "claim", disabled: q.claimed || !ready }],
+        keepOpen: true,
+      }
+    ],
+    (pick) => {
+      if (pick === "back") return openQuestPage();
+      if (pick !== "claim") return;
+      ensureQuestState();
+      if (state.player.questWeekly.claimed || state.player.questWeekly.wins < targetWins) return openWeeklyQuestPage();
+      state.player.questWeekly.claimed = true;
+      state.player.gold = (state.player.gold || 0) + 1000;
+      state.player.gems = (state.player.gems || 0) + 5;
+      addLog("REWARD", "Weekly Quest selesai: +1000 Gold, +5 Gems.");
+      autosave(state);
+      refresh(state);
+      openWeeklyQuestPage();
+    }
+  );
+}
+
+function openQuestPage(){
+  ensureQuestState();
+  const p = state.player;
+  modal.open(
+    "Mission",
+    [
+      { title: "Daily Login", desc: "Claim harian. Cycle akan reset tiap 30 hari.", meta: `${p.loginClaimedDays.length}/${LOGIN_CYCLE_DAYS} claimed`, value: "daily_login" },
+      { title: "Daily Quest", desc: "Menangkan 3 battle setiap hari.", meta: `${Math.min(p.questDaily.wins, 3)}/3`, value: "daily_quest" },
+      { title: "Weekly Quest", desc: "Menangkan 20 battle setiap minggu.", meta: `${Math.min(p.questWeekly.wins, 20)}/20`, value: "weekly_quest" },
+    ],
+    (pick) => {
+      if (pick === "daily_login") return openDailyLoginPage();
+      if (pick === "daily_quest") return openDailyQuestPage();
+      if (pick === "weekly_quest") return openWeeklyQuestPage();
+    }
+  );
+}
+
 function openProfileModal(){
   const charId = (state.player && typeof state.player.charId === "number") ? state.player.charId : state.activeSlot;
   const charMeta = charId === 0 ? "Admin" : "";
@@ -4896,11 +5096,13 @@ function openProfileModal(){
       { title: "Equipment", desc: "Kelola gear (hand, head, pant, armor, shoes).", meta: "", value: "equip" },
       { title: "Stat", desc: "Atur stat poin.", meta: "", value: "stat" },
       { title: "Skill Slot", desc: "Pilih skill untuk slot battle.", meta: "", value: "skill_slot" },
+      { title: "Mission", desc: "Daily login, daily quest, dan weekly quest.", meta: "", value: "quest" },
     ],
     (pick) => {
       if (pick === "equip") return openEquipmentModal();
       if (pick === "stat") return openProfileStatModal();
       if (pick === "skill_slot") return openSkillSlotModal();
+      if (pick === "quest") return openQuestPage();
     }
   );
 }
