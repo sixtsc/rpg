@@ -312,6 +312,7 @@
                 <button id="btnProfile">Profile</button>
                 <button id="btnShop">Shop</button>
                 <button id="btnBlacksmith">Blacksmith</button>
+                <button id="btnMonsterHunt">Monster Hunting</button>
                 <button class="good" id="btnMenu">Menu</button>
               </div>
             </div>
@@ -446,6 +447,65 @@
 
     <div class="allyPageBody">
       <div id="allyGrid" class="allyGrid" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section id="blacksmithPage" class="marketPage hidden" aria-hidden="true">
+    <div class="marketPageHeader">
+      <div class="marketCurrency" aria-label="Mata uang saat ini">
+        <div class="pill currencyPill">
+          <img class="currencyIcon" src="./assets/icons/coin.svg" alt="" />
+          <span id="blacksmithGoldValue">0</span>
+        </div>
+        <div class="pill currencyPill">
+          <img class="currencyIcon" src="./assets/icons/gem.svg" alt="" />
+          <span id="blacksmithGemValue">0</span>
+        </div>
+      </div>
+      <div class="marketTitle">
+        <h2>Blacksmith</h2>
+        <p>Halaman craft & enhancement (coming soon).</p>
+      </div>
+      <div class="marketActions">
+        <button class="marketBackBtn" id="blacksmithBack" type="button" aria-label="Tutup">
+          <span aria-hidden="true">✕</span>
+        </button>
+      </div>
+    </div>
+    <div class="marketPageBody">
+      <div class="marketItemsGrid">
+        <div class="marketEmptyState">
+          <h3>Blacksmith masih kosong</h3>
+          <p>Material craft dari Monster Hunting akan dipakai di sini.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="monsterHuntPage" class="marketPage hidden" aria-hidden="true">
+    <div class="marketPageHeader">
+      <div class="marketCurrency" aria-label="Mata uang saat ini">
+        <div class="pill currencyPill">
+          <img class="currencyIcon" src="./assets/icons/coin.svg" alt="" />
+          <span id="monsterHuntGoldValue">0</span>
+        </div>
+        <div class="pill currencyPill">
+          <img class="currencyIcon" src="./assets/icons/gem.svg" alt="" />
+          <span id="monsterHuntGemValue">0</span>
+        </div>
+      </div>
+      <div class="marketTitle">
+        <h2>Monster Hunting</h2>
+        <p>Lawan boss untuk mendapatkan material craft.</p>
+      </div>
+      <div class="marketActions">
+        <button class="marketBackBtn" id="monsterHuntBack" type="button" aria-label="Tutup">
+          <span aria-hidden="true">✕</span>
+        </button>
+      </div>
+    </div>
+    <div class="marketPageBody">
+      <div class="marketItemsGrid" id="monsterHuntGrid"></div>
     </div>
   </section>
 
