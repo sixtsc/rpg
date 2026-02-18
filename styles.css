@@ -3098,10 +3098,10 @@ body.inTown .grid{ grid-template-columns: 1fr !important; }
 
 /* Ally long-press skill cards in stats modal */
 .modalBody.statsGrid .choice.allySkillRow{
-  border:1px solid #2a3c52;
-  background:linear-gradient(180deg, rgba(46,64,116,0.6), rgba(23,32,60,0.65));
-  border-radius:12px;
-  padding:10px;
+  border:none;
+  background:transparent;
+  border-radius:0;
+  padding:4px 2px;
 }
 .modalBody.statsGrid .choice.allySkillRow .desc{
   display:block;
@@ -3115,6 +3115,9 @@ body.inTown .grid{ grid-template-columns: 1fr !important; }
 }
 .modalBody.statsGrid .choice.allySkillRow .titleRow b{
   font-size:13px;
+}
+.modalBody.statsGrid .choice.allySkillRow .titleRow{
+  gap:8px;
 }
 
 
@@ -3132,10 +3135,10 @@ body.inTown .grid{ grid-template-columns: 1fr !important; }
 .allyXpBar{ height:10px; }
 
 .modalBody.statsGrid .choice.allySkillRow .skillIconWrap{
-  width:48px !important;
-  height:48px !important;
-  min-width:48px !important;
-  min-height:48px !important;
+  width:34px !important;
+  height:34px !important;
+  min-width:34px !important;
+  min-height:34px !important;
   border-radius:10px !important;
   border:none !important;
   background-image:url("./assets/ui/skill-frame.png") !important;
@@ -3149,7 +3152,7 @@ body.inTown .grid{ grid-template-columns: 1fr !important; }
   box-shadow:none !important;
   position:relative;
   overflow:visible;
-  flex:0 0 48px;
+  flex:0 0 34px;
 }
 .modalBody.statsGrid .choice.allySkillRow .skillIcon{
   width:0;
@@ -3158,10 +3161,10 @@ body.inTown .grid{ grid-template-columns: 1fr !important; }
 }
 .modalBody.statsGrid .choice.allySkillRow .allySkillCooldownBadge{
   position:absolute;
-  right:-4px;
-  bottom:-4px;
-  min-width:18px;
-  height:18px;
+  right:-5px;
+  bottom:-5px;
+  min-width:16px;
+  height:16px;
   border-radius:999px;
   padding:0 5px;
   display:flex;

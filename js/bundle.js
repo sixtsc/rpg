@@ -1359,7 +1359,7 @@ function renderAllyRow() {
         delete avatarBox.dataset.allyId;
       }
       applyAllyAvatar(avatarBox, ally);
-      renderAllySkillCooldownBadges(isAlive ? ally : null, statusWrap);
+      renderStatusBadges(isAlive ? ally : null, statusWrap);
       bindLongPress(card, () => {
         const currentAllies = Array.isArray(state.allies) ? state.allies : [];
         const currentAlly = currentAllies[i];
@@ -1382,7 +1382,7 @@ function renderAllyRow() {
       delete card.dataset.allyId;
       delete avatarBox.dataset.allyId;
       applyAllyAvatar(avatarBox, null);
-      renderAllySkillCooldownBadges(null, statusWrap);
+      renderStatusBadges(null, statusWrap);
     }
   });
 }
@@ -1923,43 +1923,6 @@ function renderStatusBadges(entity, container) {
     container.appendChild(btn);
   });
 }
-function renderAllySkillCooldownBadges(ally, container) {
-  if (!container) return;
-  const skills = Array.isArray(ally?.activeSkills) ? ally.activeSkills : [];
-  const cooldownSkills = skills
-    .map((skill) => ({ skill, cdLeft: Math.max(0, Number(skill?.cdLeft) || 0) }))
-    .filter((entry) => entry.cdLeft > 0);
-
-  if (!cooldownSkills.length) {
-    container.innerHTML = "";
-    container.style.display = "none";
-    return;
-  }
-
-  container.innerHTML = "";
-  container.style.display = "flex";
-  cooldownSkills.forEach(({ skill, cdLeft }) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "statusBadge cooldown";
-    btn.setAttribute("aria-label", `${skill?.name || "Skill"} cooldown ${cdLeft} turn`);
-    btn.title = `${skill?.name || "Skill"} cooldown ${cdLeft} turn${cdLeft > 1 ? "s" : ""}`;
-    btn.innerHTML = `
-      <span class="statusBadgeIcon" aria-hidden="true"><img src="./assets/icons/cooldown.svg" alt="" /></span>
-      <span class="statusBadgeTurns">${cdLeft}</span>
-    `;
-    btn.onclick = (event) => {
-      event.stopPropagation();
-      modal.open(
-        `Cooldown: ${skill?.name || "Skill"}`,
-        [{ title: "Detail", desc: `Sisa cooldown ${cdLeft} turn.`, meta: "", value: undefined, className: "readonly" }],
-        () => {}
-      );
-    };
-    container.appendChild(btn);
-  });
-}
-
 function setBar(el, cur, max) {
   const pctRaw = max <= 0 ? 0 : (cur / max) * 100;
   const pct = clamp(pctRaw, 0, 100);
