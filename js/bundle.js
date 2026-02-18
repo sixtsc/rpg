@@ -71,8 +71,8 @@ const GLENN_BASE = {
   story: "Glenn adalah mantan penjaga gerbang utara yang meninggalkan pos demi melindungi desa-desa kecil dari serangan bandit.",
   basicAttack: { name: "Iron Slash", desc: "Serangan pedang standar yang konsisten untuk membuka pertarungan." },
   activeSkills: [
-    { name: "Shield Break", desc: "Tebasan berat yang menurunkan DEF target sebesar 15% selama 2 turn.", power: 6, mpCost: 4, cooldown: 3, type: "debuff" },
-    { name: "Guard Stance", desc: "Menaikkan DEF Glenn 25% selama 2 turn dan memulihkan 8 MP.", power: 3, mpCost: 6, cooldown: 4, type: "buff" }
+    { name: "Shield Break", desc: "Tebasan berat yang menurunkan DEF target sebesar 15% selama 2 turn.", power: 10, mpCost: 4, cooldown: 3, type: "debuff" },
+    { name: "Guard Stance", desc: "Menaikkan DEF Glenn 25% selama 2 turn.", power: 6, mpCost: 6, cooldown: 5, type: "buff" }
   ],
   passiveSkill: { name: "Last Bastion", desc: "Saat HP di bawah 35%, DEF bertambah 20% otomatis." },
   xp: 0,
@@ -187,7 +187,8 @@ function resolveAttack(att, def, basePower, opts = {}) {
     ? Math.round((att.atk || 0) * 1.2)
     : (att.atk || 0);
   const guardDefBoost = hasStatus(def, "guardStance") ? Math.round((def.def || 0) * 0.35) : 0;
-  const effectiveDef = (def.def || 0) + guardDefBoost;
+  const armorBreakPenalty = hasStatus(def, "armorBreak") ? Math.round((def.def || 0) * 0.15) : 0;
+  const effectiveDef = Math.max(0, (def.def || 0) + guardDefBoost - armorBreakPenalty);
   let dmg = calcDamage(atkPower, effectiveDef, basePower, false);
 
   const critChance = clamp(att.critChance || 0, 0, 100);
@@ -335,15 +336,19 @@ function normalizeAlly(ally){
       desc: ally.basicAttack?.desc || GLENN_BASE.basicAttack.desc
     },
     activeSkills: Array.isArray(ally.activeSkills) && ally.activeSkills.length
-      ? ally.activeSkills.slice(0, 2).map((skill, idx) => ({
-        name: skill?.name || GLENN_BASE.activeSkills[idx]?.name || `Active ${idx + 1}`,
-        desc: skill?.desc || GLENN_BASE.activeSkills[idx]?.desc || "",
-        cooldown: Math.max(1, Number(skill?.cooldown) || 1),
-        cdLeft: Math.max(0, Number(skill?.cdLeft) || 0),
-        power: Math.max(1, Number(skill?.power) || Number(GLENN_BASE.activeSkills[idx]?.power || 4)),
-        mpCost: Math.max(0, Number(skill?.mpCost) || Number(GLENN_BASE.activeSkills[idx]?.mpCost || 0)),
-        type: skill?.type || GLENN_BASE.activeSkills[idx]?.type || "damage"
-      }))
+      ? ally.activeSkills.slice(0, 2).map((skill, idx) => {
+        const skillName = skill?.name || GLENN_BASE.activeSkills[idx]?.name || `Active ${idx + 1}`;
+        const baseRef = GLENN_BASE.activeSkills.find((baseSkill) => baseSkill.name === skillName) || GLENN_BASE.activeSkills[idx] || {};
+        return {
+          name: skillName,
+          desc: baseRef.desc || skill?.desc || "",
+          cooldown: Math.max(1, Number(baseRef.cooldown) || Number(skill?.cooldown) || 1),
+          cdLeft: Math.max(0, Number(skill?.cdLeft) || 0),
+          power: Math.max(1, Number(baseRef.power) || Number(skill?.power) || 4),
+          mpCost: Math.max(0, Number(baseRef.mpCost) || Number(skill?.mpCost) || 0),
+          type: baseRef.type || skill?.type || "damage"
+        };
+      })
       : GLENN_BASE.activeSkills.map((skill) => ({ ...skill, cdLeft: 0 })),
     passiveSkill: {
       name: ally.passiveSkill?.name || GLENN_BASE.passiveSkill.name,
@@ -1813,9 +1818,20 @@ function showSkillFloatingDetail(skill, anchorEl){
     <div class="skillFloatingMeta">MP ${skill.mpCost || 0} • DMG ${skill.power || 0} • CD ${skill.cooldown || 0} turn</div>
   `;
   const r = anchorEl.getBoundingClientRect();
-  const maxLeft = Math.max(8, window.innerWidth - 260);
-  const left = Math.min(maxLeft, Math.max(8, r.left + (r.width / 2) - 120));
-  const top = Math.max(8, r.top - 92);
+  const vw = window.innerWidth || document.documentElement.clientWidth || 360;
+  const vh = window.innerHeight || document.documentElement.clientHeight || 640;
+  const margin = 8;
+  const bubbleW = Math.min(240, vw - margin * 2);
+  const bubbleH = el.offsetHeight || 92;
+
+  const left = Math.max(margin, Math.min(vw - bubbleW - margin, r.left + (r.width / 2) - (bubbleW / 2)));
+
+  const aboveTop = r.top - bubbleH - 10;
+  const belowTop = r.bottom + 10;
+  const top = aboveTop >= margin
+    ? aboveTop
+    : Math.min(vh - bubbleH - margin, Math.max(margin, belowTop));
+
   el.style.left = `${left}px`;
   el.style.top = `${top}px`;
   el.classList.add("show");
@@ -1941,6 +1957,16 @@ const STATUS_DEFS = {
     label: "Guard Stance",
     desc: "Meningkatkan DEF signifikan selama beberapa turn.",
     kind: "buff",
+  },
+  stance: {
+    label: "Stance",
+    desc: "Mengalihkan semua serangan ke pengguna stance.",
+    kind: "buff",
+  },
+  armorBreak: {
+    label: "Armor Break",
+    desc: "Menurunkan DEF target sebesar 15% selama beberapa turn.",
+    kind: "debuff",
   },
   stun: {
     label: "Stun",
@@ -2116,7 +2142,10 @@ const modal = {
 
       const left = document.createElement("div");
       left.className = "left";
-      const iconHtml = c.icon ? `<span class="skillIconWrap"><img class="skillIcon" src="${escapeHtml(c.icon)}" alt="" /></span>` : "";
+      const iconWrapClass = ["skillIconWrap", c.iconFrameOnly ? "frameOnly" : ""].filter(Boolean).join(" ");
+      const iconHtml = (c.icon || c.iconFrameOnly)
+        ? `<span class="${iconWrapClass}">${c.icon ? `<img class="skillIcon" src="${escapeHtml(c.icon)}" alt="" />` : ""}${c.cooldownBadge ? `<span class="skillCooldown allySkillCooldownBadge">${escapeHtml(String(c.cooldownBadge))}</span>` : ""}</span>`
+        : "";
       const descHtml = c.descHtml ? String(c.descHtml) : escapeHtml(c.desc || "");
       left.innerHTML = `
         <div class="titleRow">${iconHtml}<b>${escapeHtml(c.title)}</b></div>
@@ -2528,6 +2557,8 @@ function getAliveAllies(){
 
 function pickEnemyTarget(){
   const allies = getAliveAllies();
+  const stanceHolder = allies.find((ally) => hasStatus(ally, "stance"));
+  if (stanceHolder) return { target: stanceHolder, isPlayer: false };
   if (!allies.length) return { target: state.player, isPlayer: true };
   const roll = randInt(1, 100);
   if (roll <= 60) return { target: state.player, isPlayer: true };
@@ -4150,13 +4181,12 @@ function alliesAct(done){
       if (targetIndex < 0) return;
 
       const skill = pickAllySkill(ally);
-      let basePower = 2;
+      let basePower = 3;
       if (skill) {
         ally.mp = clamp((ally.mp || 0) - (skill.mpCost || 0), 0, ally.maxMp || 0);
         skill.cdLeft = skill.cooldown || 0;
-        basePower = Math.max(2, Number(skill.power) || 2);
+        basePower = Math.max(3, Number(skill.power) || 3);
         addLog("SKILL", `${ally.name} • ${skill.name}`);
-        showEnemyDamageText(skill.name, targetIndex);
       }
 
       const res = resolveAttack(ally, currentTarget, basePower);
@@ -4173,6 +4203,10 @@ function alliesAct(done){
       }
       if (skill?.type === "buff") {
         addStatusEffect(ally, { type: "guardStance", turns: 2, debuff: false });
+        addStatusEffect(ally, { type: "stance", turns: 2, debuff: false });
+      }
+      if (skill?.type === "debuff") {
+        addStatusEffect(currentTarget, { type: "armorBreak", turns: 2, debuff: true });
       }
 
       if (res.reflected > 0) {
@@ -4293,8 +4327,20 @@ function startAdventureBattle(targetLevel, stageName){
   state.playerDefending = false;
   state.battleTurn = 0;
   clearStatuses(state.enemy);
+  clearStatuses(state.player);
   ensureStatuses(state.enemy);
   ensureStatuses(state.player);
+  const allies = ensureAllies();
+  allies.forEach((ally) => {
+    if (!ally) return;
+    clearStatuses(ally);
+    ensureStatuses(ally);
+    if (Array.isArray(ally.activeSkills)) {
+      ally.activeSkills.forEach((skill) => {
+        if (skill) skill.cdLeft = 0;
+      });
+    }
+  });
   addLog("INFO", `Stage ${stageName}: Musuh muncul: ${state.enemy.name} (Lv${state.enemy.level})`);
 
   if (state.enemy.spd > state.player.spd) {
@@ -4951,7 +4997,7 @@ function openAllyStatsModal(ally) {
     const basic = ally.basicAttack || {};
     cards.push({
       title: `Basic • ${basic.name || "Basic Attack"}`,
-      icon: getAllySkillIconSrc(basic, "./assets/icons/physical.svg"),
+      iconFrameOnly: true,
       descHtml: `${escapeHtml(basic.desc || "-")}<br><span class="muted">CD - • Basic Attack</span>`,
       meta: "READY",
       value: undefined,
@@ -4960,10 +5006,23 @@ function openAllyStatsModal(ally) {
       skillRef: { name: basic.name || "Basic Attack", desc: basic.desc || "-", mpCost: 0, power: 2, cooldown: 0 }
     });
 
+    const passive = ally.passiveSkill || {};
+    cards.push({
+      title: `Passive • ${passive.name || "Passive"}`,
+      iconFrameOnly: true,
+      descHtml: `${escapeHtml(passive.desc || "-")}<br><span class="muted">Selalu aktif</span>`,
+      meta: "PASSIVE",
+      value: undefined,
+      className: "allySkillRow allySkillCardRow",
+      keepOpen: true,
+      skillRef: { name: passive.name || "Passive", desc: passive.desc || "-", mpCost: 0, power: 0, cooldown: 0 }
+    });
+
     (ally.activeSkills || []).forEach((skill, idx) => {
       cards.push({
         title: `Active ${idx + 1} • ${skill.name || "Skill"}`,
-        icon: getAllySkillIconSrc(skill, "./assets/icons/physical.svg"),
+        iconFrameOnly: true,
+        cooldownBadge: (skill.cdLeft || 0) > 0 ? `${skill.cdLeft}` : "",
         descHtml: `${escapeHtml(skill.desc || "-")}<br><span class="muted">MP ${skill.mpCost || 0} • Power ${skill.power || 0} • CD ${skill.cdLeft || 0}/${skill.cooldown || 0}</span>`,
         meta: (skill.cdLeft || 0) > 0 ? `CD ${skill.cdLeft}` : "READY",
         value: undefined,
@@ -4971,18 +5030,6 @@ function openAllyStatsModal(ally) {
         keepOpen: true,
         skillRef: skill
       });
-    });
-
-    const passive = ally.passiveSkill || {};
-    cards.push({
-      title: `Passive • ${passive.name || "Passive"}`,
-      icon: getAllySkillIconSrc(passive, "./assets/icons/universal.svg"),
-      descHtml: `${escapeHtml(passive.desc || "-")}<br><span class="muted">Selalu aktif</span>`,
-      meta: "PASSIVE",
-      value: undefined,
-      className: "allySkillRow allySkillCardRow",
-      keepOpen: true,
-      skillRef: { name: passive.name || "Passive", desc: passive.desc || "-", mpCost: 0, power: 0, cooldown: 0 }
     });
 
     return cards;
@@ -4998,6 +5045,8 @@ function openAllyStatsModal(ally) {
     const skill = skillData[idx]?.skillRef;
     if (!skill) return;
     bindLongPress(row, () => showSkillFloatingDetail(skill, row));
+    const iconWrap = row.querySelector('.skillIconWrap');
+    if (iconWrap) bindLongPress(iconWrap, () => showSkillFloatingDetail(skill, row));
   });
 }
 
