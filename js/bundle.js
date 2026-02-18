@@ -2732,7 +2732,7 @@ function getAllyVisual(ally, idx = 0){
 
 function formatRarity(ally){
   const rarity = clamp(Number(ally?.rarity) || 1, 1, 6);
-  return `${"★".repeat(rarity)} ${rarity} Stars`;
+  return "★".repeat(rarity);
 }
 
 function setAllyPageVisible(show){
@@ -2793,6 +2793,7 @@ function openAllyDetailPopup(ally, idx = 0){
   const avatar = byId("allyDetailAvatar");
   const name = byId("allyDetailName");
   const role = byId("allyDetailRole");
+  const rarityEl = byId("allyDetailRarity");
   const stats = byId("allyDetailStats");
   const desc = byId("allyDetailDesc");
   const story = byId("allyDetailStory");
@@ -2808,7 +2809,8 @@ function openAllyDetailPopup(ally, idx = 0){
     avatar.style.background = visual.background;
   }
   if (name) name.textContent = ally.name || `Ally ${idx + 1}`;
-  if (role) role.textContent = `${ally.role || "Ally"} • ${formatRarity(ally)} • Lv ${ally.level ?? 0}/10`;
+  if (role) role.textContent = `${ally.role || "Ally"} • Lv ${ally.level ?? 0}/10`;
+  if (rarityEl) rarityEl.textContent = formatRarity(ally);
   if (stats) {
     const rows = [
       ["HP", `${ally.hp}/${ally.maxHp}`],
@@ -2816,8 +2818,7 @@ function openAllyDetailPopup(ally, idx = 0){
       ["ATK", `${ally.atk || 0}`],
       ["DEF", `${ally.def || 0}`],
       ["SPD", `${ally.spd || 0}`],
-      ["CRIT", `${ally.critChance || 0}%`],
-      ["RARITY", formatRarity(ally)]
+      ["CRIT", `${ally.critChance || 0}%`]
     ];
     stats.innerHTML = rows.map(([label, value]) => `
       <div class="allyDetailStat">
@@ -2900,7 +2901,6 @@ function renderAllyPage(){
       <div class="allyAvatarLevel">${escapeHtml(String(ally.level ?? 0))}</div>
       <div class="allyAvatarPortrait" style="background:${escapeHtml(visual.background)}">${escapeHtml(visual.icon)}</div>
       <div class="allyAvatarName">${escapeHtml(ally.name || `Ally ${idx + 1}`)}</div>
-      <div class="allyAvatarMeta">${escapeHtml(ally.role || "Ally")}</div>
       <div class="allyAvatarRarity">${escapeHtml(formatRarity(ally))}</div>
     `;
     card.onclick = () => openAllyDetailPopup(ally, idx);
