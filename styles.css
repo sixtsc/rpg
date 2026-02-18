@@ -170,6 +170,15 @@ body.inBattle .mailButton{
   cursor:pointer;
 }
 
+.mailboxAction:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+}
+
+.mailboxActionDanger{
+  color:#ff9a9a;
+}
+
 .mailboxHeaderActions{
   display:flex;
   align-items:center;
@@ -227,6 +236,16 @@ body.inBattle .mailButton{
   overflow:auto;
   padding-right:4px;
   max-height:60vh;
+}
+
+.mailboxEmptyText{
+  min-height:220px;
+  display:grid;
+  place-items:center;
+  text-align:center;
+  color:var(--muted);
+  font-weight:600;
+  padding:12px;
 }
 
 .mailItem{

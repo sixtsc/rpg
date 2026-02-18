@@ -703,6 +703,20 @@ async function mailboxClaim(id) {
   });
 }
 
+async function mailboxClaimAll() {
+  return apiJson("/api/mailbox-claim-all", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+async function mailboxDeleteAll() {
+  return apiJson("/api/mailbox-delete-all", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
 function formatMailboxTime(epochSec) {
   if (!epochSec) return "";
   try {
@@ -717,6 +731,29 @@ const mailboxState = {
   tab: "all",
   selected: null,
 };
+
+function hasUnclaimedMailboxRewards(items) {
+  if (!Array.isArray(items)) return false;
+  const now = Math.floor(Date.now() / 1000);
+  return items.some((item) => {
+    const attachments = Array.isArray(item?.attachments) ? item.attachments : [];
+    const isExpired = Number(item?.expires_at || 0) > 0 && Number(item.expires_at) <= now;
+    return attachments.length > 0 && !item?.claimed_at && !isExpired;
+  });
+}
+
+function updateMailboxHeaderActions() {
+  const claimAllBtn = byId("mailboxClaimAll");
+  if (claimAllBtn) {
+    const hasClaimable = hasUnclaimedMailboxRewards(mailboxState.items);
+    claimAllBtn.disabled = !hasClaimable;
+  }
+
+  const deleteAllBtn = byId("mailboxDeleteAll");
+  if (deleteAllBtn) {
+    deleteAllBtn.disabled = hasUnclaimedMailboxRewards(mailboxState.items);
+  }
+}
 
 function updateMailboxBadge(items) {
   const btn = byId("mailButton");
@@ -756,19 +793,8 @@ function renderMailboxList() {
 
   if (filtered.length === 0) {
     const empty = document.createElement("div");
-    empty.className = "mailItem";
-    empty.innerHTML = `
-      <div class="mailAvatar">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M4 6.5h16a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 20 17.5H4A1.5 1.5 0 0 1 2.5 16V8A1.5 1.5 0 0 1 4 6.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
-          <path d="m3.5 8 8.5 5 8.5-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <div>
-        <div class="mailTitle">Inbox kosong</div>
-        <div class="mailBody">Belum ada pesan.</div>
-      </div>
-    `;
+    empty.className = "mailboxEmptyText";
+    empty.textContent = mailboxState.tab === "unclaimed" ? "Tidak ada pesan belum claim." : "Inbox kosong.";
     list.appendChild(empty);
     return;
   }
@@ -886,11 +912,13 @@ async function refreshMailboxItems() {
     mailboxState.items = [];
     renderMailboxList();
     updateMailboxBadge([]);
+    updateMailboxHeaderActions();
     return;
   }
   mailboxState.items = Array.isArray(data?.items) ? data.items : [];
   updateMailboxBadge(mailboxState.items);
   renderMailboxList();
+  updateMailboxHeaderActions();
 }
 
 async function openMailboxOverlay() {
@@ -5357,12 +5385,26 @@ function bind() {
   const mailboxOverlayClose = byId("mailboxClose");
   if (mailboxOverlayClose) mailboxOverlayClose.onclick = () => closeMailboxOverlay();
 
-  const mailboxAction = byId("mailboxAction");
-  if (mailboxAction) {
-    mailboxAction.onclick = async () => {
-      const unreadItems = mailboxState.items.filter((item) => !item.read_at);
-      await Promise.all(unreadItems.map((item) => mailboxMarkRead(item.id)));
+  const mailboxClaimAllBtn = byId("mailboxClaimAll");
+  if (mailboxClaimAllBtn) {
+    mailboxClaimAllBtn.onclick = async () => {
+      mailboxClaimAllBtn.disabled = true;
+      await mailboxClaimAll();
       await refreshMailboxItems();
+    };
+  }
+
+  const mailboxDeleteAllBtn = byId("mailboxDeleteAll");
+  if (mailboxDeleteAllBtn) {
+    mailboxDeleteAllBtn.onclick = async () => {
+      if (hasUnclaimedMailboxRewards(mailboxState.items)) return;
+      mailboxDeleteAllBtn.disabled = true;
+      const { res } = await mailboxDeleteAll();
+      await refreshMailboxItems();
+      if (res.ok) {
+        mailboxState.selected = null;
+        setMailboxDetailOpen(false);
+      }
     };
   }
 
