@@ -2924,12 +2924,11 @@ function renderAllyPage(){
     const visual = getAllyVisual(ally, idx);
     const card = document.createElement("button");
     card.type = "button";
-    card.className = "allyAvatarCard";
+    card.className = `allyAvatarCard${ally.equipped !== false ? " equipped" : ""}`;
     card.innerHTML = `
       <div class="allyAvatarLevel">${escapeHtml(String(ally.level ?? 0))}</div>
       <div class="allyAvatarPortrait" style="background:${escapeHtml(visual.background)}">${escapeHtml(visual.icon)}</div>
       <div class="allyAvatarName">${escapeHtml(ally.name || `Ally ${idx + 1}`)}</div>
-      <div class="allyAvatarUsage">${escapeHtml(ally.equipped !== false ? "Dipakai" : "Disimpan")}</div>
       <div class="allyAvatarRarity">${escapeHtml(formatRarity(ally))}</div>
     `;
     card.onclick = () => openAllyDetailPopup(ally, idx);

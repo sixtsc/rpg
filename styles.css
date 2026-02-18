@@ -2021,6 +2021,10 @@ body.inBattle .enemyMiniMeta .muted{
   border-color:rgba(151,184,255,0.95);
   box-shadow:0 14px 24px rgba(0,0,0,0.32);
 }
+.allyAvatarCard.equipped{
+  border-color:rgba(79,220,137,0.95);
+  box-shadow:0 0 0 1px rgba(79,220,137,0.35), 0 14px 24px rgba(0,0,0,0.28);
+}
 .allyAvatarLevel{
   width:100%;
   text-align:left;
@@ -2044,12 +2048,6 @@ body.inBattle .enemyMiniMeta .muted{
   text-align:center;
   font-size:18px;
   font-weight:800;
-}
-.allyAvatarUsage{
-  font-size:12px;
-  font-weight:700;
-  color:#9edbbf;
-  letter-spacing:.2px;
 }
 .allyAvatarRarity{
   font-size:12px;
