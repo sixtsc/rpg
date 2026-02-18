@@ -178,6 +178,16 @@ export function refresh(state) {
     btnAutoBattleFloating.setAttribute("title", autoLabel);
   }
 
+  const autoItemLabel = state.autoBattleUseConsumable ? "Auto Item: ON" : "Auto Item: OFF";
+  const btnAutoBattleSettingsFloating = $("btnAutoBattleSettingsFloating");
+  if (btnAutoBattleSettingsFloating) {
+    const showSetting = !!state.inBattle && !!state.autoBattleEnabled;
+    btnAutoBattleSettingsFloating.style.display = showSetting ? "inline-flex" : "none";
+    btnAutoBattleSettingsFloating.classList.toggle("off", !state.autoBattleUseConsumable);
+    btnAutoBattleSettingsFloating.setAttribute("aria-label", autoItemLabel);
+    btnAutoBattleSettingsFloating.setAttribute("title", autoItemLabel);
+  }
+
   // Log hint / Turn indicator
   const logHint = $("logHint");
   if (logHint) {
@@ -246,7 +256,7 @@ export function refresh(state) {
 
     // Buttons visibility
     $("townBtns").style.display = "none";
-    $("battleBtns").style.display = state.turn === "player" ? "flex" : "none";
+    $("battleBtns").style.display = (state.turn === "player" && !state.autoBattleEnabled) ? "flex" : "none";
 
     const enemyBtns = $("enemyBtns");
     if (enemyBtns) enemyBtns.style.display = "flex";

@@ -24,6 +24,7 @@ export function newState(){
     inBattle: false,
     playerDefending: false,
     autoBattleEnabled: false,
+    autoBattleUseConsumable: true,
     _autoBattlePending: false,
     skillShopCategory: "fire",
     turn: "town",

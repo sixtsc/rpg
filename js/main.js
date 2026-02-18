@@ -45,6 +45,10 @@ function setAutoBattleEnabled(enabled) {
   if (!state.autoBattleEnabled) clearAutoBattleTimer();
 }
 
+function setAutoBattleUseConsumable(enabled) {
+  state.autoBattleUseConsumable = !!enabled;
+}
+
 function isActionModalOpen() {
   const backdrop = byId("modalBackdrop");
   return !!(backdrop && backdrop.style.display !== "none");
@@ -422,7 +426,7 @@ function performAutoBattleTurn() {
   if (!p || !e || e.hp <= 0) return;
 
   const hpRatio = p.maxHp > 0 ? p.hp / p.maxHp : 1;
-  if (hpRatio <= 0.35) {
+  if (state.autoBattleUseConsumable && hpRatio <= 0.35) {
     const healId = Object.keys(p.inv || {}).find((id) => {
       const item = p.inv[id];
       return item && item.qty > 0 && item.kind === "heal_hp";
@@ -742,6 +746,16 @@ function bind() {
 
   const btnAutoBattleFloating = byId("btnAutoBattleFloating");
   if (btnAutoBattleFloating) btnAutoBattleFloating.onclick = toggleAutoBattle;
+
+  const btnAutoBattleSettingsFloating = byId("btnAutoBattleSettingsFloating");
+  if (btnAutoBattleSettingsFloating) {
+    btnAutoBattleSettingsFloating.onclick = () => {
+      if (!state.inBattle || !state.autoBattleEnabled) return;
+      setAutoBattleUseConsumable(!state.autoBattleUseConsumable);
+      addLog("INFO", state.autoBattleUseConsumable ? "Auto Battle: consumable aktif." : "Auto Battle: consumable nonaktif.");
+      refresh(state);
+    };
+  }
 
   byId("btnRun").onclick = () => {
     if (!state.inBattle || state.turn !== "player") return;
