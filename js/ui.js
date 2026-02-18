@@ -141,6 +141,7 @@ export const modal = {
 
   close() {
     $("modalBackdrop").style.display = "none";
+    window.dispatchEvent(new Event("rpg:modal-closed"));
   },
 
   bind() {

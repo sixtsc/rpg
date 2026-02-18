@@ -712,6 +712,11 @@ function openTownMenu(){
 
 function bind() {
   modal.bind();
+  window.addEventListener("rpg:modal-closed", () => {
+    if (!state.autoBattleEnabled) return;
+    if (!state.inBattle || state.turn !== "player") return;
+    scheduleAutoBattleTurn();
+  });
   const appRoot = document.querySelector(".wrap");
   if (appRoot) {
     appRoot.addEventListener("contextmenu", (event) => {
