@@ -293,6 +293,7 @@ function newPlayer(){
     gold:0,
     gems:0,
     allies: [],
+    blacksmithEnhance: {},
     glennUnlocked: false,
     highestStageCleared: 0,
     skills:[{ ...SKILLS.fireball, cdLeft:0 }],
@@ -426,6 +427,9 @@ function normalizePlayer(p){
     p.equipmentBonus.spd = Number(p.equipmentBonus.spd || 0);
     p.equipmentBonus.evasion = Number(p.equipmentBonus.evasion || 0);
   }
+  if (!p.blacksmithEnhance || typeof p.blacksmithEnhance !== "object") {
+    p.blacksmithEnhance = {};
+  }
   if (!Array.isArray(p.skills)) p.skills = [];
   p.skills = p.skills.map((skill) => {
     if (!skill || !skill.name) return skill;
@@ -488,6 +492,7 @@ function calcEquipmentBonus(player){
   const p = player;
   const bonus = { atk:0, def:0, spd:0, evasion:0 };
   if (!p || !p.equipment) return bonus;
+  const enhanceMap = p.blacksmithEnhance || {};
   Object.values(p.equipment).forEach((name) => {
     const it = getItemRef(name, p);
     if (!it) return;
@@ -495,6 +500,11 @@ function calcEquipmentBonus(player){
     if (typeof it.def === "number") bonus.def += it.def;
     if (typeof it.spd === "number") bonus.spd += it.spd;
     if (typeof it.evasion === "number") bonus.evasion += it.evasion;
+    const upgrade = enhanceMap[name] || {};
+    bonus.atk += Number(upgrade.atk || 0);
+    bonus.def += Number(upgrade.def || 0);
+    bonus.spd += Number(upgrade.spd || 0);
+    bonus.evasion += Number(upgrade.evasion || 0);
   });
   return bonus;
 }
@@ -3749,6 +3759,114 @@ function openShopModal(mode = "menu"){
   }
 }
 
+function getBlacksmithEquipmentRows(){
+  const equip = state.player?.equipment || {};
+  const slotOrder = [
+    ["hand", "Weapon"],
+    ["head", "Head"],
+    ["armor", "Armor"],
+    ["pant", "Pant"],
+    ["shoes", "Shoes"],
+  ];
+  return slotOrder
+    .map(([slot, label]) => {
+      const itemName = equip[slot];
+      if (!itemName) return null;
+      const ref = getItemRef(itemName, state.player);
+      if (!ref || ref.kind !== "gear") return null;
+      return { slot, label, itemName, ref };
+    })
+    .filter(Boolean);
+}
+
+function getBlacksmithEnhance(name){
+  if (!state.player.blacksmithEnhance || typeof state.player.blacksmithEnhance !== "object") {
+    state.player.blacksmithEnhance = {};
+  }
+  if (!state.player.blacksmithEnhance[name]) {
+    state.player.blacksmithEnhance[name] = { level:0, atk:0, def:0, spd:0, evasion:0 };
+  }
+  return state.player.blacksmithEnhance[name];
+}
+
+function getBlacksmithUpgradeCost(level){
+  const lv = Math.max(0, Number(level) || 0);
+  return 40 + (lv * 35);
+}
+
+function applyBlacksmithUpgrade(itemName){
+  const ref = getItemRef(itemName, state.player);
+  if (!ref || ref.kind !== "gear") {
+    return { ok:false, reason:"not-gear" };
+  }
+  const upgrade = getBlacksmithEnhance(itemName);
+  const cost = getBlacksmithUpgradeCost(upgrade.level);
+  if ((state.player.gold || 0) < cost) {
+    return { ok:false, reason:"gold", cost };
+  }
+
+  state.player.gold -= cost;
+  upgrade.level += 1;
+  if (typeof ref.atk === "number") upgrade.atk += 1;
+  if (typeof ref.def === "number") upgrade.def += 1;
+  if (typeof ref.spd === "number") upgrade.spd += 1;
+  if (typeof ref.evasion === "number") upgrade.evasion += 1;
+
+  applyEquipmentStats(state.player);
+  autosave(state);
+  return { ok:true, cost, level:upgrade.level };
+}
+
+function openBlacksmithMenu(){
+  if (state.inBattle) return;
+  const rows = getBlacksmithEquipmentRows();
+  if (!rows.length) {
+    modal.open(
+      "Blacksmith",
+      [
+        { title: "Belum ada gear terpasang", desc: "Pasang equipment dulu dari Inventory agar bisa di-upgrade.", meta: "", value: undefined, className: "readonly" },
+      ],
+      () => {}
+    );
+    return;
+  }
+
+  const choices = rows.map((row) => {
+    const upgrade = getBlacksmithEnhance(row.itemName);
+    const cost = getBlacksmithUpgradeCost(upgrade.level);
+    const plus = [];
+    if (typeof row.ref.atk === "number") plus.push(`ATK +${upgrade.atk}`);
+    if (typeof row.ref.def === "number") plus.push(`DEF +${upgrade.def}`);
+    if (typeof row.ref.spd === "number") plus.push(`SPD +${upgrade.spd}`);
+    if (typeof row.ref.evasion === "number") plus.push(`EVA +${upgrade.evasion}`);
+    return {
+      title: `${row.label}: ${row.itemName}`,
+      desc: plus.length ? plus.join(" • ") : "Belum ada bonus",
+      meta: `Upgrade Lv${upgrade.level} • ${cost} gold`,
+      value: `upgrade:${row.itemName}`,
+    };
+  });
+
+  modal.open(
+    "Blacksmith",
+    [
+      { title: `Gold: ${state.player.gold}`, desc: "Perkuat gear yang sedang dipakai.", meta: "", value: undefined, className: "readonly" },
+    ].concat(choices),
+    (pick) => {
+      if (!String(pick || "").startsWith("upgrade:")) return;
+      const itemName = String(pick).replace("upgrade:", "");
+      const res = applyBlacksmithUpgrade(itemName);
+      if (!res.ok) {
+        if (res.reason === "gold") showToast("Gold tidak cukup untuk upgrade.", "warn");
+        return;
+      }
+      addLog("SMITH", `${itemName} berhasil di-upgrade ke Lv${res.level}.`);
+      refresh(state);
+      openBlacksmithMenu();
+    }
+  );
+}
+
 function openSkillLearnDetail(skillKey){
 
 }
@@ -5511,6 +5629,8 @@ function bind() {
   if (btnProfile) btnProfile.onclick = openProfileModal;
   const btnShop = byId("btnShop");
   if (btnShop) btnShop.onclick = () => openShopModal();
+  const btnBlacksmith = byId("btnBlacksmith");
+  if (btnBlacksmith) btnBlacksmith.onclick = openBlacksmithMenu;
   const marketBack = byId("marketBack");
   if (marketBack) marketBack.onclick = () => setMarketPageVisible(false);
   const skillShopBack = byId("skillShopBack");
