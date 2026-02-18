@@ -2077,6 +2077,10 @@ body.inBattle .enemyMiniMeta .muted{
   border-color:rgba(151,184,255,0.95);
   box-shadow:0 14px 24px rgba(0,0,0,0.32);
 }
+.allyAvatarCard.equipped{
+  border-color:rgba(79,220,137,0.95);
+  box-shadow:0 0 0 1px rgba(79,220,137,0.35), 0 14px 24px rgba(0,0,0,0.28);
+}
 .allyAvatarLevel{
   width:100%;
   text-align:left;
@@ -2085,13 +2089,13 @@ body.inBattle .enemyMiniMeta .muted{
   color:#f4f6ff;
 }
 .allyAvatarPortrait{
-  width:74px;
-  height:74px;
+  width:96px;
+  height:96px;
   border-radius:20px;
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:40px;
+  font-size:52px;
   border:1px solid rgba(255,255,255,0.35);
   box-shadow:inset 0 -12px 18px rgba(0,0,0,0.2);
 }
@@ -2101,10 +2105,11 @@ body.inBattle .enemyMiniMeta .muted{
   font-size:18px;
   font-weight:800;
 }
-.allyAvatarMeta{
-  font-size:13px;
-  font-weight:600;
-  color:var(--muted);
+.allyAvatarRarity{
+  font-size:12px;
+  font-weight:700;
+  color:#ffd86b;
+  letter-spacing:.2px;
 }
 
 .allyDetailPopup{
@@ -2147,6 +2152,11 @@ body.inBattle .enemyMiniMeta .muted{
   margin-bottom:14px;
 }
 .allyDetailHeadline h3{ margin:0; font-size:28px; }
+.allyDetailAvatarWrap{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
 .allyDetailAvatar{
   width:98px;
   height:98px;
@@ -2157,8 +2167,34 @@ body.inBattle .enemyMiniMeta .muted{
   font-size:48px;
   border:1px solid rgba(255,255,255,0.35);
 }
+.allyDetailRarity{
+  margin-top:6px;
+  text-align:center;
+  font-size:20px;
+  font-weight:800;
+  color:#ffd86b;
+  letter-spacing:1px;
+}
 .allyDetailRole{ margin:4px 0; color:var(--muted); font-size:14px; }
 .allyDetailProgress{ margin:0 0 8px; font-size:12px; color:#c9d8ff; }
+.allyDetailActions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.allyDetailEquip{
+  border:1px solid rgba(120,221,171,0.5);
+  background:rgba(50,158,116,0.2);
+  color:#e9fff4;
+  border-radius:10px;
+  padding:8px 12px;
+  cursor:pointer;
+  font-weight:700;
+}
+.allyDetailEquip.active{
+  background:rgba(58,182,132,0.34);
+  border-color:rgba(120,240,188,0.75);
+}
 .allyDetailLevelUp{
   border:1px solid rgba(121,163,255,0.55);
   background:rgba(87,129,238,0.25);
@@ -2235,9 +2271,9 @@ body.inBattle .enemyMiniMeta .muted{
     gap:8px;
   }
   .allyAvatarPortrait{
-    width:58px;
-    height:58px;
-    font-size:30px;
+    width:78px;
+    height:78px;
+    font-size:40px;
   }
   .allyAvatarName{
     font-size:16px;
@@ -2864,10 +2900,19 @@ body.inTown .grid{ grid-template-columns: 1fr !important; }
   animation: hpPulse 360ms ease-out;
   box-shadow: 0 0 0 2px rgba(255, 120, 120, 0.35);
 }
+.bar.hpHealPulse{
+  animation: hpHealPulse 420ms ease-out;
+  box-shadow: 0 0 0 2px rgba(120, 255, 165, 0.35);
+}
 @keyframes hpPulse{
   0%{ box-shadow: 0 0 0 0 rgba(255, 120, 120, 0.45); }
   70%{ box-shadow: 0 0 0 4px rgba(255, 120, 120, 0.15); }
   100%{ box-shadow: 0 0 0 0 rgba(255, 120, 120, 0); }
+}
+@keyframes hpHealPulse{
+  0%{ box-shadow: 0 0 0 0 rgba(120, 255, 165, 0.45); }
+  70%{ box-shadow: 0 0 0 4px rgba(120, 255, 165, 0.2); }
+  100%{ box-shadow: 0 0 0 0 rgba(120, 255, 165, 0); }
 }
 
 

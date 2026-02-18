@@ -140,7 +140,7 @@
               <div class="damageText" id="playerDamage"></div>
               <div class="allySlotBadge" id="allySlotBadge">
                 <span class="allySlotIcon" aria-hidden="true">🤝</span>
-                <span id="allySlotText">0/1</span>
+                <span id="allySlotText">0/2</span>
               </div>
               <div class="sectionTitle">
                 <div class="playerTitle">
@@ -452,7 +452,10 @@
     <div class="allyDetailCard" role="dialog" aria-modal="true" aria-labelledby="allyDetailName">
       <button id="allyDetailClose" class="allyDetailClose" type="button" aria-label="Tutup">✕</button>
       <div class="allyDetailHero">
-        <div class="allyDetailAvatar" id="allyDetailAvatar">A</div>
+        <div class="allyDetailAvatarWrap">
+          <div class="allyDetailAvatar" id="allyDetailAvatar">A</div>
+          <div id="allyDetailRarity" class="allyDetailRarity">★★★★</div>
+        </div>
         <div class="allyDetailHeadline">
           <h3 id="allyDetailName">Ally</h3>
           <p id="allyDetailRole" class="allyDetailRole">Role</p>
@@ -461,7 +464,10 @@
             <div class="allyXpMeta"><span>XP</span><span id="allyDetailXpText">0/0</span></div>
             <div class="bar allyXpBar"><div id="allyDetailXpBar" class="fill xp" style="width:0%"></div></div>
           </div>
-          <button id="allyDetailLevelUp" class="allyDetailLevelUp" type="button">Level Up</button>
+          <div class="allyDetailActions">
+            <button id="allyDetailEquip" class="allyDetailEquip" type="button">Equip</button>
+            <button id="allyDetailLevelUp" class="allyDetailLevelUp" type="button">Level Up</button>
+          </div>
         </div>
       </div>
 
@@ -483,8 +489,8 @@
       <div class="allyDetailSection">
         <h4>Skill Set</h4>
         <div id="allyBasicAttack" class="allySkillCard"></div>
-        <div id="allyActiveSkills" class="allySkillGrid"></div>
         <div id="allyPassiveSkill" class="allySkillCard passive"></div>
+        <div id="allyActiveSkills" class="allySkillGrid"></div>
       </div>
 
     </div>
