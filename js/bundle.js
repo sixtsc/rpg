@@ -394,7 +394,8 @@ function normalizeAlly(ally){
     },
     activeSkills: Array.isArray(ally.activeSkills) && ally.activeSkills.length
       ? ally.activeSkills.slice(0, 2).map((skill, idx) => {
-        const skillName = skill?.name || baseAlly.activeSkills?.[idx]?.name || `Active ${idx + 1}`;
+        const rawSkillName = skill?.name || baseAlly.activeSkills?.[idx]?.name || `Active ${idx + 1}`;
+        const skillName = rawSkillName === "Spirit Veil" ? "Verdant Sanctuary" : rawSkillName;
         const baseRef = (baseAlly.activeSkills || []).find((baseSkill) => baseSkill.name === skillName) || baseAlly.activeSkills?.[idx] || {};
         return {
           name: skillName,
@@ -5288,14 +5289,16 @@ function openAllyStatsModal(ally) {
     });
 
     (ally.activeSkills || []).forEach((skill, idx) => {
+      const cdLeft = Math.max(0, Number(skill?.cdLeft) || 0);
+      const cdMax = Math.max(0, Number(skill?.cooldown) || 0);
       cards.push({
         title: `Active ${idx + 1} • ${skill.name || "Skill"}`,
         iconFrameOnly: true,
-        cooldownBadge: (skill.cdLeft || 0) > 0 ? `${skill.cdLeft}` : "",
-        descHtml: `${escapeHtml(skill.desc || "-")}<br><span class="muted">MP ${skill.mpCost || 0} • Power ${skill.power || 0} • CD ${skill.cdLeft || 0}/${skill.cooldown || 0}</span>`,
-        meta: (skill.cdLeft || 0) > 0 ? `CD ${skill.cdLeft}` : "READY",
+        cooldownBadge: `CD ${cdLeft}/${cdMax}`,
+        descHtml: `${escapeHtml(skill.desc || "-")}<br><span class="muted">MP ${skill.mpCost || 0} • Power ${skill.power || 0} • CD ${cdLeft}/${cdMax}</span>`,
+        meta: cdLeft > 0 ? `COOLDOWN ${cdLeft}` : "READY",
         value: undefined,
-        className: "allySkillRow allySkillCardRow",
+        className: `allySkillRow allySkillCardRow${cdLeft > 0 ? " skillOnCooldown" : ""}`,
         keepOpen: true,
         skillRef: skill
       });
