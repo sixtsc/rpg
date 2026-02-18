@@ -1166,6 +1166,98 @@ function createBattleRewardItem({ icon, name, amount }) {
   return card;
 }
 
+function renderBattleRewardXpList(summary) {
+  const xpList = $("battleRewardXpList");
+  if (!xpList) return;
+  xpList.innerHTML = "";
+  if (summary.outcome !== "win") {
+    xpList.style.display = "none";
+    return;
+  }
+  const progress = Array.isArray(summary.expProgress) ? summary.expProgress : [];
+  if (!progress.length) {
+    xpList.style.display = "none";
+    return;
+  }
+  xpList.style.display = "flex";
+  progress.forEach((entry, idx) => {
+    const beforeLevel = Number(entry.beforeLevel) || 0;
+    const afterLevel = Number(entry.afterLevel) || beforeLevel;
+    const beforeToLevel = Math.max(1, Number(entry.beforeXpToLevel) || 1);
+    const afterToLevel = Math.max(1, Number(entry.afterXpToLevel) || beforeToLevel);
+    const beforeXpRaw = Number(entry.beforeXp) || 0;
+    const afterXpRaw = Number(entry.afterXp) || 0;
+    const maxedBefore = beforeLevel >= MAX_LEVEL;
+    const maxedAfter = afterLevel >= MAX_LEVEL;
+    const resetOnLevelUp = !maxedAfter && afterLevel > beforeLevel;
+    const startXp = maxedBefore ? beforeToLevel : clamp(resetOnLevelUp ? 0 : beforeXpRaw, 0, resetOnLevelUp ? afterToLevel : beforeToLevel);
+    const startToLevel = resetOnLevelUp ? afterToLevel : beforeToLevel;
+    const endXp = maxedAfter ? afterToLevel : clamp(afterXpRaw, 0, afterToLevel);
+    const icon = entry.avatarIcon || ((entry.name || "?").slice(0, 1).toUpperCase());
+    const bg = entry.avatarBg || "linear-gradient(135deg, #4b5c6e, #202934)";
+    const gain = Math.max(0, Number(entry.gainXp) || 0);
+
+    const card = document.createElement("div");
+    card.className = "battleRewardXpCard" + (maxedAfter ? " maxed" : "");
+    card.innerHTML = `
+      <div class="battleRewardXpAvatar" style="background:${escapeHtml(bg)}">${escapeHtml(icon)}</div>
+      <div class="battleRewardXpMain">
+        <div class="battleRewardXpTop">
+          <div class="battleRewardXpName">${escapeHtml(entry.name || `Unit ${idx + 1}`)}</div>
+          <div class="battleRewardXpGain">+${escapeHtml(String(gain))} EXP</div>
+        </div>
+        <div class="battleRewardXpBar"><div class="battleRewardXpFill"></div></div>
+        <div class="battleRewardXpText"></div>
+      </div>
+    `;
+    card.dataset.startXp = String(startXp);
+    card.dataset.startXpToLevel = String(startToLevel);
+    card.dataset.endXp = String(endXp);
+    card.dataset.endXpToLevel = String(afterToLevel);
+    card.dataset.maxedAfter = maxedAfter ? "1" : "0";
+    xpList.appendChild(card);
+  });
+}
+
+function animateBattleRewardXpList(summary) {
+  const xpList = $("battleRewardXpList");
+  if (!xpList || summary.outcome !== "win") return;
+  const cards = Array.from(xpList.querySelectorAll(".battleRewardXpCard"));
+  cards.forEach((card, idx) => {
+    const fill = card.querySelector(".battleRewardXpFill");
+    const text = card.querySelector(".battleRewardXpText");
+    if (!fill || !text) return;
+    const startXp = Number(card.dataset.startXp) || 0;
+    const startToLevel = Math.max(1, Number(card.dataset.startXpToLevel) || 1);
+    const endXp = Number(card.dataset.endXp) || 0;
+    const endToLevel = Math.max(1, Number(card.dataset.endXpToLevel) || 1);
+    const maxed = card.dataset.maxedAfter === "1";
+
+    const setState = (xp, toLevel, isMax) => {
+      const safeToLevel = Math.max(1, toLevel || 1);
+      const safeXp = clamp(xp || 0, 0, safeToLevel);
+      fill.style.width = `${(safeXp / safeToLevel) * 100}%`;
+      text.textContent = isMax ? "MAX" : `${Math.round(safeXp)}/${safeToLevel}`;
+    };
+
+    setTimeout(() => {
+      if (maxed) {
+        setState(endToLevel, endToLevel, true);
+        return;
+      }
+      const duration = 900;
+      const startedAt = performance.now();
+      const tick = (now) => {
+        const t = clamp((now - startedAt) / duration, 0, 1);
+        const curr = startXp + ((endXp - startXp) * t);
+        setState(curr, endToLevel, false);
+        if (t < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }, idx * 180);
+  });
+}
+
 function showBattleResultOverlay(summary, onClose) {
   const backdrop = $("battleResultBackdrop");
   if (!backdrop) return;
@@ -1197,6 +1289,8 @@ function showBattleResultOverlay(summary, onClose) {
     }
   }
 
+  renderBattleRewardXpList(summary);
+
   const drops = Array.isArray(summary.drops) ? summary.drops : [];
   if (dropTitle) dropTitle.style.display = isWin ? "block" : "none";
   if (dropGrid) {
@@ -1221,6 +1315,7 @@ function showBattleResultOverlay(summary, onClose) {
   }
 
   backdrop.style.display = "flex";
+  animateBattleRewardXpList(summary);
   const btn = $("battleResultClose");
   if (btn) {
     btn.onclick = () => {
@@ -3743,6 +3838,49 @@ function grantDropsToPlayer(drops){
   });
 }
 
+function collectBattleExpProgress(beforePlayer, beforeAllies, xpGain) {
+  const result = [];
+  const player = state.player;
+  if (player) {
+    const before = beforePlayer || {};
+    const playerIcon = String(player.gender || "male").toLowerCase() === "female" ? "♀" : "♂";
+    result.push({
+      id: "player",
+      name: player.name || "Player",
+      avatarIcon: playerIcon,
+      avatarBg: "linear-gradient(135deg, #79c8ff, #4a5dff)",
+      gainXp: xpGain,
+      beforeLevel: Number(before.level) || 0,
+      beforeXp: Number(before.xp) || 0,
+      beforeXpToLevel: Number(before.xpToLevel) || 1,
+      afterLevel: Number(player.level) || 0,
+      afterXp: Number(player.xp) || 0,
+      afterXpToLevel: Number(player.xpToLevel) || 1,
+    });
+  }
+
+  const allies = ensureAllies();
+  allies.forEach((ally, idx) => {
+    if (!ally) return;
+    const before = Array.isArray(beforeAllies) ? beforeAllies[idx] || {} : {};
+    const visual = getAllyVisual(ally, idx);
+    result.push({
+      id: ally.id || `ally-${idx}`,
+      name: ally.name || `Ally ${idx + 1}`,
+      avatarIcon: visual.icon,
+      avatarBg: visual.background,
+      gainXp: Math.max(1, Math.floor((xpGain || 0) * 0.7)),
+      beforeLevel: Number(before.level) || 0,
+      beforeXp: Number(before.xp) || 0,
+      beforeXpToLevel: Number(before.xpToLevel) || 1,
+      afterLevel: Number(ally.level) || 0,
+      afterXp: Number(ally.xp) || 0,
+      afterXpToLevel: Number(ally.xpToLevel) || 1,
+    });
+  });
+  return result;
+}
+
 function winBattle() {
   const p = state.player;
   const e = state.enemy;
@@ -3750,6 +3888,16 @@ function winBattle() {
   const drops = rollBattleDrops(e);
   const goldGain = e.goldReward || 0;
   const xpGain = e.xpReward || 0;
+  const beforePlayer = {
+    level: Number(p.level) || 0,
+    xp: Number(p.xp) || 0,
+    xpToLevel: Number(p.xpToLevel) || 1,
+  };
+  const beforeAllies = ensureAllies().map((ally) => ally ? ({
+    level: Number(ally.level) || 0,
+    xp: Number(ally.xp) || 0,
+    xpToLevel: Number(ally.xpToLevel) || 1,
+  }) : null);
 
   addLog("WIN", `Menang melawan ${e.name}!`);
   p.gold += goldGain;
@@ -3757,6 +3905,7 @@ function winBattle() {
   gainXp(xpGain);
   gainAllyXp(xpGain);
   grantDropsToPlayer(drops);
+  const expProgress = collectBattleExpProgress(beforePlayer, beforeAllies, xpGain);
 
   if (Array.isArray(state.enemyQueue) && state.enemyQueue.length > 1) {
     state.enemyQueue.shift();
@@ -3786,7 +3935,7 @@ function winBattle() {
     return;
   }
 
-  const summary = { outcome: "win", gold: goldGain, xp: xpGain, drops, enemyName: e.name };
+  const summary = { outcome: "win", gold: goldGain, xp: xpGain, drops, enemyName: e.name, expProgress };
   endBattle("Pertarungan selesai.", summary);
 }
 
