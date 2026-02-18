@@ -72,7 +72,7 @@ const GLENN_BASE = {
   basicAttack: { name: "Iron Slash", desc: "Serangan pedang standar yang konsisten untuk membuka pertarungan." },
   activeSkills: [
     { name: "Shield Break", desc: "Tebasan berat yang menurunkan DEF target sebesar 15% selama 2 turn.", power: 10, mpCost: 4, cooldown: 3, type: "debuff" },
-    { name: "Guard Stance", desc: "Menaikkan DEF Glenn 25% selama 2 turn dan memulihkan 8 MP.", power: 6, mpCost: 6, cooldown: 4, type: "buff" }
+    { name: "Guard Stance", desc: "Menaikkan DEF Glenn 25% selama 2 turn.", power: 6, mpCost: 6, cooldown: 5, type: "buff" }
   ],
   passiveSkill: { name: "Last Bastion", desc: "Saat HP di bawah 35%, DEF bertambah 20% otomatis." },
   xp: 0,
@@ -1859,6 +1859,11 @@ const STATUS_DEFS = {
     desc: "Meningkatkan DEF signifikan selama beberapa turn.",
     kind: "buff",
   },
+  stance: {
+    label: "Stance",
+    desc: "Mengalihkan semua serangan ke pengguna stance.",
+    kind: "buff",
+  },
   armorBreak: {
     label: "Armor Break",
     desc: "Menurunkan DEF target sebesar 15% selama beberapa turn.",
@@ -2453,6 +2458,8 @@ function getAliveAllies(){
 
 function pickEnemyTarget(){
   const allies = getAliveAllies();
+  const stanceHolder = allies.find((ally) => hasStatus(ally, "stance"));
+  if (stanceHolder) return { target: stanceHolder, isPlayer: false };
   if (!allies.length) return { target: state.player, isPlayer: true };
   const roll = randInt(1, 100);
   if (roll <= 60) return { target: state.player, isPlayer: true };
@@ -4044,6 +4051,7 @@ function alliesAct(done){
       }
       if (skill?.type === "buff") {
         addStatusEffect(ally, { type: "guardStance", turns: 2, debuff: false });
+        addStatusEffect(ally, { type: "stance", turns: 2, debuff: false });
       }
       if (skill?.type === "debuff") {
         addStatusEffect(currentTarget, { type: "armorBreak", turns: 2, debuff: true });
