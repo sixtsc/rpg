@@ -1,0 +1,10 @@
+{
+  "name": "rpg",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "build:bundle": "node scripts/build-bundle.mjs",
+    "build:bundle:dev": "node scripts/build-bundle.mjs --sourcemap",
+    "watch:bundle": "node scripts/build-bundle.mjs --watch"
+  }
+}
