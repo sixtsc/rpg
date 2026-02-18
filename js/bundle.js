@@ -4387,17 +4387,21 @@ function resolveAllySkillValues(ally, skill){
   const baseAlly = ALLY_BASES[String(ally?.id || "").toLowerCase()] || {};
   const skillList = Array.isArray(ally?.activeSkills) ? ally.activeSkills : [];
   const skillIdx = skillList.indexOf(skill);
-  const idxBaseSkill = skillIdx >= 0 ? (baseAlly.activeSkills || [])[skillIdx] : null;
+
+  // Priority: exact name match first, then fallback by slot index (for legacy saves)
   const nameBaseSkill = (baseAlly.activeSkills || []).find((s) => s?.name === skill.name) || null;
-  const baseSkill = idxBaseSkill || nameBaseSkill || {};
+  const idxBaseSkill = skillIdx >= 0 ? (baseAlly.activeSkills || [])[skillIdx] : null;
+  const baseSkill = nameBaseSkill || idxBaseSkill || null;
 
   const rawMpCost = Number(skill.mpCost);
-  const baseMpCost = Math.max(1, Number(baseSkill.mpCost) || 1);
-  const mpCost = rawMpCost > 0 ? rawMpCost : baseMpCost;
-
   const rawCooldown = Number(skill.cooldown);
-  const baseCooldown = Math.max(1, Number(baseSkill.cooldown) || 1);
-  const cooldown = rawCooldown > 0 ? rawCooldown : baseCooldown;
+
+  const baseMpCost = Math.max(1, Number(baseSkill?.mpCost) || 1);
+  const baseCooldown = Math.max(1, Number(baseSkill?.cooldown) || 1);
+
+  // If base template exists, lock to base values to prevent legacy/bad runtime values causing spam.
+  const mpCost = baseSkill ? baseMpCost : (rawMpCost > 0 ? rawMpCost : 1);
+  const cooldown = baseSkill ? baseCooldown : (rawCooldown > 0 ? rawCooldown : 1);
 
   const cdLeft = Math.max(0, Number(skill.cdLeft) || 0);
   skill.mpCost = mpCost;
