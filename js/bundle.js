@@ -2282,9 +2282,17 @@ function refresh(state) {
     battleHintEl.textContent = "";
   }
 
+  const autoLabel = state.autoBattleEnabled ? "Auto: ON" : "Auto: OFF";
   const btnAutoBattle = $("btnAutoBattle");
   if (btnAutoBattle) {
-    btnAutoBattle.textContent = state.autoBattleEnabled ? "Auto: ON" : "Auto: OFF";
+    btnAutoBattle.textContent = autoLabel;
+  }
+
+  const btnAutoBattleFloating = $("btnAutoBattleFloating");
+  if (btnAutoBattleFloating) {
+    btnAutoBattleFloating.classList.toggle("active", !!state.autoBattleEnabled);
+    btnAutoBattleFloating.setAttribute("aria-label", autoLabel);
+    btnAutoBattleFloating.setAttribute("title", autoLabel);
   }
 
   // Player title + name
@@ -5569,16 +5577,19 @@ function bind() {
     charge();
   };
 
+  const toggleAutoBattle = () => {
+    if (!state.inBattle) return;
+    setAutoBattleEnabled(!state.autoBattleEnabled);
+    addLog("INFO", state.autoBattleEnabled ? "Auto Battle aktif." : "Auto Battle nonaktif.");
+    if (state.autoBattleEnabled && state.turn === "player") scheduleAutoBattleTurn();
+    refresh(state);
+  };
+
   const btnAutoBattle = byId("btnAutoBattle");
-  if (btnAutoBattle) {
-    btnAutoBattle.onclick = () => {
-      if (!state.inBattle) return;
-      setAutoBattleEnabled(!state.autoBattleEnabled);
-      addLog("INFO", state.autoBattleEnabled ? "Auto Battle aktif." : "Auto Battle nonaktif.");
-      if (state.autoBattleEnabled && state.turn === "player") scheduleAutoBattleTurn();
-      refresh(state);
-    };
-  }
+  if (btnAutoBattle) btnAutoBattle.onclick = toggleAutoBattle;
+
+  const btnAutoBattleFloating = byId("btnAutoBattleFloating");
+  if (btnAutoBattleFloating) btnAutoBattleFloating.onclick = toggleAutoBattle;
 
   const runBackdrop = byId("runConfirmBackdrop");
   const runConfirm = byId("btnRunConfirm");

@@ -722,16 +722,19 @@ function bind() {
     afterPlayerAction();
   };
 
+  const toggleAutoBattle = () => {
+    if (!state.inBattle) return;
+    setAutoBattleEnabled(!state.autoBattleEnabled);
+    addLog("INFO", state.autoBattleEnabled ? "Auto Battle aktif." : "Auto Battle nonaktif.");
+    if (state.autoBattleEnabled && state.turn === "player") scheduleAutoBattleTurn();
+    refresh(state);
+  };
+
   const btnAutoBattle = byId("btnAutoBattle");
-  if (btnAutoBattle) {
-    btnAutoBattle.onclick = () => {
-      if (!state.inBattle) return;
-      setAutoBattleEnabled(!state.autoBattleEnabled);
-      addLog("INFO", state.autoBattleEnabled ? "Auto Battle aktif." : "Auto Battle nonaktif.");
-      if (state.autoBattleEnabled && state.turn === "player") scheduleAutoBattleTurn();
-      refresh(state);
-    };
-  }
+  if (btnAutoBattle) btnAutoBattle.onclick = toggleAutoBattle;
+
+  const btnAutoBattleFloating = byId("btnAutoBattleFloating");
+  if (btnAutoBattleFloating) btnAutoBattleFloating.onclick = toggleAutoBattle;
 
   byId("btnRun").onclick = () => {
     if (!state.inBattle || state.turn !== "player") return;

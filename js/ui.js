@@ -165,9 +165,17 @@ export function refresh(state) {
     btnStatsTown.textContent = "Stats";
   }
 
+  const autoLabel = state.autoBattleEnabled ? "Auto: ON" : "Auto: OFF";
   const btnAutoBattle = $("btnAutoBattle");
   if (btnAutoBattle) {
-    btnAutoBattle.textContent = state.autoBattleEnabled ? "Auto: ON" : "Auto: OFF";
+    btnAutoBattle.textContent = autoLabel;
+  }
+
+  const btnAutoBattleFloating = $("btnAutoBattleFloating");
+  if (btnAutoBattleFloating) {
+    btnAutoBattleFloating.classList.toggle("active", !!state.autoBattleEnabled);
+    btnAutoBattleFloating.setAttribute("aria-label", autoLabel);
+    btnAutoBattleFloating.setAttribute("title", autoLabel);
   }
 
   // Log hint / Turn indicator
