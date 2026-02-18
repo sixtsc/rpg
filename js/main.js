@@ -10,6 +10,9 @@ const state = newState();
 const MAX_ALLIES = 2;
 const TURN_DELAY_MS = 650;
 const ALLY_ACTION_GAP_MS = 420;
+const AUTO_TURN_DELAY_MS = 380;
+
+let autoBattleTimer = null;
 
 /* ----------------------------- Core helpers ----------------------------- */
 
@@ -29,8 +32,35 @@ function restoreAllies() {
   });
 }
 
+function clearAutoBattleTimer() {
+  if (autoBattleTimer) {
+    clearTimeout(autoBattleTimer);
+    autoBattleTimer = null;
+  }
+  state._autoBattlePending = false;
+}
+
+function setAutoBattleEnabled(enabled) {
+  state.autoBattleEnabled = !!enabled;
+  if (!state.autoBattleEnabled) clearAutoBattleTimer();
+}
+
+function scheduleAutoBattleTurn() {
+  clearAutoBattleTimer();
+  if (!state.autoBattleEnabled || !state.inBattle || state.turn !== "player" || !state.enemy) return;
+
+  state._autoBattlePending = true;
+  autoBattleTimer = setTimeout(() => {
+    autoBattleTimer = null;
+    state._autoBattlePending = false;
+    performAutoBattleTurn();
+  }, AUTO_TURN_DELAY_MS);
+}
+
 function setTurn(turn) {
   state.turn = turn; // "town" | "player" | "enemy"
+  if (turn === "player") scheduleAutoBattleTurn();
+  else clearAutoBattleTimer();
 }
 
 function endBattle(reason) {
@@ -38,6 +68,7 @@ function endBattle(reason) {
   state.inBattle = false;
   state.enemy = null;
   state.playerDefending = false;
+  setAutoBattleEnabled(false);
   setTurn("town");
   state.battleTurn = 0;
 
@@ -204,6 +235,7 @@ function afterPlayerAction() {
 function explore() {
   if (state.inBattle) return;
 
+  setAutoBattleEnabled(false);
   state.enemy = genEnemy(state.player.level);
   state.inBattle = true;
   state._animateEnemyIn = true;
@@ -374,6 +406,47 @@ function openRecruitModal() {
       }
     }
   );
+}
+
+function performAutoBattleTurn() {
+  if (!state.autoBattleEnabled || !state.inBattle || state.turn !== "player") return;
+  const p = state.player;
+  const e = state.enemy;
+  if (!p || !e || e.hp <= 0) return;
+
+  const hpRatio = p.maxHp > 0 ? p.hp / p.maxHp : 1;
+  if (hpRatio <= 0.35) {
+    const healId = Object.keys(p.inv || {}).find((id) => {
+      const item = p.inv[id];
+      return item && item.qty > 0 && item.kind === "heal_hp";
+    });
+    if (healId) {
+      const ok = useItem(healId);
+      if (ok) {
+        afterPlayerAction();
+        return;
+      }
+    }
+  }
+
+  const usableSkills = (p.skills || [])
+    .map((skill, idx) => ({ skill, idx }))
+    .filter(({ skill }) => skill && p.mp >= (skill.mpCost || 0));
+
+  if (usableSkills.length) {
+    const selected = usableSkills.sort((a, b) => (b.skill.power || 0) - (a.skill.power || 0))[0];
+    const skill = selected.skill;
+    setTurn("player");
+    p.mp -= skill.mpCost || 0;
+    const dmg = calcDamage(p.atk, e.def, skill.power || 2, false);
+    e.hp = clamp(e.hp - dmg, 0, e.maxHp);
+    addLog("YOU", `${skill.name}! Damage ${dmg}.`);
+    afterPlayerAction();
+    return;
+  }
+
+  attack();
+  afterPlayerAction();
 }
 
 function runAway() {
@@ -649,6 +722,17 @@ function bind() {
     afterPlayerAction();
   };
 
+  const btnAutoBattle = byId("btnAutoBattle");
+  if (btnAutoBattle) {
+    btnAutoBattle.onclick = () => {
+      if (!state.inBattle) return;
+      setAutoBattleEnabled(!state.autoBattleEnabled);
+      addLog("INFO", state.autoBattleEnabled ? "Auto Battle aktif." : "Auto Battle nonaktif.");
+      if (state.autoBattleEnabled && state.turn === "player") scheduleAutoBattleTurn();
+      refresh(state);
+    };
+  }
+
   byId("btnRun").onclick = () => {
     if (!state.inBattle || state.turn !== "player") return;
     const ok = runAway();
@@ -677,6 +761,7 @@ function applyLoaded(payload){
     state.enemy = null;
     state.inBattle = false;
     state.playerDefending = false;
+    setAutoBattleEnabled(false);
     setTurn("town");
   state.battleTurn = 0;
     byId("log").innerHTML = "";
@@ -693,6 +778,7 @@ function startNewGame(){
   state.enemy = null;
   state.inBattle = false;
   state.playerDefending = false;
+  setAutoBattleEnabled(false);
   setTurn("town");
   state.battleTurn = 0;
   byId("log").innerHTML = "";

@@ -165,6 +165,11 @@ export function refresh(state) {
     btnStatsTown.textContent = "Stats";
   }
 
+  const btnAutoBattle = $("btnAutoBattle");
+  if (btnAutoBattle) {
+    btnAutoBattle.textContent = state.autoBattleEnabled ? "Auto: ON" : "Auto: OFF";
+  }
+
   // Log hint / Turn indicator
   const logHint = $("logHint");
   if (logHint) {
