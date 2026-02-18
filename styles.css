@@ -2050,6 +2050,12 @@ body.inBattle .enemyMiniMeta .muted{
   font-weight:600;
   color:var(--muted);
 }
+.allyAvatarRarity{
+  font-size:12px;
+  font-weight:700;
+  color:#ffd86b;
+  letter-spacing:.2px;
+}
 
 .allyDetailPopup{
   position:fixed;

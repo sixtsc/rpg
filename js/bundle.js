@@ -46,12 +46,14 @@ const ALLY_AVATARS = {
   Guardian: { icon: "🛡️", bg: "linear-gradient(135deg, #7ad5ff, #1f4b78)" },
   Ranger: { icon: "🏹", bg: "linear-gradient(135deg, #8be77b, #2c6b2a)" },
   Mystic: { icon: "🔮", bg: "linear-gradient(135deg, #c59bff, #4c2a7a)" },
-  Glenn: { icon: "⚔️", bg: "linear-gradient(135deg, #8ec5ff, #2e4f96)" }
+  Glenn: { icon: "⚔️", bg: "linear-gradient(135deg, #8ec5ff, #2e4f96)" },
+  Elara: { icon: "🌿", bg: "linear-gradient(135deg, #9be7c8, #2b7f67)" }
 };
 const GLENN_BASE = {
   id: "glenn",
   name: "Glenn",
   role: "Knight Vanguard",
+  rarity: 4,
   level: 0,
   maxHp: 66,
   maxMp: 20,
@@ -80,6 +82,44 @@ const GLENN_BASE = {
   equipment: { hand:null, head:null, pant:null, armor:null, shoes:null },
   equipmentBonus: { atk:0, def:0, spd:0, evasion:0 },
   statuses: []
+};
+const ELARA_BASE = {
+  id: "elara",
+  name: "Elara",
+  role: "Support",
+  rarity: 4,
+  level: 0,
+  maxHp: 52,
+  maxMp: 32,
+  hp: 52,
+  mp: 32,
+  atk: 9,
+  def: 4,
+  spd: 8,
+  critChance: 6,
+  critDamage: 0,
+  combustionChance: 0,
+  evasion: 6,
+  blockRate: 0,
+  escapeChance: 0,
+  manaRegen: 0,
+  description: "Elf support dengan sihir alam yang menjaga ritme tim tetap stabil.",
+  story: "Elara adalah elf yang diselamatkan player saat diculik bandit di Stage 10 untuk dijual. Setelah bebas, ia memutuskan membantu perjalananmu.",
+  basicAttack: { name: "Nature Bolt", desc: "Serangan sihir ringan yang memulihkan fokus Elara." },
+  activeSkills: [
+    { name: "Healing Bloom", desc: "Memulihkan HP party sebesar 18% dari Max HP Elara.", power: 8, mpCost: 6, cooldown: 3, type: "heal" },
+    { name: "Spirit Veil", desc: "Memberi buff DEF 20% ke party selama 2 turn.", power: 6, mpCost: 8, cooldown: 5, type: "buff" }
+  ],
+  passiveSkill: { name: "Forest Whisper", desc: "Saat Elara bertahan hidup, regen MP seluruh party +2 tiap turn." },
+  xp: 0,
+  xpToLevel: 50,
+  equipment: { hand:null, head:null, pant:null, armor:null, shoes:null },
+  equipmentBonus: { atk:0, def:0, spd:0, evasion:0 },
+  statuses: []
+};
+const ALLY_BASES = {
+  glenn: GLENN_BASE,
+  elara: ELARA_BASE
 };
 const SHOP_GOODS = [
   { name:"Potion", price:12, ref: ITEMS.potion },
@@ -236,25 +276,28 @@ function dodgeChance(p,e){
 
 
 /* ===== state.js ===== */
-function createStarterAlly(level = 0){
+function createStarterAlly(allyId = "glenn", level = 0){
+  const key = String(allyId || "glenn").toLowerCase();
+  const baseAlly = ALLY_BASES[key] || GLENN_BASE;
   const lv = clamp(Number(level) || 0, 0, MAX_LEVEL);
-  const maxHp = GLENN_BASE.maxHp + (lv - 1) * 10;
-  const maxMp = GLENN_BASE.maxMp + (lv - 1) * 4;
+  const levelDelta = lv - 1;
+  const maxHp = baseAlly.maxHp + levelDelta * 10;
+  const maxMp = baseAlly.maxMp + levelDelta * 4;
   return {
-    ...GLENN_BASE,
+    ...baseAlly,
     level: lv,
     maxHp,
     maxMp,
     hp: maxHp,
     mp: maxMp,
-    atk: GLENN_BASE.atk + (lv - 1) * 2,
-    def: GLENN_BASE.def + (lv - 1) * 2,
-    spd: GLENN_BASE.spd + (lv - 1),
+    atk: baseAlly.atk + levelDelta * 2,
+    def: baseAlly.def + levelDelta * 2,
+    spd: baseAlly.spd + levelDelta,
     xp: 0,
-    xpToLevel: Math.max(50, 50 + (lv - 1) * 15),
-    activeSkills: GLENN_BASE.activeSkills.map((s) => ({ ...s })),
-    passiveSkill: { ...GLENN_BASE.passiveSkill },
-    basicAttack: { ...GLENN_BASE.basicAttack },
+    xpToLevel: Math.max(50, 50 + levelDelta * 15),
+    activeSkills: (baseAlly.activeSkills || []).map((skill) => ({ ...skill, cdLeft: 0 })),
+    passiveSkill: { ...(baseAlly.passiveSkill || {}) },
+    basicAttack: { ...(baseAlly.basicAttack || {}) },
     equipment: { hand:null, head:null, pant:null, armor:null, shoes:null },
     equipmentBonus: { atk:0, def:0, spd:0, evasion:0 },
     statuses: []
@@ -293,6 +336,7 @@ function newPlayer(){
     gems:0,
     allies: [],
     glennUnlocked: false,
+    elaraUnlocked: false,
     highestStageCleared: 0,
     skills:[{ ...SKILLS.fireball, cdLeft:0 }],
     skillSlots: ["Fireball", null, null, null, null, null, null, null],
@@ -302,6 +346,8 @@ function newPlayer(){
 
 function normalizeAlly(ally){
   if (!ally) return null;
+  const allyId = String(ally.id || ally.name || "glenn").toLowerCase();
+  const baseAlly = ALLY_BASES[allyId] || GLENN_BASE;
   const level = clamp(Number(ally.level) || 0, 0, MAX_LEVEL);
   const maxHp = Math.max(1, Number(ally.maxHp) || 1);
   const maxMp = Math.max(0, Number(ally.maxMp) || 0);
@@ -311,7 +357,9 @@ function normalizeAlly(ally){
   const mp = clamp(Number.isFinite(mpRaw) ? mpRaw : maxMp, 0, maxMp);
   return {
     ...ally,
+    id: ally.id || baseAlly.id,
     level,
+    rarity: Math.max(1, Number(ally.rarity) || Number(baseAlly.rarity) || 1),
     maxHp,
     maxMp,
     hp,
@@ -327,34 +375,34 @@ function normalizeAlly(ally){
     escapeChance: Number(ally.escapeChance) || 0,
     manaRegen: Number(ally.manaRegen) || 0,
     statuses: Array.isArray(ally.statuses) ? ally.statuses : [],
-    role: ally.role || "Ally",
-    name: ally.name || "Ally",
-    description: ally.description || "",
-    story: ally.story || "",
+    role: ally.role || baseAlly.role || "Ally",
+    name: ally.name || baseAlly.name || "Ally",
+    description: ally.description || baseAlly.description || "",
+    story: ally.story || baseAlly.story || "",
     xp: Math.max(0, Number(ally.xp) || 0),
     xpToLevel: Math.max(1, Number(ally.xpToLevel) || 50),
     basicAttack: {
-      name: ally.basicAttack?.name || GLENN_BASE.basicAttack.name,
-      desc: ally.basicAttack?.desc || GLENN_BASE.basicAttack.desc
+      name: ally.basicAttack?.name || baseAlly.basicAttack?.name || "Basic Attack",
+      desc: ally.basicAttack?.desc || baseAlly.basicAttack?.desc || ""
     },
     activeSkills: Array.isArray(ally.activeSkills) && ally.activeSkills.length
       ? ally.activeSkills.slice(0, 2).map((skill, idx) => {
-        const skillName = skill?.name || GLENN_BASE.activeSkills[idx]?.name || `Active ${idx + 1}`;
-        const baseRef = GLENN_BASE.activeSkills.find((baseSkill) => baseSkill.name === skillName) || GLENN_BASE.activeSkills[idx] || {};
+        const skillName = skill?.name || baseAlly.activeSkills?.[idx]?.name || `Active ${idx + 1}`;
+        const baseRef = (baseAlly.activeSkills || []).find((baseSkill) => baseSkill.name === skillName) || baseAlly.activeSkills?.[idx] || {};
         return {
           name: skillName,
-          desc: baseRef.desc || skill?.desc || "",
-          cooldown: Math.max(1, Number(baseRef.cooldown) || Number(skill?.cooldown) || 1),
+          desc: skill?.desc || baseRef.desc || "",
+          cooldown: Math.max(1, Number(skill?.cooldown) || Number(baseRef.cooldown) || 1),
           cdLeft: Math.max(0, Number(skill?.cdLeft) || 0),
-          power: Math.max(1, Number(baseRef.power) || Number(skill?.power) || 4),
-          mpCost: Math.max(0, Number(baseRef.mpCost) || Number(skill?.mpCost) || 0),
-          type: baseRef.type || skill?.type || "damage"
+          power: Math.max(1, Number(skill?.power) || Number(baseRef.power) || 4),
+          mpCost: Math.max(0, Number(skill?.mpCost) || Number(baseRef.mpCost) || 0),
+          type: skill?.type || baseRef.type || "damage"
         };
       })
-      : GLENN_BASE.activeSkills.map((skill) => ({ ...skill, cdLeft: 0 })),
+      : (baseAlly.activeSkills || []).map((skill) => ({ ...skill, cdLeft: 0 })),
     passiveSkill: {
-      name: ally.passiveSkill?.name || GLENN_BASE.passiveSkill.name,
-      desc: ally.passiveSkill?.desc || GLENN_BASE.passiveSkill.desc
+      name: ally.passiveSkill?.name || baseAlly.passiveSkill?.name || "Passive",
+      desc: ally.passiveSkill?.desc || baseAlly.passiveSkill?.desc || ""
     },
     equipment: { hand:null, head:null, pant:null, armor:null, shoes:null },
     equipmentBonus: { atk:0, def:0, spd:0, evasion:0 }
@@ -362,12 +410,14 @@ function normalizeAlly(ally){
 }
 
 
+
 function normalizePlayer(p){
   if (!p) return p;
 
   if (!Array.isArray(p.allies)) p.allies = [];
-  p.allies = p.allies.map(normalizeAlly).filter(Boolean).slice(0, 1);
+  p.allies = p.allies.map(normalizeAlly).filter(Boolean).slice(0, MAX_ALLIES);
   if (typeof p.glennUnlocked !== "boolean") p.glennUnlocked = p.allies.some((ally) => ally?.id === "glenn" || ally?.name === "Glenn");
+  if (typeof p.elaraUnlocked !== "boolean") p.elaraUnlocked = p.allies.some((ally) => ally?.id === "elara" || ally?.name === "Elara");
   p.highestStageCleared = Math.max(0, Number(p.highestStageCleared) || 0);
   if (typeof p._allyStarterInit !== "boolean") p._allyStarterInit = false;
 
@@ -2595,24 +2645,44 @@ function ensureGlennUnlockState({ source = "" } = {}){
   return true;
 }
 
+function hasElaraUnlockRequirements(){
+  const player = state.player;
+  if (!player) return false;
+  return (Number(player.highestStageCleared) || 0) >= 10;
+}
+
+function ensureElaraUnlockState({ source = "" } = {}){
+  if (!state.player) return false;
+  if (state.player.elaraUnlocked) return true;
+  if (!hasElaraUnlockRequirements()) return false;
+  state.player.elaraUnlocked = true;
+  addLog("ALLY", `Elara bergabung! (${source || "Syarat terpenuhi"})`);
+  return true;
+}
+
 function ensureAllies(){
   if (!state.player) return [];
   ensureGlennUnlockState();
+  ensureElaraUnlockState();
   if (!Array.isArray(state.player.allies)) state.player.allies = [];
-  state.player.allies = state.player.allies.map(normalizeAlly).filter(Boolean);
-  if (state.player.allies.length > 1) state.player.allies = [state.player.allies[0]];
-  if (!state.player.glennUnlocked) {
-    state.player.allies = [];
-  } else if (!state.player.allies.length) {
-    state.player.allies.push(normalizeAlly(createStarterAlly(0)));
+
+  const existing = state.player.allies.map(normalizeAlly).filter(Boolean);
+  const allyMap = new Map(existing.map((ally) => [String(ally.id || ally.name || "").toLowerCase(), ally]));
+
+  if (state.player.glennUnlocked && !allyMap.has("glenn")) {
+    allyMap.set("glenn", normalizeAlly(createStarterAlly("glenn", 0)));
   }
-  if (state.player.glennUnlocked && state.player.allies[0] && state.player.allies[0].id !== "glenn") {
-    state.player.allies[0] = normalizeAlly({ ...createStarterAlly(0), ...state.player.allies[0], id:"glenn", name:"Glenn", level:0, xp:0 });
+
+  if (state.player.elaraUnlocked && !allyMap.has("elara")) {
+    allyMap.set("elara", normalizeAlly(createStarterAlly("elara", 0)));
   }
-  if (state.player.glennUnlocked && !state.player._allyStarterInit) {
-    state.player.allies[0] = normalizeAlly({ ...createStarterAlly(0), id:"glenn", name:"Glenn" });
-    state.player._allyStarterInit = true;
-  }
+
+  const ordered = ["glenn", "elara"]
+    .map((id) => allyMap.get(id))
+    .filter(Boolean)
+    .concat(Array.from(allyMap.entries()).filter(([id]) => !["glenn", "elara"].includes(id)).map(([, ally]) => ally));
+
+  state.player.allies = ordered.slice(0, MAX_ALLIES);
   state.allies = state.player.allies;
   return state.allies;
 }
@@ -2658,6 +2728,11 @@ function getAllyVisual(ally, idx = 0){
   const icon = ALLY_TILE_ICONS[Math.abs(hash) % ALLY_TILE_ICONS.length];
   const background = ALLY_TILE_BACKGROUNDS[Math.abs(hash) % ALLY_TILE_BACKGROUNDS.length];
   return { icon, background };
+}
+
+function formatRarity(ally){
+  const rarity = clamp(Number(ally?.rarity) || 1, 1, 6);
+  return `${"★".repeat(rarity)} ${rarity} Stars`;
 }
 
 function setAllyPageVisible(show){
@@ -2733,7 +2808,7 @@ function openAllyDetailPopup(ally, idx = 0){
     avatar.style.background = visual.background;
   }
   if (name) name.textContent = ally.name || `Ally ${idx + 1}`;
-  if (role) role.textContent = `${ally.role || "Ally"} • Lv ${ally.level ?? 0}/10`;
+  if (role) role.textContent = `${ally.role || "Ally"} • ${formatRarity(ally)} • Lv ${ally.level ?? 0}/10`;
   if (stats) {
     const rows = [
       ["HP", `${ally.hp}/${ally.maxHp}`],
@@ -2741,7 +2816,8 @@ function openAllyDetailPopup(ally, idx = 0){
       ["ATK", `${ally.atk || 0}`],
       ["DEF", `${ally.def || 0}`],
       ["SPD", `${ally.spd || 0}`],
-      ["CRIT", `${ally.critChance || 0}%`]
+      ["CRIT", `${ally.critChance || 0}%`],
+      ["RARITY", formatRarity(ally)]
     ];
     stats.innerHTML = rows.map(([label, value]) => `
       <div class="allyDetailStat">
@@ -2825,6 +2901,7 @@ function renderAllyPage(){
       <div class="allyAvatarPortrait" style="background:${escapeHtml(visual.background)}">${escapeHtml(visual.icon)}</div>
       <div class="allyAvatarName">${escapeHtml(ally.name || `Ally ${idx + 1}`)}</div>
       <div class="allyAvatarMeta">${escapeHtml(ally.role || "Ally")}</div>
+      <div class="allyAvatarRarity">${escapeHtml(formatRarity(ally))}</div>
     `;
     card.onclick = () => openAllyDetailPopup(ally, idx);
     grid.appendChild(card);
@@ -4049,6 +4126,7 @@ function winBattle() {
   if (Number.isFinite(stageNumber) && stageNumber > 0) {
     state.player.highestStageCleared = Math.max(Number(state.player.highestStageCleared) || 0, stageNumber);
     ensureGlennUnlockState({ source: `Stage ${stageNumber} clear` });
+    ensureElaraUnlockState({ source: `Stage ${stageNumber} clear` });
   }
 
   const summary = { outcome: "win", gold: goldGain, xp: xpGain, drops, enemyName: e.name, expProgress };
