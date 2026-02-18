@@ -45,9 +45,15 @@ function setAutoBattleEnabled(enabled) {
   if (!state.autoBattleEnabled) clearAutoBattleTimer();
 }
 
+function isActionModalOpen() {
+  const backdrop = byId("modalBackdrop");
+  return !!(backdrop && backdrop.style.display !== "none");
+}
+
 function scheduleAutoBattleTurn() {
   clearAutoBattleTimer();
   if (!state.autoBattleEnabled || !state.inBattle || state.turn !== "player" || !state.enemy) return;
+  if (isActionModalOpen()) return;
 
   state._autoBattlePending = true;
   autoBattleTimer = setTimeout(() => {
@@ -410,6 +416,7 @@ function openRecruitModal() {
 
 function performAutoBattleTurn() {
   if (!state.autoBattleEnabled || !state.inBattle || state.turn !== "player") return;
+  if (isActionModalOpen()) return;
   const p = state.player;
   const e = state.enemy;
   if (!p || !e || e.hp <= 0) return;

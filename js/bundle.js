@@ -3756,10 +3756,16 @@ function setAutoBattleEnabled(enabled){
   if (!state.autoBattleEnabled) clearAutoBattleTimer();
 }
 
+function isActionModalOpen(){
+  const backdrop = byId("modalBackdrop");
+  return !!(backdrop && backdrop.style.display !== "none");
+}
+
 function scheduleAutoBattleTurn(){
   clearAutoBattleTimer();
   if (!state.autoBattleEnabled || !state.inBattle || state.turn !== "player" || !getTargetEnemy()) return;
   if (state.battleResult) return;
+  if (isActionModalOpen()) return;
 
   state._autoBattlePending = true;
   autoBattleTimer = setTimeout(() => {
@@ -4694,6 +4700,7 @@ function castSkillByIndex(idx){
 
 function performAutoBattleTurn(){
   if (!state.autoBattleEnabled || !state.inBattle || state.turn !== "player") return;
+  if (isActionModalOpen()) return;
   if (state._autoBattlePending) return;
 
   const p = state.player;
