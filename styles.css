@@ -2844,10 +2844,19 @@ body.inTown .grid{ grid-template-columns: 1fr !important; }
   animation: hpPulse 360ms ease-out;
   box-shadow: 0 0 0 2px rgba(255, 120, 120, 0.35);
 }
+.bar.hpHealPulse{
+  animation: hpHealPulse 420ms ease-out;
+  box-shadow: 0 0 0 2px rgba(120, 255, 165, 0.35);
+}
 @keyframes hpPulse{
   0%{ box-shadow: 0 0 0 0 rgba(255, 120, 120, 0.45); }
   70%{ box-shadow: 0 0 0 4px rgba(255, 120, 120, 0.15); }
   100%{ box-shadow: 0 0 0 0 rgba(255, 120, 120, 0); }
+}
+@keyframes hpHealPulse{
+  0%{ box-shadow: 0 0 0 0 rgba(120, 255, 165, 0.45); }
+  70%{ box-shadow: 0 0 0 4px rgba(120, 255, 165, 0.2); }
+  100%{ box-shadow: 0 0 0 0 rgba(120, 255, 165, 0); }
 }
 
 

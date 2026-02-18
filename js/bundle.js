@@ -104,11 +104,11 @@ const ELARA_BASE = {
   escapeChance: 0,
   manaRegen: 0,
   description: "Elf support dengan sihir alam yang menjaga ritme tim tetap stabil.",
-  story: "Elara adalah elf pengembara yang pernah kehilangan klannya, lalu menemukan harapan baru saat bertemu denganmu.",
+  story: "Elara adalah elf tabib yang menemukan tujuan baru untuk melindungi rekan seperjalanan lewat kekuatan alam.",
   basicAttack: { name: "Nature Bolt", desc: "Serangan sihir ringan yang memulihkan fokus Elara." },
   activeSkills: [
     { name: "Healing Bloom", desc: "Memulihkan HP party sebesar 18% dari Max HP Elara.", power: 8, mpCost: 6, cooldown: 3, type: "heal" },
-    { name: "Spirit Veil", desc: "Memberi buff DEF 20% ke party selama 2 turn.", power: 6, mpCost: 8, cooldown: 5, type: "buff" }
+    { name: "Verdant Sanctuary", desc: "Membuka area pemulihan alam. Selama 2 turn, seluruh party memulihkan 2% Max HP mereka di akhir turn.", power: 0, mpCost: 8, cooldown: 5, type: "regen" }
   ],
   passiveSkill: { name: "Forest Whisper", desc: "Saat Elara bertahan hidup, regen MP seluruh party +2 tiap turn." },
   xp: 0,
@@ -379,7 +379,13 @@ function normalizeAlly(ally){
     role: ally.role || baseAlly.role || "Ally",
     name: ally.name || baseAlly.name || "Ally",
     description: ally.description || baseAlly.description || "",
-    story: ally.story || baseAlly.story || "",
+    story: (() => {
+      const rawStory = ally.story || baseAlly.story || "";
+      if ((ally.id || baseAlly.id) === "elara" && /stage\s*10/i.test(rawStory)) {
+        return baseAlly.story || rawStory;
+      }
+      return rawStory;
+    })(),
     xp: Math.max(0, Number(ally.xp) || 0),
     xpToLevel: Math.max(1, Number(ally.xpToLevel) || 50),
     basicAttack: {
@@ -1522,14 +1528,16 @@ function renderAllyRow() {
       setBar(hpBar, ally.hp, ally.maxHp);
       setBar(mpBar, ally.mp, ally.maxMp);
       const hpBarWrap = hpBar.parentElement;
-      if (hpBarWrap && ally.hp < prevHp) {
+      if (hpBarWrap && ally.hp !== prevHp) {
+        const cls = ally.hp < prevHp ? "hpPulse" : "hpHealPulse";
+        const alt = ally.hp < prevHp ? "hpHealPulse" : "hpPulse";
         if (hpBarWrap._hpPulseTimer) clearTimeout(hpBarWrap._hpPulseTimer);
-        hpBarWrap.classList.remove("hpPulse");
+        hpBarWrap.classList.remove("hpPulse", "hpHealPulse", alt);
         void hpBarWrap.offsetWidth;
-        hpBarWrap.classList.add("hpPulse");
+        hpBarWrap.classList.add(cls);
         hpBarWrap._hpPulseTimer = setTimeout(() => {
-          hpBarWrap.classList.remove("hpPulse");
-        }, 360);
+          hpBarWrap.classList.remove(cls);
+        }, 420);
       }
       ally._prevHp = ally.hp;
       card.classList.remove("empty");
@@ -2073,6 +2081,11 @@ const STATUS_DEFS = {
     desc: "Setiap akhir turn target, Max HP berkurang sebesar persentase poison.",
     kind: "debuff",
   },
+  healingArea: {
+    label: "Healing Area",
+    desc: "Memulihkan HP di akhir turn.",
+    kind: "buff",
+  },
 };
 
 function getStatusDefinition(status) {
@@ -2374,14 +2387,16 @@ function refresh(state) {
   const playerHpBar = $("hpBar");
   setBar(playerHpBar, p.hp, p.maxHp);
   const playerHpBarWrap = playerHpBar ? playerHpBar.parentElement : null;
-  if (playerHpBarWrap && p.hp < prevPlayerHp) {
+  if (playerHpBarWrap && p.hp !== prevPlayerHp) {
+    const cls = p.hp < prevPlayerHp ? "hpPulse" : "hpHealPulse";
+    const alt = p.hp < prevPlayerHp ? "hpHealPulse" : "hpPulse";
     if (playerHpBarWrap._hpPulseTimer) clearTimeout(playerHpBarWrap._hpPulseTimer);
-    playerHpBarWrap.classList.remove("hpPulse");
+    playerHpBarWrap.classList.remove("hpPulse", "hpHealPulse", alt);
     void playerHpBarWrap.offsetWidth;
-    playerHpBarWrap.classList.add("hpPulse");
+    playerHpBarWrap.classList.add(cls);
     playerHpBarWrap._hpPulseTimer = setTimeout(() => {
-      playerHpBarWrap.classList.remove("hpPulse");
-    }, 360);
+      playerHpBarWrap.classList.remove(cls);
+    }, 420);
   }
   p._prevHp = p.hp;
   setBar($("mpBar"), p.mp, p.maxMp);
@@ -2982,6 +2997,17 @@ function applyPoisonAtTurnEnd(entity){
   return beforeMaxHp - entity.maxHp;
 }
 
+function applyHealingAreaAtTurnEnd(entity){
+  if (!entity || !Array.isArray(entity.statuses) || typeof entity.hp !== "number") return 0;
+  const regenStatus = entity.statuses.find((st) => st.type === "healingArea" && (st.turns || 0) > 0);
+  if (!regenStatus || regenStatus.justApplied) return 0;
+  const pct = Math.max(0, Number(regenStatus.pct || 2));
+  const heal = Math.max(1, Math.floor((entity.maxHp || 0) * pct / 100));
+  const before = entity.hp;
+  entity.hp = clamp((entity.hp || 0) + heal, 0, entity.maxHp || 0);
+  return Math.max(0, entity.hp - before);
+}
+
 function hasStatus(entity, type){
   return ensureStatuses(entity).find((s) => s.type === type && (s.turns || 0) > 0);
 }
@@ -2992,6 +3018,13 @@ function tickStatuses(entity){
   if (poisonLoss > 0) {
     const label = entity === state.player ? "Kamu" : (entity.name || "Target");
     addLog("DEBUFF", `${label} terkena Poison: Max HP -${poisonLoss}.`);
+  }
+  const healGain = applyHealingAreaAtTurnEnd(entity);
+  if (healGain > 0) {
+    const label = entity === state.player ? "Kamu" : (entity.name || "Target");
+    addLog("GOOD", `${label} dipulihkan +${healGain} HP dari area regenerasi.`);
+    if (entity === state.player) showDamageText("player", `+${healGain}`);
+    else showAllyDamageText(`+${healGain}`, entity);
   }
   let removed = 0;
   entity.statuses = entity.statuses
@@ -3030,6 +3063,20 @@ function applyManaRegen(entity){
   const before = entity.mp;
   entity.mp = clamp(entity.mp + regen, 0, entity.maxMp || 0);
   return entity.mp - before;
+}
+
+function applyElaraPassiveManaRegen(){
+  const elara = getAliveAllies().find((ally) => String(ally?.id || "").toLowerCase() === "elara");
+  if (!elara) return;
+  const targets = [state.player, ...getAliveAllies()];
+  let total = 0;
+  targets.forEach((target) => {
+    if (!target || typeof target.mp !== "number") return;
+    const before = target.mp;
+    target.mp = clamp((target.mp || 0) + 2, 0, target.maxMp || 0);
+    total += Math.max(0, target.mp - before);
+  });
+  if (total > 0) addLog("GOOD", "Forest Whisper aktif: MP party +2.");
 }
 
 function applyDamageAfterDelay(target, dmg, slashTarget, delay = 200){
@@ -3881,6 +3928,7 @@ function beginPlayerTurn(){
     return false;
   }
   applyManaRegen(state.player);
+  applyElaraPassiveManaRegen();
   refresh(state);
   return true;
 }
@@ -4373,6 +4421,7 @@ function alliesAct(done){
 
       const skill = pickAllySkill(ally);
       let basePower = 3;
+      let usedSupportSkill = false;
       if (skill) {
         ally.mp = clamp((ally.mp || 0) - (skill.mpCost || 0), 0, ally.maxMp || 0);
         skill.cdLeft = skill.cooldown || 0;
@@ -4380,35 +4429,64 @@ function alliesAct(done){
         addLog("SKILL", `${ally.name} • ${skill.name}`);
       }
 
-      const res = resolveAttack(ally, currentTarget, basePower);
-      if (res.missed) {
-        addLog("ALLY", `${ally.name} meleset.`);
-        tickStatuses(ally);
-        refresh(state);
-        return;
+      if (skill?.type === "heal") {
+        usedSupportSkill = true;
+        const alliesNow = getAliveAllies();
+        const party = [state.player, ...alliesNow];
+        party.forEach((member) => {
+          if (!member || typeof member.hp !== "number") return;
+          const healAmount = Math.max(1, Math.floor((ally.maxHp || 0) * 0.18));
+          const beforeHp = member.hp;
+          member.hp = clamp(member.hp + healAmount, 0, member.maxHp || 0);
+          const gained = Math.max(0, member.hp - beforeHp);
+          if (gained > 0) {
+            if (member === state.player) showDamageText("player", `+${gained}`);
+            else showAllyDamageText(`+${gained}`, member);
+          }
+        });
+        addLog("ALLY", `${ally.name} menggunakan ${skill.name}! Party dipulihkan.`);
+      } else if (skill?.type === "regen") {
+        usedSupportSkill = true;
+        const alliesNow = getAliveAllies();
+        const party = [state.player, ...alliesNow];
+        party.forEach((member) => addStatusEffect(member, { type: "healingArea", turns: 2, pct: 2, debuff: false }));
+        addLog("ALLY", `${ally.name} menciptakan area regenerasi untuk party selama 2 turn.`);
       }
 
-      if (res.dmg > 0) {
-        currentTarget.hp = clamp(currentTarget.hp - res.dmg, 0, currentTarget.maxHp);
-        playEnemyCritShake(targetIndex);
-      }
-      if (skill?.type === "buff") {
-        addStatusEffect(ally, { type: "guardStance", turns: 2, debuff: false });
-        addStatusEffect(ally, { type: "stance", turns: 2, debuff: false });
-      }
-      if (skill?.type === "debuff") {
-        addStatusEffect(currentTarget, { type: "armorBreak", turns: 2, debuff: true });
-      }
+      let res = null;
+      if (!usedSupportSkill) {
+        res = resolveAttack(ally, currentTarget, basePower);
+        if (res.missed) {
+          addLog("ALLY", `${ally.name} meleset.`);
+          tickStatuses(ally);
+          refresh(state);
+          return;
+        }
 
-      if (res.reflected > 0) {
-        ally.hp = clamp(ally.hp - res.reflected, 0, ally.maxHp);
-        addLog("ALLY", `${ally.name} terkena pantulan ${res.reflected} damage.`);
+        if (res.dmg > 0) {
+          currentTarget.hp = clamp(currentTarget.hp - res.dmg, 0, currentTarget.maxHp);
+          playEnemyCritShake(targetIndex);
+        }
+        if (skill?.type === "buff") {
+          addStatusEffect(ally, { type: "guardStance", turns: 2, debuff: false });
+          addStatusEffect(ally, { type: "stance", turns: 2, debuff: false });
+        }
+        if (skill?.type === "debuff") {
+          addStatusEffect(currentTarget, { type: "armorBreak", turns: 2, debuff: true });
+        }
+
+        if (res.reflected > 0) {
+          ally.hp = clamp(ally.hp - res.reflected, 0, ally.maxHp);
+          addLog("ALLY", `${ally.name} terkena pantulan ${res.reflected} damage.`);
+        }
+        addLog("ALLY", `${ally.name} ${skill ? `menggunakan ${skill.name}` : "menyerang"}! Damage ${res.dmg}.`);
       }
-      addLog("ALLY", `${ally.name} ${skill ? `menggunakan ${skill.name}` : "menyerang"}! Damage ${res.dmg}.`);
       tickStatuses(ally);
-      setTimeout(() => {
-        showEnemyDamageText(formatDamageText(res, res.dmg), targetIndex);
-      }, skill ? 260 : 0);
+      if (res) {
+        setTimeout(() => {
+          showEnemyDamageText(formatDamageText(res, res.dmg), targetIndex);
+        }, skill ? 260 : 0);
+      }
       refresh(state);
     }, delay);
   });
