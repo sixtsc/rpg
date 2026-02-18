@@ -788,19 +788,8 @@ function renderMailboxList() {
 
   if (filtered.length === 0) {
     const empty = document.createElement("div");
-    empty.className = "mailItem";
-    empty.innerHTML = `
-      <div class="mailAvatar">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M4 6.5h16a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 20 17.5H4A1.5 1.5 0 0 1 2.5 16V8A1.5 1.5 0 0 1 4 6.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
-          <path d="m3.5 8 8.5 5 8.5-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <div>
-        <div class="mailTitle">Inbox kosong</div>
-        <div class="mailBody">Belum ada pesan.</div>
-      </div>
-    `;
+    empty.className = "mailboxEmptyText";
+    empty.textContent = mailboxState.tab === "unclaimed" ? "Tidak ada pesan belum claim." : "Inbox kosong.";
     list.appendChild(empty);
     return;
   }

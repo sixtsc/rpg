@@ -238,6 +238,16 @@ body.inBattle .mailButton{
   max-height:60vh;
 }
 
+.mailboxEmptyText{
+  min-height:220px;
+  display:grid;
+  place-items:center;
+  text-align:center;
+  color:var(--muted);
+  font-weight:600;
+  padding:12px;
+}
+
 .mailItem{
   background:var(--card2);
   border:1px solid rgba(255,255,255,0.05);
