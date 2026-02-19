@@ -44,7 +44,7 @@ const ITEMS = {
     atk:25,
     penetrationDef:7,
     basicAccDownPct:20,
-    basicAccDownTurns:2,
+    basicAccDownTurns:1,
     level:1,
   }
 };
@@ -3898,7 +3898,7 @@ function openBlacksmithRecipeDetail(recipeId){
       },
       {
         title: "Stat",
-        desc: "+25 ATK • +7 DEF Penetration • Basic Hit: Accuracy musuh -20%",
+        desc: "+25 ATK • +7 DEF Penetration • Basic Hit: Accuracy musuh -20% (1 turn)",
         meta: "",
         value: undefined,
         className: "readonly",
@@ -5007,7 +5007,7 @@ function tryApplyBasicAttackAccuracyDown(attacker, target){
   const weapon = attacker.inv[weaponName];
   const accDownPct = Math.max(0, Number(weapon?.basicAccDownPct || 0));
   if (!weapon || accDownPct <= 0) return;
-  const turns = Math.max(1, Number(weapon.basicAccDownTurns || 2));
+  const turns = Math.max(1, Number(weapon.basicAccDownTurns || 1));
   addStatusEffect(target, { type: "accuracyDown", turns, debuff: true, pct: accDownPct });
   addLog("DEBUFF", `${target.name} kehilangan fokus! Accuracy turun ${accDownPct}% selama ${turns} turn.`);
 }
