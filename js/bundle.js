@@ -151,9 +151,9 @@ function weekKeyUtc(ts = Date.now()) {
 }
 
 function getDailyLoginReward(day){
-  if (day % 7 === 0) return { gold: 400, gems: 2 };
-  if (day % 5 === 0) return { gold: 250, gems: 1 };
-  return { gold: 120, gems: 0 };
+  if (day % 7 === 0) return { gold: 400, gems: 20 };
+  if (day % 5 === 0) return { gold: 220, gems: 10 };
+  return { gold: 1000, gems: 0 };
 }
 function genEnemy(plv){
   const lvl = clamp(plv + pick([-1,0,0,1]), 1, MAX_LEVEL);
@@ -5013,7 +5013,7 @@ function openDailyQuestPage(){
       { title: "Back", desc: "Kembali ke Mission.", meta: "", value: "back", className: "subMenuBack" },
       {
         title: "Menangkan 3 Battle",
-        desc: `Progress: ${Math.min(q.wins, targetWins)}/${targetWins}`,
+        desc: `Progress: ${Math.min(q.wins, targetWins)}/${targetWins} • Reward: 300 Gold + 1 Gems`,
         meta: q.claimed ? "✅ Selesai" : (ready ? "Siap claim" : "Belum selesai"),
         buttons: [{ text: "Claim", value: "claim", disabled: q.claimed || !ready }],
         keepOpen: true,
@@ -5046,7 +5046,7 @@ function openWeeklyQuestPage(){
       { title: "Back", desc: "Kembali ke Mission.", meta: "", value: "back", className: "subMenuBack" },
       {
         title: "Menangkan 20 Battle",
-        desc: `Progress: ${Math.min(q.wins, targetWins)}/${targetWins}`,
+        desc: `Progress: ${Math.min(q.wins, targetWins)}/${targetWins} • Reward: 1000 Gold + 5 Gems`,
         meta: q.claimed ? "✅ Selesai" : (ready ? "Siap claim" : "Belum selesai"),
         buttons: [{ text: "Claim", value: "claim", disabled: q.claimed || !ready }],
         keepOpen: true,
