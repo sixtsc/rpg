@@ -45,7 +45,7 @@ const ITEMS = {
     penetrationDef:7,
     basicAccDownPct:20,
     basicAccDownTurns:2,
-    level:20,
+    level:1,
   }
 };
 const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton"];
@@ -3874,43 +3874,54 @@ function craftBlacksmithRecipe(recipeId){
   return { ok:true, resultName };
 }
 
-function renderBlacksmithPage(){
-  const grid = byId("blacksmithCraftGrid");
-  if (!grid) return;
-  const goldEl = byId("blacksmithGoldValue");
-  const gemEl = byId("blacksmithGemValue");
-  if (goldEl) goldEl.textContent = String(state.player?.gold || 0);
-  if (gemEl) gemEl.textContent = String(state.player?.gems || 0);
-
-  grid.innerHTML = BLACKSMITH_RECIPES.map((recipe) => {
-    const canCraft = canCraftRecipe(recipe);
-    const mats = recipe.materials.map((m) => {
+function openBlacksmithRecipeDetail(recipeId){
+  const recipe = BLACKSMITH_RECIPES.find((r) => r.id === recipeId);
+  if (!recipe) return;
+  const canCraft = canCraftRecipe(recipe);
+  const levelBadge = Number(recipe.resultRef?.level || 1);
+  const mats = recipe.materials
+    .map((m) => {
       const own = getInventoryQty(m.name);
-      const ok = own >= m.qty;
-      return `<span class="monsterHuntDropChip" style="opacity:${ok ? "1" : ".55"}">${escapeHtml(m.name)} ${own}/${m.qty}</span>`;
-    }).join("");
-    return `
-      <article class="marketItemCard" data-recipe-id="${escapeHtml(recipe.id)}">
-        <div class="marketItemMain">
-          <h3>${escapeHtml(recipe.resultName)}</h3>
-          <p>${escapeHtml(recipe.resultRef.desc || "")}</p>
-          <p>Stat: +25 ATK • +7 DEF Penetration • Basic Hit: -20% Accuracy musuh</p>
-        </div>
-        <div class="monsterHuntSection">
-          <h4>Resep</h4>
-          <div class="monsterHuntDrops">${mats}</div>
-        </div>
-        <div class="marketItemActions">
-          <button type="button" class="marketActionBtn buy" data-craft-id="${escapeHtml(recipe.id)}" ${canCraft ? "" : "disabled"}>Forge</button>
-        </div>
-      </article>
-    `;
-  }).join("");
+      return `${m.name} ${own}/${m.qty}`;
+    })
+    .join(" • ");
 
-  grid.querySelectorAll("[data-craft-id]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const recipeId = btn.getAttribute("data-craft-id") || "";
-      const res = craftBlacksmithRecipe(recipeId);
+  modal.open(
+    recipe.resultName,
+    [
+      {
+        title: `Lv ${levelBadge} Weapon`,
+        desc: recipe.resultRef?.desc || "",
+        meta: "",
+        value: undefined,
+        className: "readonly",
+      },
+      {
+        title: "Stat",
+        desc: "+25 ATK • +7 DEF Penetration • Basic Hit: Accuracy musuh -20%",
+        meta: "",
+        value: undefined,
+        className: "readonly",
+      },
+      {
+        title: "Resep",
+        desc: mats,
+        meta: "",
+        value: undefined,
+        className: "readonly",
+      },
+      {
+        title: canCraft ? "Forge" : "Material belum cukup",
+        desc: canCraft ? "Tempa senjata ini sekarang." : "Farm material dari Monster Hunting dulu.",
+        meta: "",
+        value: canCraft ? `forge:${recipe.id}` : undefined,
+        className: canCraft ? "" : "readonly",
+      },
+    ],
+    (pick) => {
+      if (!String(pick || "").startsWith("forge:")) return;
+      const targetId = String(pick).replace("forge:", "");
+      const res = craftBlacksmithRecipe(targetId);
       if (!res.ok) {
         showToast("Material belum cukup untuk forging.", "warn");
         return;
@@ -3919,6 +3930,37 @@ function renderBlacksmithPage(){
       showToast(`${res.resultName} forged!`, "good");
       refresh(state);
       renderBlacksmithPage();
+      openBlacksmithRecipeDetail(targetId);
+    }
+  );
+}
+
+function renderBlacksmithPage(){
+  const grid = byId("blacksmithCraftGrid");
+  if (!grid) return;
+  const goldEl = byId("blacksmithGoldValue");
+  const gemEl = byId("blacksmithGemValue");
+  if (goldEl) goldEl.textContent = String(state.player?.gold || 0);
+  if (gemEl) gemEl.textContent = String(state.player?.gems || 0);
+
+  grid.classList.add("blacksmithAvatarGrid");
+  grid.innerHTML = BLACKSMITH_RECIPES.map((recipe) => {
+    const canCraft = canCraftRecipe(recipe);
+    const levelBadge = Number(recipe.resultRef?.level || 1);
+    return `
+      <button type="button" class="blacksmithAvatarBtn" data-recipe-id="${escapeHtml(recipe.id)}" aria-label="${escapeHtml(recipe.resultName)}">
+        <span class="blacksmithLevelBadge">Lv ${levelBadge}</span>
+        <span class="blacksmithAvatarIcon" aria-hidden="true">⚔️</span>
+        <span class="blacksmithAvatarName">${escapeHtml(recipe.resultName)}</span>
+        <span class="blacksmithAvatarHint">${canCraft ? "Tap untuk forge" : "Tap untuk lihat resep"}</span>
+      </button>
+    `;
+  }).join("");
+
+  grid.querySelectorAll("[data-recipe-id]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const recipeId = btn.getAttribute("data-recipe-id") || "";
+      openBlacksmithRecipeDetail(recipeId);
     });
   });
 }

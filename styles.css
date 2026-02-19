@@ -2527,6 +2527,51 @@ body.inBattle .enemyMiniMeta .muted{
   box-shadow:0 12px 24px rgba(0,0,0,0.25);
 }
 
+.blacksmithAvatarGrid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(120px, 1fr));
+  gap:12px;
+  width:min(720px, 100%);
+  margin:0 auto;
+}
+.blacksmithAvatarBtn{
+  position:relative;
+  min-height:132px;
+  border-radius:14px;
+  border:1px solid rgba(124,161,255,0.4);
+  background:linear-gradient(145deg, rgba(19,31,57,0.95), rgba(12,20,38,0.95));
+  color:var(--text);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  padding:10px;
+  cursor:pointer;
+  text-align:center;
+  transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.blacksmithAvatarBtn:hover{
+  transform:translateY(-2px);
+  border-color:rgba(255,120,68,0.65);
+  box-shadow:0 12px 24px rgba(0,0,0,0.26);
+}
+.blacksmithAvatarIcon{ font-size:34px; line-height:1; }
+.blacksmithAvatarName{ font-size:13px; font-weight:800; line-height:1.2; }
+.blacksmithAvatarHint{ font-size:11px; color:var(--muted); }
+.blacksmithLevelBadge{
+  position:absolute;
+  top:8px;
+  right:8px;
+  font-size:10px;
+  font-weight:700;
+  padding:2px 6px;
+  border-radius:999px;
+  background:rgba(15,25,44,0.95);
+  border:1px solid rgba(255,120,68,0.6);
+  color:#ffd8c5;
+}
+
 .monsterHuntLayout{
   display:grid;
   grid-template-columns:260px 1px minmax(0,1fr);
