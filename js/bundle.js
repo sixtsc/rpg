@@ -3945,14 +3945,12 @@ function renderBlacksmithPage(){
 
   grid.classList.add("blacksmithAvatarGrid");
   grid.innerHTML = BLACKSMITH_RECIPES.map((recipe) => {
-    const canCraft = canCraftRecipe(recipe);
     const levelBadge = Number(recipe.resultRef?.level || 1);
     return `
       <button type="button" class="blacksmithAvatarBtn" data-recipe-id="${escapeHtml(recipe.id)}" aria-label="${escapeHtml(recipe.resultName)}">
         <span class="blacksmithLevelBadge">Lv ${levelBadge}</span>
         <span class="blacksmithAvatarIcon" aria-hidden="true">⚔️</span>
         <span class="blacksmithAvatarName">${escapeHtml(recipe.resultName)}</span>
-        <span class="blacksmithAvatarHint">${canCraft ? "Tap untuk forge" : "Tap untuk lihat resep"}</span>
       </button>
     `;
   }).join("");
