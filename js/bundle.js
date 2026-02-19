@@ -6441,6 +6441,7 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
   refresh(state);
 
   // Show character menu
+  setAuthLoading(false);
   showAuth(false);
   openCharacterMenu();
 
