@@ -31,7 +31,22 @@ const ITEMS = {
   banditsDagger: { name:"Bandit's Dagger", kind:"gear", slot:"hand", desc:"Dagger bandit. Basic attack punya 25% chance memberi Poison 3% selama 1 turn.", atk:17, level:10, basicPoisonChance:25, poisonPct:3, poisonTurns:1 },
   banditsHood: { name:"Bandit's Hood", kind:"gear", slot:"head", desc:"Hood bandit yang meningkatkan evasion.", evasion:4, level:10 },
   banditsArmour: { name:"Bandit's Armour", kind:"gear", slot:"armor", desc:"Armor bandit dengan pertahanan tinggi dan sedikit speed.", def:10, spd:2, level:10 },
-  banditsBoots: { name:"Bandit's Boots", kind:"gear", slot:"shoes", desc:"Boots bandit yang sangat ringan.", spd:7, level:10 }
+  banditsBoots: { name:"Bandit's Boots", kind:"gear", slot:"shoes", desc:"Boots bandit yang sangat ringan.", spd:7, level:10 },
+  wyrmScale: { name:"Wyrm Scale", kind:"material", desc:"Sisik naga purba yang masih menyimpan panas mana." },
+  moltenCore: { name:"Molten Core", kind:"material", desc:"Inti bara dari Ancient Wyrm." },
+  behemothHorn: { name:"Behemoth Horn", kind:"material", desc:"Tanduk keras milik Crimson Behemoth." },
+  bloodCrystal: { name:"Blood Crystal", kind:"material", desc:"Kristal merah pekat yang memuat energi brutal." },
+  eclipsedRunebreaker: {
+    name:"Eclipsed Runebreaker",
+    kind:"gear",
+    slot:"hand",
+    desc:"Pedang transenden hasil fusi Rune Blade dan relic boss. Saat tebasan dasar mengenai target, aura eclipse-nya menyesatkan pandangan musuh dan menurunkan Accuracy mereka 20%.",
+    atk:25,
+    penetrationDef:7,
+    basicAccDownPct:20,
+    basicAccDownTurns:2,
+    level:20,
+  }
 };
 const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton"];
 const ENEMY_AVATARS = {
@@ -178,7 +193,9 @@ function resolveAttack(att, def, basePower, opts = {}) {
   // opts: { dodgeBonus: number }
   const dodgeBonus = opts.dodgeBonus || 0;
 
-  const evasion = clamp((def.evasion || 0) + dodgeBonus, 0, 95);
+  const accuracyDown = hasStatus(att, "accuracyDown") ? 0.8 : 1;
+  const effectiveAcc = Math.max(0, Math.round((att.acc || 0) * accuracyDown));
+  const evasion = clamp(((def.evasion || 0) + dodgeBonus) - effectiveAcc, 0, 95);
   const rollEv = randInt(1, 100);
   if (rollEv <= evasion) {
     return { missed: true, crit: false, combustion: false, dmg: 0, evasion, rollEv, rollCrit: null, rollComb: null };
@@ -189,7 +206,8 @@ function resolveAttack(att, def, basePower, opts = {}) {
     : (att.atk || 0);
   const guardDefBoost = hasStatus(def, "guardStance") ? Math.round((def.def || 0) * 0.35) : 0;
   const armorBreakPenalty = hasStatus(def, "armorBreak") ? Math.round((def.def || 0) * 0.15) : 0;
-  const effectiveDef = Math.max(0, (def.def || 0) + guardDefBoost - armorBreakPenalty);
+  const penetrationDef = Math.max(0, Number(att.penetrationDef || 0));
+  const effectiveDef = Math.max(0, (def.def || 0) + guardDefBoost - armorBreakPenalty - penetrationDef);
   let dmg = calcDamage(atkPower, effectiveDef, basePower, false);
 
   const critChance = clamp(att.critChance || 0, 0, 100);
@@ -280,13 +298,14 @@ function newPlayer(){
     hp:60, mp:25,
     atk:10, def:4, spd:7,
     acc:0,
+    penetrationDef:0,
     critChance:5, critDamage:0, combustionChance:0, evasion:5,
     manaRegen:5,
     blockRate:0,
     escapeChance:0,
     statuses: [],
     equipment: { hand:null, head:null, pant:null, armor:null, shoes:null },
-    equipmentBonus: { atk:0, def:0, spd:0, evasion:0 },
+    equipmentBonus: { atk:0, def:0, spd:0, evasion:0, penetrationDef:0 },
 
     deprecatedSkillCooldown:0,
     xp:0, xpToLevel:50,
@@ -393,6 +412,7 @@ function normalizePlayer(p){
 
   // Derived / combat stats
   if (typeof p.acc !== "number") p.acc = 0;
+  if (typeof p.penetrationDef !== "number") p.penetrationDef = 0;
   if (typeof p.combustionChance !== "number") p.combustionChance = 0;
 
   if (typeof p.critDamage !== "number") {
@@ -419,12 +439,13 @@ function normalizePlayer(p){
     p.equipment.shoes ??= null;
   }
   if (!p.equipmentBonus || typeof p.equipmentBonus !== "object") {
-    p.equipmentBonus = { atk:0, def:0, spd:0, evasion:0 };
+    p.equipmentBonus = { atk:0, def:0, spd:0, evasion:0, penetrationDef:0 };
   } else {
     p.equipmentBonus.atk = Number(p.equipmentBonus.atk || 0);
     p.equipmentBonus.def = Number(p.equipmentBonus.def || 0);
     p.equipmentBonus.spd = Number(p.equipmentBonus.spd || 0);
     p.equipmentBonus.evasion = Number(p.equipmentBonus.evasion || 0);
+    p.equipmentBonus.penetrationDef = Number(p.equipmentBonus.penetrationDef || 0);
   }
   if (!Array.isArray(p.skills)) p.skills = [];
   p.skills = p.skills.map((skill) => {
@@ -486,7 +507,7 @@ function getItemRef(name, player){
 
 function calcEquipmentBonus(player){
   const p = player;
-  const bonus = { atk:0, def:0, spd:0, evasion:0 };
+  const bonus = { atk:0, def:0, spd:0, evasion:0, penetrationDef:0 };
   if (!p || !p.equipment) return bonus;
   Object.values(p.equipment).forEach((name) => {
     const it = getItemRef(name, p);
@@ -495,6 +516,7 @@ function calcEquipmentBonus(player){
     if (typeof it.def === "number") bonus.def += it.def;
     if (typeof it.spd === "number") bonus.spd += it.spd;
     if (typeof it.evasion === "number") bonus.evasion += it.evasion;
+    if (typeof it.penetrationDef === "number") bonus.penetrationDef += it.penetrationDef;
   });
   return bonus;
 }
@@ -502,12 +524,13 @@ function calcEquipmentBonus(player){
 function applyEquipmentStats(player){
   const p = player;
   if (!p) return;
-  const prev = p.equipmentBonus || { atk:0, def:0, spd:0, evasion:0 };
+  const prev = p.equipmentBonus || { atk:0, def:0, spd:0, evasion:0, penetrationDef:0 };
   const next = calcEquipmentBonus(p);
   p.atk = Math.max(0, (p.atk || 0) - (prev.atk || 0) + next.atk);
   p.def = Math.max(0, (p.def || 0) - (prev.def || 0) + next.def);
   p.spd = Math.max(0, (p.spd || 0) - (prev.spd || 0) + next.spd);
   p.evasion = clamp((p.evasion || 0) - (prev.evasion || 0) + next.evasion, 0, 100);
+  p.penetrationDef = Math.max(0, (p.penetrationDef || 0) - (prev.penetrationDef || 0) + (next.penetrationDef || 0));
   p.equipmentBonus = next;
 }
 
@@ -2026,6 +2049,11 @@ const STATUS_DEFS = {
   poison: {
     label: "Poison",
     desc: "Setiap akhir turn target, Max HP berkurang sebesar persentase poison.",
+    kind: "debuff",
+  },
+  accuracyDown: {
+    label: "Accuracy Down",
+    desc: (turns) => `Accuracy berkurang 20% selama ${turns} turn.`,
     kind: "debuff",
   },
 };
@@ -3801,6 +3829,100 @@ const MONSTER_HUNT_BOSSES = [
   },
 ];
 
+const BLACKSMITH_RECIPES = [
+  {
+    id: "eclipsed-runebreaker",
+    resultName: "Eclipsed Runebreaker",
+    resultRef: ITEMS.eclipsedRunebreaker,
+    materials: [
+      { name: "Rune Blade", qty: 1 },
+      { name: "Wyrm Scale", qty: 3 },
+      { name: "Molten Core", qty: 1 },
+      { name: "Behemoth Horn", qty: 2 },
+      { name: "Blood Crystal", qty: 1 },
+    ],
+  },
+];
+
+function getInventoryQty(name){
+  return Math.max(0, Number(state.player?.inv?.[name]?.qty || 0));
+}
+
+function canCraftRecipe(recipe){
+  if (!recipe || !Array.isArray(recipe.materials)) return false;
+  return recipe.materials.every((m) => getInventoryQty(m.name) >= m.qty);
+}
+
+function consumeMaterial(name, qty){
+  const inv = state.player?.inv;
+  if (!inv || !inv[name]) return false;
+  inv[name].qty = Math.max(0, Number(inv[name].qty || 0) - qty);
+  if (inv[name].qty <= 0) delete inv[name];
+  return true;
+}
+
+function craftBlacksmithRecipe(recipeId){
+  const recipe = BLACKSMITH_RECIPES.find((r) => r.id === recipeId);
+  if (!recipe) return { ok:false, reason:"recipe" };
+  if (!canCraftRecipe(recipe)) return { ok:false, reason:"material" };
+  recipe.materials.forEach((m) => consumeMaterial(m.name, m.qty));
+  const resultName = recipe.resultName;
+  const inv = state.player.inv || (state.player.inv = {});
+  if (inv[resultName]) inv[resultName].qty += 1;
+  else inv[resultName] = { ...recipe.resultRef, qty:1 };
+  autosave(state);
+  return { ok:true, resultName };
+}
+
+function renderBlacksmithPage(){
+  const grid = byId("blacksmithCraftGrid");
+  if (!grid) return;
+  const goldEl = byId("blacksmithGoldValue");
+  const gemEl = byId("blacksmithGemValue");
+  if (goldEl) goldEl.textContent = String(state.player?.gold || 0);
+  if (gemEl) gemEl.textContent = String(state.player?.gems || 0);
+
+  grid.innerHTML = BLACKSMITH_RECIPES.map((recipe) => {
+    const canCraft = canCraftRecipe(recipe);
+    const mats = recipe.materials.map((m) => {
+      const own = getInventoryQty(m.name);
+      const ok = own >= m.qty;
+      return `<span class="monsterHuntDropChip" style="opacity:${ok ? "1" : ".55"}">${escapeHtml(m.name)} ${own}/${m.qty}</span>`;
+    }).join("");
+    return `
+      <article class="marketItemCard" data-recipe-id="${escapeHtml(recipe.id)}">
+        <div class="marketItemMain">
+          <h3>${escapeHtml(recipe.resultName)}</h3>
+          <p>${escapeHtml(recipe.resultRef.desc || "")}</p>
+          <p>Stat: +25 ATK • +7 DEF Penetration • Basic Hit: -20% Accuracy musuh</p>
+        </div>
+        <div class="monsterHuntSection">
+          <h4>Resep</h4>
+          <div class="monsterHuntDrops">${mats}</div>
+        </div>
+        <div class="marketItemActions">
+          <button type="button" class="marketActionBtn buy" data-craft-id="${escapeHtml(recipe.id)}" ${canCraft ? "" : "disabled"}>Forge</button>
+        </div>
+      </article>
+    `;
+  }).join("");
+
+  grid.querySelectorAll("[data-craft-id]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const recipeId = btn.getAttribute("data-craft-id") || "";
+      const res = craftBlacksmithRecipe(recipeId);
+      if (!res.ok) {
+        showToast("Material belum cukup untuk forging.", "warn");
+        return;
+      }
+      addLog("FORGE", `${res.resultName} berhasil ditempa di Blacksmith.`);
+      showToast(`${res.resultName} forged!`, "good");
+      refresh(state);
+      renderBlacksmithPage();
+    });
+  });
+}
+
 function setBlacksmithPageVisible(show){
   const page = byId("blacksmithPage");
   const marketPage = byId("marketPage");
@@ -3810,8 +3932,7 @@ function setBlacksmithPageVisible(show){
   const wrap = document.querySelector(".wrap");
   if (!page || !wrap) return;
   if (show) {
-    byId("blacksmithGoldValue").textContent = String(state.player?.gold || 0);
-    byId("blacksmithGemValue").textContent = String(state.player?.gems || 0);
+    renderBlacksmithPage();
     page.classList.remove("hidden");
     page.setAttribute("aria-hidden", "false");
     wrap.classList.add("hidden");
@@ -4263,6 +4384,18 @@ function rollBattleDrops(enemy){
     if (randInt(1, 100) <= 4) drops.push({ ...ITEMS.banditsArmour, qty: 1 });
     if (randInt(1, 100) <= 4) drops.push({ ...ITEMS.banditsBoots, qty: 1 });
   }
+
+  const isBossHunt = String(state.currentStageName || "").startsWith("Boss Hunt");
+  if (isBossHunt && enemy?.name === "Ancient Wyrm") {
+    drops.push({ ...ITEMS.wyrmScale, qty: randInt(2, 4) });
+    if (randInt(1, 100) <= 75) drops.push({ ...ITEMS.moltenCore, qty: 1 });
+  }
+
+  if (isBossHunt && enemy?.name === "Crimson Behemoth") {
+    drops.push({ ...ITEMS.behemothHorn, qty: randInt(1, 2) });
+    drops.push({ ...ITEMS.bloodCrystal, qty: 1 });
+  }
+
   return drops;
 }
 
@@ -4827,6 +4960,18 @@ function tryApplyBasicAttackPoison(attacker, target){
   addLog("DEBUFF", `${target.name} terkena Poison ${poisonPct}% selama ${poisonTurns} turn.`);
 }
 
+function tryApplyBasicAttackAccuracyDown(attacker, target){
+  if (!attacker || !target || !attacker.equipment || !attacker.inv) return;
+  const weaponName = attacker.equipment.hand;
+  if (!weaponName) return;
+  const weapon = attacker.inv[weaponName];
+  const accDownPct = Math.max(0, Number(weapon?.basicAccDownPct || 0));
+  if (!weapon || accDownPct <= 0) return;
+  const turns = Math.max(1, Number(weapon.basicAccDownTurns || 2));
+  addStatusEffect(target, { type: "accuracyDown", turns, debuff: true, pct: accDownPct });
+  addLog("DEBUFF", `${target.name} kehilangan fokus! Accuracy turun ${accDownPct}% selama ${turns} turn.`);
+}
+
 function attack() {
   setTurn("player");
 
@@ -4846,6 +4991,7 @@ function attack() {
     e.hp = clamp(e.hp - res.dmg, 0, e.maxHp);
     playEnemyCritShake(targetIndex);
     tryApplyBasicAttackPoison(p, e);
+    tryApplyBasicAttackAccuracyDown(p, e);
   }
   if (res.reflected > 0) {
     p.hp = clamp(p.hp - res.reflected, 0, p.maxHp);
