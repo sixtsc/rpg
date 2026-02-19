@@ -142,11 +142,17 @@ function dayKeyUtc(ts = Date.now()) {
 }
 
 function weekKeyUtc(ts = Date.now()) {
+  // Normalize to UTC midnight first so week calculation never drifts by time-of-day.
   const d = new Date(ts);
+  d.setUTCHours(0, 0, 0, 0);
+
   const day = d.getUTCDay() || 7;
   d.setUTCDate(d.getUTCDate() + 4 - day);
+  d.setUTCHours(0, 0, 0, 0);
+
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  const dayDiff = Math.floor((d - yearStart) / 86400000);
+  const weekNo = Math.floor(dayDiff / 7) + 1;
   return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
 }
 
