@@ -1922,10 +1922,15 @@ function hideSkillFloatingDetail(){
 function showSkillFloatingDetail(skill, anchorEl){
   if (!skill || !anchorEl) return;
   const el = ensureSkillFloatingDetail();
+  const cdLeft = Math.max(0, Number(skill.cdLeft) || 0);
+  const cdMax = Math.max(0, Number(skill.cooldown) || 0);
+  const cdStatus = cdLeft > 0 ? `Cooldown aktif: ${cdLeft} turn` : "Ready";
+  const cdMeta = cdMax > 0 ? `${cdLeft}/${cdMax}` : "-";
   el.innerHTML = `
     <div class="skillFloatingTitle">${escapeHtml(skill.name || "Skill")}</div>
     <div class="skillFloatingDesc">${escapeHtml(skill.desc || "Tidak ada deskripsi.")}</div>
-    <div class="skillFloatingMeta">MP ${skill.mpCost || 0} • DMG ${skill.power || 0} • CD ${skill.cooldown || 0} turn</div>
+    <div class="skillFloatingMeta">MP ${skill.mpCost || 0} • DMG ${skill.power || 0} • CD ${cdMeta}</div>
+    <div class="skillFloatingMeta">Status: ${escapeHtml(cdStatus)}</div>
   `;
   const r = anchorEl.getBoundingClientRect();
   const vw = window.innerWidth || document.documentElement.clientWidth || 360;
@@ -2899,13 +2904,18 @@ function openAllyDetailPopup(ally, idx = 0){
     passive.innerHTML = `<h5>${escapeHtml(ally.passiveSkill?.name || "Passive")}</h5><p>${escapeHtml(ally.passiveSkill?.desc || "-")}</p>`;
   }
   if (active) {
-    active.innerHTML = (ally.activeSkills || []).slice(0, 2).map((skill, i) => `
+    active.innerHTML = (ally.activeSkills || []).slice(0, 2).map((skill, i) => {
+      const cdLeft = Math.max(0, Number(skill?.cdLeft) || 0);
+      const cdMax = Math.max(0, Number(skill?.cooldown) || 1);
+      const cdLabel = cdLeft > 0 ? `Cooldown ${cdLeft}/${cdMax}` : `Ready (0/${cdMax})`;
+      return `
       <div class="allySkillCard">
         <h5>${escapeHtml(skill.name || `Active ${i + 1}`)}</h5>
         <p>${escapeHtml(skill.desc || "-")}</p>
-        <span class="allySkillCooldown">Cooldown ${escapeHtml(String(skill.cooldown || 1))} turn</span>
+        <span class="allySkillCooldown">${escapeHtml(cdLabel)}</span>
       </div>
-    `).join("");
+    `;
+    }).join("");
   }
   if (progress) {
     progress.textContent = `Progress Level: Lv ${ally.level ?? 0}/10`;
@@ -4453,18 +4463,19 @@ function handleEnemyDefeat(){
 }
 
 function resolveAllySkillValues(ally, skill){
-  if (!ally || !skill) return { mpCost: 1, cooldown: 1, cdLeft: 0 };
+  if (!ally || !skill) return { mpCost: 1, cooldown: 1, cdLeft: 0, skillRef: skill || null };
   const baseAlly = ALLY_BASES[String(ally?.id || "").toLowerCase()] || {};
   const skillList = Array.isArray(ally?.activeSkills) ? ally.activeSkills : [];
   const skillIdx = skillList.indexOf(skill);
+  const skillRef = skillIdx >= 0 ? skillList[skillIdx] : skill;
 
   // Priority: exact name match first, then fallback by slot index (for legacy saves)
-  const nameBaseSkill = (baseAlly.activeSkills || []).find((s) => s?.name === skill.name) || null;
+  const nameBaseSkill = (baseAlly.activeSkills || []).find((s) => s?.name === skillRef.name) || null;
   const idxBaseSkill = skillIdx >= 0 ? (baseAlly.activeSkills || [])[skillIdx] : null;
   const baseSkill = nameBaseSkill || idxBaseSkill || null;
 
-  const rawMpCost = Number(skill.mpCost);
-  const rawCooldown = Number(skill.cooldown);
+  const rawMpCost = Number(skillRef.mpCost);
+  const rawCooldown = Number(skillRef.cooldown);
 
   const baseMpCost = Math.max(1, Number(baseSkill?.mpCost) || 1);
   const baseCooldown = Math.max(1, Number(baseSkill?.cooldown) || 1);
@@ -4473,11 +4484,11 @@ function resolveAllySkillValues(ally, skill){
   const mpCost = baseSkill ? baseMpCost : (rawMpCost > 0 ? rawMpCost : 1);
   const cooldown = baseSkill ? baseCooldown : (rawCooldown > 0 ? rawCooldown : 1);
 
-  const cdLeft = Math.max(0, Number(skill.cdLeft) || 0);
-  skill.mpCost = mpCost;
-  skill.cooldown = cooldown;
-  skill.cdLeft = cdLeft;
-  return { mpCost, cooldown, cdLeft };
+  const cdLeft = Math.max(0, Number(skillRef.cdLeft) || 0);
+  skillRef.mpCost = mpCost;
+  skillRef.cooldown = cooldown;
+  skillRef.cdLeft = cdLeft;
+  return { mpCost, cooldown, cdLeft, skillRef };
 }
 
 function alliesAct(done){
@@ -4488,6 +4499,17 @@ function alliesAct(done){
     if (done) done();
     return;
   }
+
+  const resolveRuntimeAlly = (snapshotAlly) => {
+    const key = String(snapshotAlly?.id || snapshotAlly?.name || "").toLowerCase();
+    const liveAllies = getAliveAllies();
+    if (!liveAllies.length) return null;
+    if (key) {
+      const found = liveAllies.find((ally) => String(ally?.id || ally?.name || "").toLowerCase() === key);
+      if (found) return found;
+    }
+    return liveAllies.find((ally) => ally === snapshotAlly) || null;
+  };
 
   const pickAllySkill = (ally) => {
     const skills = Array.isArray(ally?.activeSkills) ? ally.activeSkills : [];
@@ -4505,13 +4527,14 @@ function alliesAct(done){
   const baseDelay = 260;
   const orderGap = ALLY_ACTION_GAP_MS;
   let lastDelay = 0;
-  allies.forEach((ally, index) => {
-    const spd = Number(ally.spd) || 0;
+  allies.forEach((allySnapshot, index) => {
+    const spd = Number(allySnapshot.spd) || 0;
     const speedLag = Math.max(0, maxSpd - spd) * 20;
     const delay = baseDelay + (index * orderGap) + speedLag;
     lastDelay = Math.max(lastDelay, delay);
     setTimeout(() => {
-      if (ally.hp <= 0) return;
+      const ally = resolveRuntimeAlly(allySnapshot);
+      if (!ally || ally.hp <= 0) return;
       if (hasStatus(ally, "stun")) {
         addLog("ALLY", `${ally.name} terkena Stun dan tidak bisa bergerak.`);
         tickStatuses(ally);
@@ -4530,9 +4553,11 @@ function alliesAct(done){
       }
       if (skill) {
         const vals = resolveAllySkillValues(ally, skill);
+        const skillRef = vals.skillRef || skill;
         ally.mp = clamp((ally.mp || 0) - vals.mpCost, 0, ally.maxMp || 0);
-        skill.cdLeft = vals.cooldown;
-        basePower = Math.max(3, Number(skill.power) || 3);
+        skillRef.cdLeft = vals.cooldown;
+        basePower = Math.max(3, Number(skillRef.power) || 3);
+        skill = skillRef;
         addLog("SKILL", `${ally.name} • ${skill.name}`);
       }
 
