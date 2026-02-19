@@ -4453,18 +4453,19 @@ function handleEnemyDefeat(){
 }
 
 function resolveAllySkillValues(ally, skill){
-  if (!ally || !skill) return { mpCost: 1, cooldown: 1, cdLeft: 0 };
+  if (!ally || !skill) return { mpCost: 1, cooldown: 1, cdLeft: 0, skillRef: skill || null };
   const baseAlly = ALLY_BASES[String(ally?.id || "").toLowerCase()] || {};
   const skillList = Array.isArray(ally?.activeSkills) ? ally.activeSkills : [];
   const skillIdx = skillList.indexOf(skill);
+  const skillRef = skillIdx >= 0 ? skillList[skillIdx] : skill;
 
   // Priority: exact name match first, then fallback by slot index (for legacy saves)
-  const nameBaseSkill = (baseAlly.activeSkills || []).find((s) => s?.name === skill.name) || null;
+  const nameBaseSkill = (baseAlly.activeSkills || []).find((s) => s?.name === skillRef.name) || null;
   const idxBaseSkill = skillIdx >= 0 ? (baseAlly.activeSkills || [])[skillIdx] : null;
   const baseSkill = nameBaseSkill || idxBaseSkill || null;
 
-  const rawMpCost = Number(skill.mpCost);
-  const rawCooldown = Number(skill.cooldown);
+  const rawMpCost = Number(skillRef.mpCost);
+  const rawCooldown = Number(skillRef.cooldown);
 
   const baseMpCost = Math.max(1, Number(baseSkill?.mpCost) || 1);
   const baseCooldown = Math.max(1, Number(baseSkill?.cooldown) || 1);
@@ -4473,11 +4474,11 @@ function resolveAllySkillValues(ally, skill){
   const mpCost = baseSkill ? baseMpCost : (rawMpCost > 0 ? rawMpCost : 1);
   const cooldown = baseSkill ? baseCooldown : (rawCooldown > 0 ? rawCooldown : 1);
 
-  const cdLeft = Math.max(0, Number(skill.cdLeft) || 0);
-  skill.mpCost = mpCost;
-  skill.cooldown = cooldown;
-  skill.cdLeft = cdLeft;
-  return { mpCost, cooldown, cdLeft };
+  const cdLeft = Math.max(0, Number(skillRef.cdLeft) || 0);
+  skillRef.mpCost = mpCost;
+  skillRef.cooldown = cooldown;
+  skillRef.cdLeft = cdLeft;
+  return { mpCost, cooldown, cdLeft, skillRef };
 }
 
 function alliesAct(done){
@@ -4530,9 +4531,11 @@ function alliesAct(done){
       }
       if (skill) {
         const vals = resolveAllySkillValues(ally, skill);
+        const skillRef = vals.skillRef || skill;
         ally.mp = clamp((ally.mp || 0) - vals.mpCost, 0, ally.maxMp || 0);
-        skill.cdLeft = vals.cooldown;
-        basePower = Math.max(3, Number(skill.power) || 3);
+        skillRef.cdLeft = vals.cooldown;
+        basePower = Math.max(3, Number(skillRef.power) || 3);
+        skill = skillRef;
         addLog("SKILL", `${ally.name} • ${skill.name}`);
       }
 
