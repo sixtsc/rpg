@@ -4500,6 +4500,17 @@ function alliesAct(done){
     return;
   }
 
+  const resolveRuntimeAlly = (snapshotAlly) => {
+    const key = String(snapshotAlly?.id || snapshotAlly?.name || "").toLowerCase();
+    const liveAllies = getAliveAllies();
+    if (!liveAllies.length) return null;
+    if (key) {
+      const found = liveAllies.find((ally) => String(ally?.id || ally?.name || "").toLowerCase() === key);
+      if (found) return found;
+    }
+    return liveAllies.find((ally) => ally === snapshotAlly) || null;
+  };
+
   const pickAllySkill = (ally) => {
     const skills = Array.isArray(ally?.activeSkills) ? ally.activeSkills : [];
     const ready = skills.filter((skill) => {
@@ -4516,13 +4527,14 @@ function alliesAct(done){
   const baseDelay = 260;
   const orderGap = ALLY_ACTION_GAP_MS;
   let lastDelay = 0;
-  allies.forEach((ally, index) => {
-    const spd = Number(ally.spd) || 0;
+  allies.forEach((allySnapshot, index) => {
+    const spd = Number(allySnapshot.spd) || 0;
     const speedLag = Math.max(0, maxSpd - spd) * 20;
     const delay = baseDelay + (index * orderGap) + speedLag;
     lastDelay = Math.max(lastDelay, delay);
     setTimeout(() => {
-      if (ally.hp <= 0) return;
+      const ally = resolveRuntimeAlly(allySnapshot);
+      if (!ally || ally.hp <= 0) return;
       if (hasStatus(ally, "stun")) {
         addLog("ALLY", `${ally.name} terkena Stun dan tidak bisa bergerak.`);
         tickStatuses(ally);
