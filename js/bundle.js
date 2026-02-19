@@ -6036,6 +6036,94 @@ function setAuthMsg(msg, isError=false){
   el.style.color = isError ? "#ffb4b4" : "";
 }
 
+function setAuthLoading(show, message=""){
+  const loader = byId("authLoading");
+  const textEl = byId("authLoadingText");
+  const userEl = byId("authUser");
+  const passEl = byId("authPass");
+  const btnLogin = byId("authLogin");
+  const btnRegister = byId("authRegister");
+
+  if (loader) loader.classList.toggle("hidden", !show);
+  if (textEl && message) textEl.textContent = message;
+
+  [userEl, passEl, btnLogin, btnRegister].forEach((el) => {
+    if (!el) return;
+    el.disabled = !!show;
+  });
+}
+
+const PRELOAD_ASSET_URLS = [
+  "./assets/logo.svg",
+  "./assets/ui/skill-frame.png",
+  "./assets/enemies/slime.png",
+  "./assets/enemies/goblin.png",
+  "./assets/enemies/bandit1.png",
+  "./assets/enemies/leaderbandit.png",
+  "./assets/enemies/wolf.png",
+  "./assets/enemies/skeleton.png",
+  "./assets/icons/coin.svg",
+  "./assets/icons/gem.svg",
+  "./assets/icons/mp.svg",
+  "./assets/icons/weapon.svg",
+  "./assets/icons/head.svg",
+  "./assets/icons/armor.svg",
+  "./assets/icons/pant.svg",
+  "./assets/icons/shoes.svg",
+  "./assets/icons/gender-male.svg",
+  "./assets/icons/gender-female.svg",
+  "./assets/icons/fire.svg",
+  "./assets/icons/wind.svg",
+  "./assets/icons/lightning.svg",
+  "./assets/icons/earth.svg",
+  "./assets/icons/water.svg",
+  "./assets/icons/physical.svg",
+  "./assets/icons/universal.svg",
+  "./assets/skills/fireball.svg",
+  "./assets/skills/spark.svg",
+  "./assets/skills/meteor.svg",
+  "./assets/skills/frost-bite.svg",
+  "./assets/skills/shadow-cut.svg",
+  "./assets/skills/earth-spike.svg"
+];
+
+let assetWarmupPromise = null;
+
+function preloadAsset(url){
+  if (!url) return Promise.resolve();
+  const cleanUrl = String(url).split("?")[0];
+  const isImage = /\.(png|jpe?g|gif|webp|svg)$/i.test(cleanUrl);
+
+  if (isImage){
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve();
+      img.onerror = () => resolve();
+      img.src = url;
+      if (img.decode) img.decode().then(resolve).catch(resolve);
+    });
+  }
+
+  return fetch(url, { cache: "force-cache" }).then(() => void 0).catch(() => void 0);
+}
+
+function warmupAssets(onProgress){
+  if (assetWarmupPromise) return assetWarmupPromise;
+
+  const urls = Array.from(new Set(PRELOAD_ASSET_URLS.filter(Boolean)));
+  const total = urls.length;
+  let loaded = 0;
+
+  assetWarmupPromise = urls.reduce((chain, url) => {
+    return chain.then(() => preloadAsset(url)).then(() => {
+      loaded += 1;
+      if (typeof onProgress === "function") onProgress(loaded, total);
+    });
+  }, Promise.resolve());
+
+  return assetWarmupPromise;
+}
+
 
 let pendingCreateSlot = 0;
 let selectedCharSlot = 0;
@@ -6353,6 +6441,7 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
   refresh(state);
 
   // Show character menu
+  setAuthLoading(false);
   showAuth(false);
   openCharacterMenu();
 
@@ -6390,23 +6479,37 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
       return;
     }
 
+    setAuthLoading(true, "Login...");
     setAuthMsg("Login...", false);
 
-    const { res, data } = await apiJson("/api/login", {
-      method: "POST",
-      body: JSON.stringify({ username, password })
-    });
+    try {
+      const { res, data } = await apiJson("/api/login", {
+        method: "POST",
+        body: JSON.stringify({ username, password })
+      });
 
-    if (!res.ok){
-      setAuthMsg(data?.message || "Login gagal.", true);
-      return;
+      if (!res.ok){
+        setAuthMsg(data?.message || "Login gagal.", true);
+        setAuthLoading(false);
+        return;
+      }
+
+      setAuthLoading(true, "Menyiapkan assets game...");
+      await warmupAssets((loaded, total) => {
+        setAuthLoading(true, `Menyiapkan assets game... (${loaded}/${total})`);
+      });
+
+      // refresh cached user after cookie is set
+      cloudUserCache = null;
+      await ensureCloudUser();
+
+      setAuthLoading(true, "Memuat profile cloud...");
+      await syncCloudOrLocalAndShowCharacterMenu();
+    } catch (e) {
+      console.error("[AUTH LOGIN] error", e);
+      setAuthMsg("Terjadi kendala saat login. Coba lagi.", true);
+      setAuthLoading(false);
     }
-
-    // refresh cached user after cookie is set
-    cloudUserCache = null;
-    await ensureCloudUser();
-
-    await syncCloudOrLocalAndShowCharacterMenu();
   };
 
   const doRegister = async () => {
@@ -6416,20 +6519,28 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
       return;
     }
 
+    setAuthLoading(true, "Membuat akun...");
     setAuthMsg("Register...", false);
 
-    const { res, data } = await apiJson("/api/register", {
-      method: "POST",
-      body: JSON.stringify({ username, password })
-    });
+    try {
+      const { res, data } = await apiJson("/api/register", {
+        method: "POST",
+        body: JSON.stringify({ username, password })
+      });
 
-    if (!res.ok){
-      setAuthMsg(data?.message || "Register gagal.", true);
-      return;
+      if (!res.ok){
+        setAuthMsg(data?.message || "Register gagal.", true);
+        setAuthLoading(false);
+        return;
+      }
+
+      // auto login after register
+      await doLogin();
+    } catch (e) {
+      console.error("[AUTH REGISTER] error", e);
+      setAuthMsg("Terjadi kendala saat register. Coba lagi.", true);
+      setAuthLoading(false);
     }
-
-    // auto login after register
-    await doLogin();
   };
 
   if (btnLogin) btnLogin.onclick = () => doLogin();
@@ -6448,13 +6559,19 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
       setAuthMsg("Cek login...", false);
       const me = await ensureCloudUser();
       if (me){
+        setAuthLoading(true, "Login terdeteksi. Menyiapkan assets...");
+        await warmupAssets((loaded, total) => {
+          setAuthLoading(true, `Login terdeteksi. Menyiapkan assets... (${loaded}/${total})`);
+        });
         setAuthMsg("Login terdeteksi. Memuat save...", false);
         await syncCloudOrLocalAndShowCharacterMenu();
       }else{
+        setAuthLoading(false);
         setAuthMsg("Silakan login / register untuk cloud save.", false);
       }
     }catch(e){
       console.error("[AUTH INIT] error", e);
+      setAuthLoading(false);
       setAuthMsg("Gagal cek session. Silakan login.", true);
     }
   })();

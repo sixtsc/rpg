@@ -3030,6 +3030,34 @@ body.inTown .grid{ grid-template-columns: 1fr !important; }
 .authInput::placeholder{
   color: rgba(255,255,255,0.65);
 }
+.authLoading{
+  margin:12px 0 4px;
+  border:1px solid rgba(122,174,255,0.35);
+  border-radius:12px;
+  background:rgba(18,33,64,0.55);
+  padding:10px 12px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.authSpinner{
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,0.25);
+  border-top-color:#7ec0ff;
+  animation:authSpin 0.8s linear infinite;
+  flex:0 0 auto;
+}
+.authLoadingText{
+  font-size:13px;
+  color:#d9ebff;
+  font-weight:700;
+  letter-spacing:.1px;
+}
+@keyframes authSpin{
+  to{ transform:rotate(360deg); }
+}
 
 /* Slash hit animation */
 .slashHit{
