@@ -1922,10 +1922,15 @@ function hideSkillFloatingDetail(){
 function showSkillFloatingDetail(skill, anchorEl){
   if (!skill || !anchorEl) return;
   const el = ensureSkillFloatingDetail();
+  const cdLeft = Math.max(0, Number(skill.cdLeft) || 0);
+  const cdMax = Math.max(0, Number(skill.cooldown) || 0);
+  const cdStatus = cdLeft > 0 ? `Cooldown aktif: ${cdLeft} turn` : "Ready";
+  const cdMeta = cdMax > 0 ? `${cdLeft}/${cdMax}` : "-";
   el.innerHTML = `
     <div class="skillFloatingTitle">${escapeHtml(skill.name || "Skill")}</div>
     <div class="skillFloatingDesc">${escapeHtml(skill.desc || "Tidak ada deskripsi.")}</div>
-    <div class="skillFloatingMeta">MP ${skill.mpCost || 0} • DMG ${skill.power || 0} • CD ${skill.cooldown || 0} turn</div>
+    <div class="skillFloatingMeta">MP ${skill.mpCost || 0} • DMG ${skill.power || 0} • CD ${cdMeta}</div>
+    <div class="skillFloatingMeta">Status: ${escapeHtml(cdStatus)}</div>
   `;
   const r = anchorEl.getBoundingClientRect();
   const vw = window.innerWidth || document.documentElement.clientWidth || 360;
