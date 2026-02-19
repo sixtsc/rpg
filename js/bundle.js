@@ -2904,13 +2904,18 @@ function openAllyDetailPopup(ally, idx = 0){
     passive.innerHTML = `<h5>${escapeHtml(ally.passiveSkill?.name || "Passive")}</h5><p>${escapeHtml(ally.passiveSkill?.desc || "-")}</p>`;
   }
   if (active) {
-    active.innerHTML = (ally.activeSkills || []).slice(0, 2).map((skill, i) => `
+    active.innerHTML = (ally.activeSkills || []).slice(0, 2).map((skill, i) => {
+      const cdLeft = Math.max(0, Number(skill?.cdLeft) || 0);
+      const cdMax = Math.max(0, Number(skill?.cooldown) || 1);
+      const cdLabel = cdLeft > 0 ? `Cooldown ${cdLeft}/${cdMax}` : `Ready (0/${cdMax})`;
+      return `
       <div class="allySkillCard">
         <h5>${escapeHtml(skill.name || `Active ${i + 1}`)}</h5>
         <p>${escapeHtml(skill.desc || "-")}</p>
-        <span class="allySkillCooldown">Cooldown ${escapeHtml(String(skill.cooldown || 1))} turn</span>
+        <span class="allySkillCooldown">${escapeHtml(cdLabel)}</span>
       </div>
-    `).join("");
+    `;
+    }).join("");
   }
   if (progress) {
     progress.textContent = `Progress Level: Lv ${ally.level ?? 0}/10`;
