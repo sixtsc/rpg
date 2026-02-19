@@ -5005,15 +5005,15 @@ function openDailyLoginPage(){
 function openDailyQuestPage(){
   ensureQuestState();
   const q = state.player.questDaily;
-  const targetWins = 3;
+  const targetWins = 10;
   const ready = q.wins >= targetWins;
   modal.open(
     "Daily Quest",
     [
       { title: "Back", desc: "Kembali ke Mission.", meta: "", value: "back", className: "subMenuBack" },
       {
-        title: "Menangkan 3 Battle",
-        desc: `Progress: ${Math.min(q.wins, targetWins)}/${targetWins} • Reward: 300 Gold + 1 Gems`,
+        title: "Menangkan 10 Battle",
+        desc: `Progress: ${Math.min(q.wins, targetWins)}/${targetWins} • Reward: 4000 Gold + 20 Gems`,
         meta: q.claimed ? "✅ Selesai" : (ready ? "Siap claim" : "Belum selesai"),
         buttons: [{ text: "Claim", value: "claim", disabled: q.claimed || !ready }],
         keepOpen: true,
@@ -5025,9 +5025,9 @@ function openDailyQuestPage(){
       ensureQuestState();
       if (state.player.questDaily.claimed || state.player.questDaily.wins < targetWins) return openDailyQuestPage();
       state.player.questDaily.claimed = true;
-      state.player.gold = (state.player.gold || 0) + 300;
-      state.player.gems = (state.player.gems || 0) + 1;
-      addLog("REWARD", "Daily Quest selesai: +300 Gold, +1 Gems.");
+      state.player.gold = (state.player.gold || 0) + 4000;
+      state.player.gems = (state.player.gems || 0) + 20;
+      addLog("REWARD", "Daily Quest selesai: +4000 Gold, +20 Gems.");
       autosave(state);
       refresh(state);
       openDailyQuestPage();
@@ -5038,15 +5038,15 @@ function openDailyQuestPage(){
 function openWeeklyQuestPage(){
   ensureQuestState();
   const q = state.player.questWeekly;
-  const targetWins = 20;
+  const targetWins = 60;
   const ready = q.wins >= targetWins;
   modal.open(
     "Weekly Quest",
     [
       { title: "Back", desc: "Kembali ke Mission.", meta: "", value: "back", className: "subMenuBack" },
       {
-        title: "Menangkan 20 Battle",
-        desc: `Progress: ${Math.min(q.wins, targetWins)}/${targetWins} • Reward: 1000 Gold + 5 Gems`,
+        title: "Menangkan 60 Battle",
+        desc: `Progress: ${Math.min(q.wins, targetWins)}/${targetWins} • Reward: 12000 Gold + 200 Gems`,
         meta: q.claimed ? "✅ Selesai" : (ready ? "Siap claim" : "Belum selesai"),
         buttons: [{ text: "Claim", value: "claim", disabled: q.claimed || !ready }],
         keepOpen: true,
@@ -5058,9 +5058,9 @@ function openWeeklyQuestPage(){
       ensureQuestState();
       if (state.player.questWeekly.claimed || state.player.questWeekly.wins < targetWins) return openWeeklyQuestPage();
       state.player.questWeekly.claimed = true;
-      state.player.gold = (state.player.gold || 0) + 1000;
-      state.player.gems = (state.player.gems || 0) + 5;
-      addLog("REWARD", "Weekly Quest selesai: +1000 Gold, +5 Gems.");
+      state.player.gold = (state.player.gold || 0) + 12000;
+      state.player.gems = (state.player.gems || 0) + 200;
+      addLog("REWARD", "Weekly Quest selesai: +12000 Gold, +200 Gems.");
       autosave(state);
       refresh(state);
       openWeeklyQuestPage();
@@ -5075,8 +5075,8 @@ function openQuestPage(){
     "Mission",
     [
       { title: "Daily Login", desc: "Claim harian. Cycle akan reset tiap 30 hari.", meta: `${p.loginClaimedDays.length}/${LOGIN_CYCLE_DAYS} claimed`, value: "daily_login" },
-      { title: "Daily Quest", desc: "Menangkan 3 battle setiap hari.", meta: `${Math.min(p.questDaily.wins, 3)}/3`, value: "daily_quest" },
-      { title: "Weekly Quest", desc: "Menangkan 20 battle setiap minggu.", meta: `${Math.min(p.questWeekly.wins, 20)}/20`, value: "weekly_quest" },
+      { title: "Daily Quest", desc: "Menangkan 10 battle setiap hari.", meta: `${Math.min(p.questDaily.wins, 10)}/10`, value: "daily_quest" },
+      { title: "Weekly Quest", desc: "Menangkan 60 battle setiap minggu.", meta: `${Math.min(p.questWeekly.wins, 60)}/60`, value: "weekly_quest" },
     ],
     (pick) => {
       if (pick === "daily_login") return openDailyLoginPage();
