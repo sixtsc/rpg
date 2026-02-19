@@ -3828,6 +3828,8 @@ function setBlacksmithPageVisible(show){
 
 function createBossEnemy(level, name){
   const lv = Math.max(1, Number(level) || 1);
+  const isAncientWyrm = String(name || "").toLowerCase() === "ancient wyrm";
+  const isCrimsonBehemoth = String(name || "").toLowerCase() === "crimson behemoth";
   const enemy = {
     name,
     level: lv,
@@ -3857,6 +3859,19 @@ function createBossEnemy(level, name){
     xpReward: 35 + lv * 8,
     goldReward: 20 + lv * 5,
   };
+
+  if (isAncientWyrm) {
+    enemy.maxHp = Math.round(enemy.maxHp * 1.9);
+    enemy.hp = enemy.maxHp;
+    enemy.def = Math.round(enemy.def * 1.8);
+  }
+
+  if (isCrimsonBehemoth) {
+    enemy.maxHp = Math.round(enemy.maxHp * 2.4);
+    enemy.hp = enemy.maxHp;
+    enemy.def = Math.round(enemy.def * 2.2);
+  }
+
   applyDerivedStats(enemy);
   enemy.blockRate = 0;
   return enemy;
