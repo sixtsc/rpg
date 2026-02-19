@@ -534,6 +534,7 @@ function newState(){
     autoBattleEnabled: false,
     autoBattleUseConsumable: false,
     _autoBattlePending: false,
+    monsterHuntSelectedBoss: "wyrm10",
     turn: "town",
     battleTurn: 0 // "town" | "player" | "enemy"
   };
@@ -3780,8 +3781,24 @@ function openShopModal(mode = "menu"){
 }
 
 const MONSTER_HUNT_BOSSES = [
-  { id: "wyrm10", level: 10, name: "Ancient Wyrm", note: "Boss starter untuk material craft dasar." },
-  { id: "behemoth20", level: 20, name: "Crimson Behemoth", note: "Boss elite dengan material craft langka." },
+  {
+    id: "wyrm10",
+    level: 10,
+    name: "Ancient Wyrm",
+    avatar: "🐉",
+    note: "Boss starter untuk material craft dasar.",
+    story: "Wyrm kuno yang bangkit dari reruntuhan gua api. Sisiknya keras, tapi inti mana di dadanya mulai retak.",
+    drops: ["Wyrm Scale", "Ancient Bone", "Molten Core"],
+  },
+  {
+    id: "behemoth20",
+    level: 20,
+    name: "Crimson Behemoth",
+    avatar: "🦏",
+    note: "Boss elite dengan material craft langka.",
+    story: "Raksasa merah penjaga altar darah. Setiap hentakan kakinya mengguncang tanah dan memecah armor biasa.",
+    drops: ["Behemoth Horn", "Crimson Carapace", "Blood Crystal"],
+  },
 ];
 
 function setBlacksmithPageVisible(show){
@@ -3888,32 +3905,57 @@ function startBossBattle(level, name){
 }
 
 function renderMonsterHuntPage(){
-  const grid = byId("monsterHuntGrid");
-  if (!grid) return;
+  const stageList = byId("monsterHuntStageList");
+  const detailPane = byId("monsterHuntDetailPane");
+  if (!stageList || !detailPane) return;
   byId("monsterHuntGoldValue").textContent = String(state.player?.gold || 0);
   byId("monsterHuntGemValue").textContent = String(state.player?.gems || 0);
-  grid.innerHTML = MONSTER_HUNT_BOSSES.map((boss) => `
-    <article class="marketItemCard">
-      <div class="marketItemMain">
-        <h3>${escapeHtml(boss.name)}</h3>
-        <p>${escapeHtml(boss.note)}</p>
-      </div>
-      <div class="marketMetaRow">
-        <span class="marketItemLevel">Lv ${boss.level}</span>
-      </div>
-      <div class="marketItemActions">
-        <button type="button" class="marketActionBtn buy" data-boss-id="${escapeHtml(boss.id)}">Fight Boss</button>
-      </div>
-    </article>
+  if (!state.monsterHuntSelectedBoss) state.monsterHuntSelectedBoss = MONSTER_HUNT_BOSSES[0]?.id || "";
+  const selectedId = state.monsterHuntSelectedBoss;
+  const selectedBoss = MONSTER_HUNT_BOSSES.find((row) => row.id === selectedId) || MONSTER_HUNT_BOSSES[0];
+
+  stageList.innerHTML = MONSTER_HUNT_BOSSES.map((boss) => `
+    <button type="button" class="monsterHuntStageBtn ${boss.id === selectedBoss.id ? "active" : ""}" data-boss-id="${escapeHtml(boss.id)}">
+      <div class="monsterHuntStageName">${escapeHtml(boss.name)}</div>
+      <div class="monsterHuntStageMeta">Stage Boss • Lv ${boss.level}</div>
+    </button>
   `).join("");
 
-  grid.querySelectorAll("[data-boss-id]").forEach((btn) => {
+  detailPane.innerHTML = `
+    <div class="monsterHuntHead">
+      <div class="monsterHuntAvatar">${escapeHtml(selectedBoss.avatar || "👹")}</div>
+      <div>
+        <h3 class="monsterHuntName">${escapeHtml(selectedBoss.name)}</h3>
+        <p class="monsterHuntLevel">Boss Level ${selectedBoss.level}</p>
+        <p class="monsterHuntLevel">${escapeHtml(selectedBoss.note || "")}</p>
+      </div>
+    </div>
+    <div class="monsterHuntSection">
+      <h4>Story</h4>
+      <p>${escapeHtml(selectedBoss.story || "Belum ada cerita.")}</p>
+    </div>
+    <div class="monsterHuntSection">
+      <h4>Drop Material</h4>
+      <div class="monsterHuntDrops">
+        ${(selectedBoss.drops || []).map((drop) => `<span class="monsterHuntDropChip">${escapeHtml(drop)}</span>`).join("")}
+      </div>
+    </div>
+    <div class="monsterHuntBattleWrap">
+      <button type="button" class="marketActionBtn buy" id="monsterHuntBattleBtn">Battle ${escapeHtml(selectedBoss.name)}</button>
+    </div>
+  `;
+
+  stageList.querySelectorAll("[data-boss-id]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const boss = MONSTER_HUNT_BOSSES.find((row) => row.id === btn.getAttribute("data-boss-id"));
       if (!boss) return;
-      startBossBattle(boss.level, boss.name);
+      state.monsterHuntSelectedBoss = boss.id;
+      renderMonsterHuntPage();
     });
   });
+
+  const battleBtn = byId("monsterHuntBattleBtn");
+  if (battleBtn) battleBtn.onclick = () => startBossBattle(selectedBoss.level, selectedBoss.name);
 }
 
 function setMonsterHuntPageVisible(show){

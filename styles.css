@@ -2526,6 +2526,102 @@ body.inBattle .enemyMiniMeta .muted{
   transform:translateY(-2px);
   box-shadow:0 12px 24px rgba(0,0,0,0.25);
 }
+
+.monsterHuntLayout{
+  display:grid;
+  grid-template-columns:260px 1px minmax(0,1fr);
+  gap:18px;
+  align-items:stretch;
+}
+.monsterHuntStagePane{
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:var(--card2);
+  padding:12px;
+}
+.monsterHuntPaneTitle{
+  font-size:13px;
+  font-weight:700;
+  color:var(--muted);
+  margin-bottom:10px;
+  text-transform:uppercase;
+  letter-spacing:.3px;
+}
+.monsterHuntStageList{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.monsterHuntStageBtn{
+  width:100%;
+  border-radius:10px;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,0.03);
+  color:var(--text);
+  text-align:left;
+  padding:10px;
+  cursor:pointer;
+  transition:all .2s ease;
+}
+.monsterHuntStageBtn:hover{
+  transform:translateY(-1px);
+  border-color:rgba(255,120,68,0.45);
+}
+.monsterHuntStageBtn.active{
+  border-color:rgba(255,120,68,0.65);
+  background:rgba(255,120,68,0.12);
+  box-shadow:0 0 0 1px rgba(255,120,68,0.2) inset;
+}
+.monsterHuntStageName{ font-size:15px; font-weight:800; }
+.monsterHuntStageMeta{ font-size:12px; color:var(--muted); margin-top:2px; }
+.monsterHuntDivider{
+  width:1px;
+  background:linear-gradient(180deg, transparent, var(--line), transparent);
+}
+.monsterHuntDetailPane{
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:var(--card2);
+  padding:14px;
+}
+.monsterHuntAvatar{
+  width:92px;
+  height:92px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.25);
+  background:radial-gradient(circle at 30% 25%, rgba(255,120,68,0.42), rgba(29,39,66,0.96));
+  font-size:44px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.monsterHuntHead{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-bottom:12px;
+}
+.monsterHuntName{ margin:0 0 4px; font-size:24px; }
+.monsterHuntLevel{ margin:0; font-size:13px; color:var(--muted); }
+.monsterHuntSection{ margin-top:10px; }
+.monsterHuntSection h4{ margin:0 0 6px; font-size:14px; }
+.monsterHuntSection p{ margin:0; color:#d5def6; line-height:1.5; }
+.monsterHuntDrops{ display:flex; flex-wrap:wrap; gap:8px; }
+.monsterHuntDropChip{
+  border:1px solid rgba(88,138,255,0.5);
+  background:rgba(58,108,255,0.16);
+  color:#dbe8ff;
+  border-radius:999px;
+  padding:5px 10px;
+  font-size:12px;
+  font-weight:700;
+}
+.monsterHuntBattleWrap{ margin-top:14px; }
+
+@media (max-width: 920px){
+  .monsterHuntLayout{ grid-template-columns:1fr; }
+  .monsterHuntDivider{ display:none; }
+}
 .marketItemThumb{
   width:60px;
   height:60px;
