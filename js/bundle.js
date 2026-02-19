@@ -46,12 +46,14 @@ const ALLY_AVATARS = {
   Guardian: { icon: "🛡️", bg: "linear-gradient(135deg, #7ad5ff, #1f4b78)" },
   Ranger: { icon: "🏹", bg: "linear-gradient(135deg, #8be77b, #2c6b2a)" },
   Mystic: { icon: "🔮", bg: "linear-gradient(135deg, #c59bff, #4c2a7a)" },
-  Glenn: { icon: "⚔️", bg: "linear-gradient(135deg, #8ec5ff, #2e4f96)" }
+  Glenn: { icon: "⚔️", bg: "linear-gradient(135deg, #8ec5ff, #2e4f96)" },
+  Elara: { icon: "🌿", bg: "linear-gradient(135deg, #9be7c8, #2b7f67)" }
 };
 const GLENN_BASE = {
   id: "glenn",
   name: "Glenn",
   role: "Knight Vanguard",
+  rarity: 4,
   level: 0,
   maxHp: 66,
   maxMp: 20,
@@ -80,6 +82,44 @@ const GLENN_BASE = {
   equipment: { hand:null, head:null, pant:null, armor:null, shoes:null },
   equipmentBonus: { atk:0, def:0, spd:0, evasion:0 },
   statuses: []
+};
+const ELARA_BASE = {
+  id: "elara",
+  name: "Elara",
+  role: "Support",
+  rarity: 4,
+  level: 0,
+  maxHp: 52,
+  maxMp: 32,
+  hp: 52,
+  mp: 32,
+  atk: 9,
+  def: 4,
+  spd: 8,
+  critChance: 6,
+  critDamage: 0,
+  combustionChance: 0,
+  evasion: 6,
+  blockRate: 0,
+  escapeChance: 0,
+  manaRegen: 0,
+  description: "Elf support dengan sihir alam yang menjaga ritme tim tetap stabil.",
+  story: "Elara adalah elf tabib yang menemukan tujuan baru untuk melindungi rekan seperjalanan lewat kekuatan alam.",
+  basicAttack: { name: "Nature Bolt", desc: "Serangan sihir ringan yang memulihkan fokus Elara." },
+  activeSkills: [
+    { name: "Healing Bloom", desc: "Memulihkan HP party sebesar 18% dari Max HP Elara.", power: 8, mpCost: 6, cooldown: 3, type: "heal" },
+    { name: "Verdant Sanctuary", desc: "Membuka area pemulihan alam. Selama 2 turn, seluruh party memulihkan 2% Max HP mereka di akhir turn.", power: 0, mpCost: 8, cooldown: 5, type: "regen" }
+  ],
+  passiveSkill: { name: "Forest Whisper", desc: "Saat Elara bertahan hidup, regen MP seluruh party +2 tiap turn." },
+  xp: 0,
+  xpToLevel: 50,
+  equipment: { hand:null, head:null, pant:null, armor:null, shoes:null },
+  equipmentBonus: { atk:0, def:0, spd:0, evasion:0 },
+  statuses: []
+};
+const ALLY_BASES = {
+  glenn: GLENN_BASE,
+  elara: ELARA_BASE
 };
 const SHOP_GOODS = [
   { name:"Potion", price:12, ref: ITEMS.potion },
@@ -268,25 +308,28 @@ function dodgeChance(p,e){
 
 
 /* ===== state.js ===== */
-function createStarterAlly(level = 0){
+function createStarterAlly(allyId = "glenn", level = 0){
+  const key = String(allyId || "glenn").toLowerCase();
+  const baseAlly = ALLY_BASES[key] || GLENN_BASE;
   const lv = clamp(Number(level) || 0, 0, MAX_LEVEL);
-  const maxHp = GLENN_BASE.maxHp + (lv - 1) * 10;
-  const maxMp = GLENN_BASE.maxMp + (lv - 1) * 4;
+  const levelDelta = lv - 1;
+  const maxHp = baseAlly.maxHp + levelDelta * 10;
+  const maxMp = baseAlly.maxMp + levelDelta * 4;
   return {
-    ...GLENN_BASE,
+    ...baseAlly,
     level: lv,
     maxHp,
     maxMp,
     hp: maxHp,
     mp: maxMp,
-    atk: GLENN_BASE.atk + (lv - 1) * 2,
-    def: GLENN_BASE.def + (lv - 1) * 2,
-    spd: GLENN_BASE.spd + (lv - 1),
+    atk: baseAlly.atk + levelDelta * 2,
+    def: baseAlly.def + levelDelta * 2,
+    spd: baseAlly.spd + levelDelta,
     xp: 0,
-    xpToLevel: Math.max(50, 50 + (lv - 1) * 15),
-    activeSkills: GLENN_BASE.activeSkills.map((s) => ({ ...s })),
-    passiveSkill: { ...GLENN_BASE.passiveSkill },
-    basicAttack: { ...GLENN_BASE.basicAttack },
+    xpToLevel: Math.max(50, 50 + levelDelta * 15),
+    activeSkills: (baseAlly.activeSkills || []).map((skill) => ({ ...skill, cdLeft: 0 })),
+    passiveSkill: { ...(baseAlly.passiveSkill || {}) },
+    basicAttack: { ...(baseAlly.basicAttack || {}) },
     equipment: { hand:null, head:null, pant:null, armor:null, shoes:null },
     equipmentBonus: { atk:0, def:0, spd:0, evasion:0 },
     statuses: []
@@ -325,6 +368,7 @@ function newPlayer(){
     gems:0,
     allies: [],
     glennUnlocked: false,
+    elaraUnlocked: false,
     highestStageCleared: 0,
     loginCycleStartDay: dayNumberUtc(),
     loginClaimedDays: [],
@@ -338,6 +382,8 @@ function newPlayer(){
 
 function normalizeAlly(ally){
   if (!ally) return null;
+  const allyId = String(ally.id || ally.name || "glenn").toLowerCase();
+  const baseAlly = ALLY_BASES[allyId] || GLENN_BASE;
   const level = clamp(Number(ally.level) || 0, 0, MAX_LEVEL);
   const maxHp = Math.max(1, Number(ally.maxHp) || 1);
   const maxMp = Math.max(0, Number(ally.maxMp) || 0);
@@ -347,7 +393,10 @@ function normalizeAlly(ally){
   const mp = clamp(Number.isFinite(mpRaw) ? mpRaw : maxMp, 0, maxMp);
   return {
     ...ally,
+    id: ally.id || baseAlly.id,
     level,
+    equipped: ally.equipped !== false,
+    rarity: Math.max(1, Number(ally.rarity) || Number(baseAlly.rarity) || 1),
     maxHp,
     maxMp,
     hp,
@@ -363,34 +412,42 @@ function normalizeAlly(ally){
     escapeChance: Number(ally.escapeChance) || 0,
     manaRegen: Number(ally.manaRegen) || 0,
     statuses: Array.isArray(ally.statuses) ? ally.statuses : [],
-    role: ally.role || "Ally",
-    name: ally.name || "Ally",
-    description: ally.description || "",
-    story: ally.story || "",
+    role: ally.role || baseAlly.role || "Ally",
+    name: ally.name || baseAlly.name || "Ally",
+    description: ally.description || baseAlly.description || "",
+    story: (() => {
+      const rawStory = ally.story || baseAlly.story || "";
+      if ((ally.id || baseAlly.id) === "elara" && /stage\s*10/i.test(rawStory)) {
+        return baseAlly.story || rawStory;
+      }
+      return rawStory;
+    })(),
     xp: Math.max(0, Number(ally.xp) || 0),
     xpToLevel: Math.max(1, Number(ally.xpToLevel) || 50),
     basicAttack: {
-      name: ally.basicAttack?.name || GLENN_BASE.basicAttack.name,
-      desc: ally.basicAttack?.desc || GLENN_BASE.basicAttack.desc
+      name: ally.basicAttack?.name || baseAlly.basicAttack?.name || "Basic Attack",
+      desc: ally.basicAttack?.desc || baseAlly.basicAttack?.desc || ""
     },
     activeSkills: Array.isArray(ally.activeSkills) && ally.activeSkills.length
       ? ally.activeSkills.slice(0, 2).map((skill, idx) => {
-        const skillName = skill?.name || GLENN_BASE.activeSkills[idx]?.name || `Active ${idx + 1}`;
-        const baseRef = GLENN_BASE.activeSkills.find((baseSkill) => baseSkill.name === skillName) || GLENN_BASE.activeSkills[idx] || {};
+        const rawSkillName = skill?.name || baseAlly.activeSkills?.[idx]?.name || `Active ${idx + 1}`;
+        const skillName = rawSkillName === "Spirit Veil" ? "Verdant Sanctuary" : rawSkillName;
+        const baseRef = (baseAlly.activeSkills || []).find((baseSkill) => baseSkill.name === skillName) || baseAlly.activeSkills?.[idx] || {};
         return {
           name: skillName,
+          // Lock gameplay-critical values to base template to avoid legacy save corruption.
           desc: baseRef.desc || skill?.desc || "",
           cooldown: Math.max(1, Number(baseRef.cooldown) || Number(skill?.cooldown) || 1),
           cdLeft: Math.max(0, Number(skill?.cdLeft) || 0),
           power: Math.max(1, Number(baseRef.power) || Number(skill?.power) || 4),
-          mpCost: Math.max(0, Number(baseRef.mpCost) || Number(skill?.mpCost) || 0),
+          mpCost: Math.max(1, Number(baseRef.mpCost) || Number(skill?.mpCost) || 1),
           type: baseRef.type || skill?.type || "damage"
         };
       })
-      : GLENN_BASE.activeSkills.map((skill) => ({ ...skill, cdLeft: 0 })),
+      : (baseAlly.activeSkills || []).map((skill) => ({ ...skill, cdLeft: 0 })),
     passiveSkill: {
-      name: ally.passiveSkill?.name || GLENN_BASE.passiveSkill.name,
-      desc: ally.passiveSkill?.desc || GLENN_BASE.passiveSkill.desc
+      name: ally.passiveSkill?.name || baseAlly.passiveSkill?.name || "Passive",
+      desc: ally.passiveSkill?.desc || baseAlly.passiveSkill?.desc || ""
     },
     equipment: { hand:null, head:null, pant:null, armor:null, shoes:null },
     equipmentBonus: { atk:0, def:0, spd:0, evasion:0 }
@@ -398,12 +455,14 @@ function normalizeAlly(ally){
 }
 
 
+
 function normalizePlayer(p){
   if (!p) return p;
 
   if (!Array.isArray(p.allies)) p.allies = [];
-  p.allies = p.allies.map(normalizeAlly).filter(Boolean).slice(0, 1);
+  p.allies = p.allies.map(normalizeAlly).filter(Boolean).slice(0, MAX_ALLIES);
   if (typeof p.glennUnlocked !== "boolean") p.glennUnlocked = p.allies.some((ally) => ally?.id === "glenn" || ally?.name === "Glenn");
+  if (typeof p.elaraUnlocked !== "boolean") p.elaraUnlocked = p.allies.some((ally) => ally?.id === "elara" || ally?.name === "Elara");
   p.highestStageCleared = Math.max(0, Number(p.highestStageCleared) || 0);
   if (typeof p._allyStarterInit !== "boolean") p._allyStarterInit = false;
 
@@ -1515,14 +1574,16 @@ function renderAllyRow() {
       setBar(hpBar, ally.hp, ally.maxHp);
       setBar(mpBar, ally.mp, ally.maxMp);
       const hpBarWrap = hpBar.parentElement;
-      if (hpBarWrap && ally.hp < prevHp) {
+      if (hpBarWrap && ally.hp !== prevHp) {
+        const cls = ally.hp < prevHp ? "hpPulse" : "hpHealPulse";
+        const alt = ally.hp < prevHp ? "hpHealPulse" : "hpPulse";
         if (hpBarWrap._hpPulseTimer) clearTimeout(hpBarWrap._hpPulseTimer);
-        hpBarWrap.classList.remove("hpPulse");
+        hpBarWrap.classList.remove("hpPulse", "hpHealPulse", alt);
         void hpBarWrap.offsetWidth;
-        hpBarWrap.classList.add("hpPulse");
+        hpBarWrap.classList.add(cls);
         hpBarWrap._hpPulseTimer = setTimeout(() => {
-          hpBarWrap.classList.remove("hpPulse");
-        }, 360);
+          hpBarWrap.classList.remove(cls);
+        }, 420);
       }
       ally._prevHp = ally.hp;
       card.classList.remove("empty");
@@ -1579,7 +1640,7 @@ function updateAllySlotBadge() {
   if (!badgeText) return;
   const allies = Array.isArray(state.allies) ? state.allies : [];
   const filled = allies.filter(Boolean).length;
-  const totalSlots = 1;
+  const totalSlots = MAX_ALLIES;
   badgeText.textContent = `${filled}/${totalSlots}`;
 }
 
@@ -1900,10 +1961,15 @@ function hideSkillFloatingDetail(){
 function showSkillFloatingDetail(skill, anchorEl){
   if (!skill || !anchorEl) return;
   const el = ensureSkillFloatingDetail();
+  const cdLeft = Math.max(0, Number(skill.cdLeft) || 0);
+  const cdMax = Math.max(0, Number(skill.cooldown) || 0);
+  const cdStatus = cdLeft > 0 ? `Cooldown aktif: ${cdLeft} turn` : "Ready";
+  const cdMeta = cdMax > 0 ? `${cdLeft}/${cdMax}` : "-";
   el.innerHTML = `
     <div class="skillFloatingTitle">${escapeHtml(skill.name || "Skill")}</div>
     <div class="skillFloatingDesc">${escapeHtml(skill.desc || "Tidak ada deskripsi.")}</div>
-    <div class="skillFloatingMeta">MP ${skill.mpCost || 0} • DMG ${skill.power || 0} • CD ${skill.cooldown || 0} turn</div>
+    <div class="skillFloatingMeta">MP ${skill.mpCost || 0} • DMG ${skill.power || 0} • CD ${cdMeta}</div>
+    <div class="skillFloatingMeta">Status: ${escapeHtml(cdStatus)}</div>
   `;
   const r = anchorEl.getBoundingClientRect();
   const vw = window.innerWidth || document.documentElement.clientWidth || 360;
@@ -2065,6 +2131,11 @@ const STATUS_DEFS = {
     label: "Poison",
     desc: "Setiap akhir turn target, Max HP berkurang sebesar persentase poison.",
     kind: "debuff",
+  },
+  healingArea: {
+    label: "Healing Area",
+    desc: "Memulihkan HP di akhir turn.",
+    kind: "buff",
   },
 };
 
@@ -2392,14 +2463,16 @@ function refresh(state) {
   const playerHpBar = $("hpBar");
   setBar(playerHpBar, p.hp, p.maxHp);
   const playerHpBarWrap = playerHpBar ? playerHpBar.parentElement : null;
-  if (playerHpBarWrap && p.hp < prevPlayerHp) {
+  if (playerHpBarWrap && p.hp !== prevPlayerHp) {
+    const cls = p.hp < prevPlayerHp ? "hpPulse" : "hpHealPulse";
+    const alt = p.hp < prevPlayerHp ? "hpHealPulse" : "hpPulse";
     if (playerHpBarWrap._hpPulseTimer) clearTimeout(playerHpBarWrap._hpPulseTimer);
-    playerHpBarWrap.classList.remove("hpPulse");
+    playerHpBarWrap.classList.remove("hpPulse", "hpHealPulse", alt);
     void playerHpBarWrap.offsetWidth;
-    playerHpBarWrap.classList.add("hpPulse");
+    playerHpBarWrap.classList.add(cls);
     playerHpBarWrap._hpPulseTimer = setTimeout(() => {
-      playerHpBarWrap.classList.remove("hpPulse");
-    }, 360);
+      playerHpBarWrap.classList.remove(cls);
+    }, 420);
   }
   p._prevHp = p.hp;
   setBar($("mpBar"), p.mp, p.maxMp);
@@ -2691,28 +2764,51 @@ function ensureQuestState(){
   p.questWeekly.wins = Math.max(0, Number(p.questWeekly.wins) || 0);
   p.questDaily.claimed = !!p.questDaily.claimed;
   p.questWeekly.claimed = !!p.questWeekly.claimed;
+function hasElaraUnlockRequirements(){
+  const player = state.player;
+  if (!player) return false;
+  return (Number(player.highestStageCleared) || 0) >= 10;
+}
+
+function ensureElaraUnlockState({ source = "" } = {}){
+  if (!state.player) return false;
+  if (state.player.elaraUnlocked) return true;
+  if (!hasElaraUnlockRequirements()) return false;
+  state.player.elaraUnlocked = true;
+  addLog("ALLY", `Elara bergabung! (${source || "Syarat terpenuhi"})`);
+  return true;
 }
 
 function ensureAllies(){
   if (!state.player) return [];
   ensureGlennUnlockState();
+  ensureElaraUnlockState();
   if (!Array.isArray(state.player.allies)) state.player.allies = [];
-  state.player.allies = state.player.allies.map(normalizeAlly).filter(Boolean);
-  if (state.player.allies.length > 1) state.player.allies = [state.player.allies[0]];
-  if (!state.player.glennUnlocked) {
-    state.player.allies = [];
-  } else if (!state.player.allies.length) {
-    state.player.allies.push(normalizeAlly(createStarterAlly(0)));
+
+  const existing = state.player.allies.map(normalizeAlly).filter(Boolean);
+  const allyMap = new Map(existing.map((ally) => [String(ally.id || ally.name || "").toLowerCase(), ally]));
+
+  if (state.player.glennUnlocked && !allyMap.has("glenn")) {
+    allyMap.set("glenn", normalizeAlly(createStarterAlly("glenn", 0)));
   }
-  if (state.player.glennUnlocked && state.player.allies[0] && state.player.allies[0].id !== "glenn") {
-    state.player.allies[0] = normalizeAlly({ ...createStarterAlly(0), ...state.player.allies[0], id:"glenn", name:"Glenn", level:0, xp:0 });
+
+  if (state.player.elaraUnlocked && !allyMap.has("elara")) {
+    allyMap.set("elara", normalizeAlly(createStarterAlly("elara", 0)));
   }
-  if (state.player.glennUnlocked && !state.player._allyStarterInit) {
-    state.player.allies[0] = normalizeAlly({ ...createStarterAlly(0), id:"glenn", name:"Glenn" });
-    state.player._allyStarterInit = true;
-  }
-  state.allies = state.player.allies;
+
+  const ordered = ["glenn", "elara"]
+    .map((id) => allyMap.get(id))
+    .filter(Boolean)
+    .concat(Array.from(allyMap.entries()).filter(([id]) => !["glenn", "elara"].includes(id)).map(([, ally]) => ally));
+
+  state.player.allies = ordered.slice(0, MAX_ALLIES).map((ally) => normalizeAlly(ally));
+  state.allies = state.player.allies.filter((ally) => ally && ally.equipped !== false);
   return state.allies;
+}
+
+function getRosterAllies(){
+  ensureAllies();
+  return Array.isArray(state.player?.allies) ? state.player.allies : [];
 }
 
 function restoreAllies(){
@@ -2758,6 +2854,11 @@ function getAllyVisual(ally, idx = 0){
   return { icon, background };
 }
 
+function formatRarity(ally){
+  const rarity = clamp(Number(ally?.rarity) || 1, 1, 6);
+  return "★".repeat(rarity);
+}
+
 function setAllyPageVisible(show){
   const page = byId("allyPage");
   const marketPage = byId("marketPage");
@@ -2787,7 +2888,7 @@ function setAllyPageVisible(show){
 
 
 function levelUpAlly(allyIndex){
-  const ally = ensureAllies()[allyIndex];
+  const ally = getRosterAllies()[allyIndex];
   if (!ally) return { ok:false, message:"Ally tidak ditemukan." };
   if ((ally.level || 0) >= MAX_LEVEL) return { ok:false, message:"Level Glenn sudah maksimal." };
   const cost = (ally.level + 1) * 120;
@@ -2809,6 +2910,17 @@ function levelUpAlly(allyIndex){
   return { ok:true, message:`Glenn naik ke level ${ally.level}!` };
 }
 
+function toggleAllyEquip(allyIndex){
+  const roster = getRosterAllies();
+  const ally = roster[allyIndex];
+  if (!ally) return { ok:false, message:"Ally tidak ditemukan." };
+  ally.equipped = !(ally.equipped !== false);
+  ensureAllies();
+  autosave(state);
+  refresh(state);
+  return { ok:true, message: `${ally.name} ${ally.equipped ? "dipakai" : "disimpan"}.` };
+}
+
 function openAllyDetailPopup(ally, idx = 0){
   const popup = byId("allyDetailPopup");
   if (!popup || !ally) return;
@@ -2816,6 +2928,7 @@ function openAllyDetailPopup(ally, idx = 0){
   const avatar = byId("allyDetailAvatar");
   const name = byId("allyDetailName");
   const role = byId("allyDetailRole");
+  const rarityEl = byId("allyDetailRarity");
   const stats = byId("allyDetailStats");
   const desc = byId("allyDetailDesc");
   const story = byId("allyDetailStory");
@@ -2823,6 +2936,7 @@ function openAllyDetailPopup(ally, idx = 0){
   const active = byId("allyActiveSkills");
   const passive = byId("allyPassiveSkill");
   const levelBtn = byId("allyDetailLevelUp");
+  const equipBtn = byId("allyDetailEquip");
   const progress = byId("allyDetailProgress");
   const xpText = byId("allyDetailXpText");
   const xpBar = byId("allyDetailXpBar");
@@ -2832,6 +2946,7 @@ function openAllyDetailPopup(ally, idx = 0){
   }
   if (name) name.textContent = ally.name || `Ally ${idx + 1}`;
   if (role) role.textContent = `${ally.role || "Ally"} • Lv ${ally.level ?? 0}/10`;
+  if (rarityEl) rarityEl.textContent = formatRarity(ally);
   if (stats) {
     const rows = [
       ["HP", `${ally.hp}/${ally.maxHp}`],
@@ -2851,17 +2966,22 @@ function openAllyDetailPopup(ally, idx = 0){
   if (desc) desc.textContent = ally.description || "Belum ada deskripsi.";
   if (story) story.textContent = ally.story || "Belum ada story.";
   if (basic) basic.innerHTML = `<h5>${escapeHtml(ally.basicAttack?.name || "Basic Attack")}</h5><p>${escapeHtml(ally.basicAttack?.desc || "-")}</p>`;
+  if (passive) {
+    passive.innerHTML = `<h5>${escapeHtml(ally.passiveSkill?.name || "Passive")}</h5><p>${escapeHtml(ally.passiveSkill?.desc || "-")}</p>`;
+  }
   if (active) {
-    active.innerHTML = (ally.activeSkills || []).slice(0, 2).map((skill, i) => `
+    active.innerHTML = (ally.activeSkills || []).slice(0, 2).map((skill, i) => {
+      const cdLeft = Math.max(0, Number(skill?.cdLeft) || 0);
+      const cdMax = Math.max(0, Number(skill?.cooldown) || 1);
+      const cdLabel = cdLeft > 0 ? `Cooldown ${cdLeft}/${cdMax}` : `Ready (0/${cdMax})`;
+      return `
       <div class="allySkillCard">
         <h5>${escapeHtml(skill.name || `Active ${i + 1}`)}</h5>
         <p>${escapeHtml(skill.desc || "-")}</p>
-        <span class="allySkillCooldown">Cooldown ${escapeHtml(String(skill.cooldown || 1))} turn</span>
+        <span class="allySkillCooldown">${escapeHtml(cdLabel)}</span>
       </div>
-    `).join("");
-  }
-  if (passive) {
-    passive.innerHTML = `<h5>${escapeHtml(ally.passiveSkill?.name || "Passive")}</h5><p>${escapeHtml(ally.passiveSkill?.desc || "-")}</p>`;
+    `;
+    }).join("");
   }
   if (progress) {
     progress.textContent = `Progress Level: Lv ${ally.level ?? 0}/10`;
@@ -2884,7 +3004,17 @@ function openAllyDetailPopup(ally, idx = 0){
           () => modal.close()
         );
       }
-      openAllyDetailPopup(ensureAllies()[idx], idx);
+      openAllyDetailPopup(getRosterAllies()[idx], idx);
+      renderAllyPage();
+    };
+  }
+  if (equipBtn) {
+    equipBtn.textContent = ally.equipped !== false ? "Unequip" : "Equip";
+    equipBtn.classList.toggle("active", ally.equipped !== false);
+    equipBtn.onclick = () => {
+      const result = toggleAllyEquip(idx);
+      addLog(result.ok ? "INFO" : "WARN", result.message);
+      openAllyDetailPopup(getRosterAllies()[idx], idx);
       renderAllyPage();
     };
   }
@@ -2903,7 +3033,7 @@ function renderAllyPage(){
   ensureAllies();
   const grid = byId("allyGrid");
   if (!grid) return;
-  const allies = Array.isArray(state.player?.allies) ? state.player.allies : [];
+  const allies = getRosterAllies();
   if (!allies.length) {
     const p = state.player || {};
     const stageProgress = Math.min(7, Number(p.highestStageCleared) || 0);
@@ -2917,12 +3047,12 @@ function renderAllyPage(){
     const visual = getAllyVisual(ally, idx);
     const card = document.createElement("button");
     card.type = "button";
-    card.className = "allyAvatarCard";
+    card.className = `allyAvatarCard${ally.equipped !== false ? " equipped" : ""}`;
     card.innerHTML = `
       <div class="allyAvatarLevel">${escapeHtml(String(ally.level ?? 0))}</div>
       <div class="allyAvatarPortrait" style="background:${escapeHtml(visual.background)}">${escapeHtml(visual.icon)}</div>
       <div class="allyAvatarName">${escapeHtml(ally.name || `Ally ${idx + 1}`)}</div>
-      <div class="allyAvatarMeta">${escapeHtml(ally.role || "Ally")}</div>
+      <div class="allyAvatarRarity">${escapeHtml(formatRarity(ally))}</div>
     `;
     card.onclick = () => openAllyDetailPopup(ally, idx);
     grid.appendChild(card);
@@ -2975,6 +3105,17 @@ function applyPoisonAtTurnEnd(entity){
   return beforeMaxHp - entity.maxHp;
 }
 
+function applyHealingAreaAtTurnEnd(entity){
+  if (!entity || !Array.isArray(entity.statuses) || typeof entity.hp !== "number") return 0;
+  const regenStatus = entity.statuses.find((st) => st.type === "healingArea" && (st.turns || 0) > 0);
+  if (!regenStatus || regenStatus.justApplied) return 0;
+  const pct = Math.max(0, Number(regenStatus.pct || 2));
+  const heal = Math.max(1, Math.floor((entity.maxHp || 0) * pct / 100));
+  const before = entity.hp;
+  entity.hp = clamp((entity.hp || 0) + heal, 0, entity.maxHp || 0);
+  return Math.max(0, entity.hp - before);
+}
+
 function hasStatus(entity, type){
   return ensureStatuses(entity).find((s) => s.type === type && (s.turns || 0) > 0);
 }
@@ -2985,6 +3126,13 @@ function tickStatuses(entity){
   if (poisonLoss > 0) {
     const label = entity === state.player ? "Kamu" : (entity.name || "Target");
     addLog("DEBUFF", `${label} terkena Poison: Max HP -${poisonLoss}.`);
+  }
+  const healGain = applyHealingAreaAtTurnEnd(entity);
+  if (healGain > 0) {
+    const label = entity === state.player ? "Kamu" : (entity.name || "Target");
+    addLog("GOOD", `${label} dipulihkan +${healGain} HP dari area regenerasi.`);
+    if (entity === state.player) showDamageText("player", `+${healGain}`);
+    else showAllyDamageText(`+${healGain}`, entity);
   }
   let removed = 0;
   entity.statuses = entity.statuses
@@ -3023,6 +3171,20 @@ function applyManaRegen(entity){
   const before = entity.mp;
   entity.mp = clamp(entity.mp + regen, 0, entity.maxMp || 0);
   return entity.mp - before;
+}
+
+function applyElaraPassiveManaRegen(){
+  const elara = getAliveAllies().find((ally) => String(ally?.id || "").toLowerCase() === "elara");
+  if (!elara) return;
+  const targets = [state.player, ...getAliveAllies()];
+  let total = 0;
+  targets.forEach((target) => {
+    if (!target || typeof target.mp !== "number") return;
+    const before = target.mp;
+    target.mp = clamp((target.mp || 0) + 2, 0, target.maxMp || 0);
+    total += Math.max(0, target.mp - before);
+  });
+  if (total > 0) addLog("GOOD", "Forest Whisper aktif: MP party +2.");
 }
 
 function applyDamageAfterDelay(target, dmg, slashTarget, delay = 200){
@@ -3913,6 +4075,7 @@ function beginPlayerTurn(){
     return false;
   }
   applyManaRegen(state.player);
+  applyElaraPassiveManaRegen();
   refresh(state);
   return true;
 }
@@ -4189,6 +4352,7 @@ function winBattle() {
   if (Number.isFinite(stageNumber) && stageNumber > 0) {
     state.player.highestStageCleared = Math.max(Number(state.player.highestStageCleared) || 0, stageNumber);
     ensureGlennUnlockState({ source: `Stage ${stageNumber} clear` });
+    ensureElaraUnlockState({ source: `Stage ${stageNumber} clear` });
   }
 
   const summary = { outcome: "win", gold: goldGain, xp: xpGain, drops, enemyName: e.name, expProgress };
@@ -4367,6 +4531,35 @@ function handleEnemyDefeat(){
   return true;
 }
 
+function resolveAllySkillValues(ally, skill){
+  if (!ally || !skill) return { mpCost: 1, cooldown: 1, cdLeft: 0, skillRef: skill || null };
+  const baseAlly = ALLY_BASES[String(ally?.id || "").toLowerCase()] || {};
+  const skillList = Array.isArray(ally?.activeSkills) ? ally.activeSkills : [];
+  const skillIdx = skillList.indexOf(skill);
+  const skillRef = skillIdx >= 0 ? skillList[skillIdx] : skill;
+
+  // Priority: exact name match first, then fallback by slot index (for legacy saves)
+  const nameBaseSkill = (baseAlly.activeSkills || []).find((s) => s?.name === skillRef.name) || null;
+  const idxBaseSkill = skillIdx >= 0 ? (baseAlly.activeSkills || [])[skillIdx] : null;
+  const baseSkill = nameBaseSkill || idxBaseSkill || null;
+
+  const rawMpCost = Number(skillRef.mpCost);
+  const rawCooldown = Number(skillRef.cooldown);
+
+  const baseMpCost = Math.max(1, Number(baseSkill?.mpCost) || 1);
+  const baseCooldown = Math.max(1, Number(baseSkill?.cooldown) || 1);
+
+  // If base template exists, lock to base values to prevent legacy/bad runtime values causing spam.
+  const mpCost = baseSkill ? baseMpCost : (rawMpCost > 0 ? rawMpCost : 1);
+  const cooldown = baseSkill ? baseCooldown : (rawCooldown > 0 ? rawCooldown : 1);
+
+  const cdLeft = Math.max(0, Number(skillRef.cdLeft) || 0);
+  skillRef.mpCost = mpCost;
+  skillRef.cooldown = cooldown;
+  skillRef.cdLeft = cdLeft;
+  return { mpCost, cooldown, cdLeft, skillRef };
+}
+
 function alliesAct(done){
   const allies = getAliveAllies()
     .slice()
@@ -4376,9 +4569,24 @@ function alliesAct(done){
     return;
   }
 
+  const resolveRuntimeAlly = (snapshotAlly) => {
+    const key = String(snapshotAlly?.id || snapshotAlly?.name || "").toLowerCase();
+    const liveAllies = getAliveAllies();
+    if (!liveAllies.length) return null;
+    if (key) {
+      const found = liveAllies.find((ally) => String(ally?.id || ally?.name || "").toLowerCase() === key);
+      if (found) return found;
+    }
+    return liveAllies.find((ally) => ally === snapshotAlly) || null;
+  };
+
   const pickAllySkill = (ally) => {
     const skills = Array.isArray(ally?.activeSkills) ? ally.activeSkills : [];
-    const ready = skills.filter((skill) => skill && (skill.cdLeft || 0) <= 0 && (ally.mp || 0) >= (skill.mpCost || 0));
+    const ready = skills.filter((skill) => {
+      if (!skill) return false;
+      const vals = resolveAllySkillValues(ally, skill);
+      return vals.cdLeft <= 0 && (ally.mp || 0) >= vals.mpCost;
+    });
     if (!ready.length) return null;
     if (ready.length === 1) return ready[0];
     return Math.random() < 0.55 ? ready[0] : ready[1];
@@ -4388,61 +4596,112 @@ function alliesAct(done){
   const baseDelay = 260;
   const orderGap = ALLY_ACTION_GAP_MS;
   let lastDelay = 0;
-  allies.forEach((ally, index) => {
-    const spd = Number(ally.spd) || 0;
+  allies.forEach((allySnapshot, index) => {
+    const spd = Number(allySnapshot.spd) || 0;
     const speedLag = Math.max(0, maxSpd - spd) * 20;
     const delay = baseDelay + (index * orderGap) + speedLag;
     lastDelay = Math.max(lastDelay, delay);
     setTimeout(() => {
-      const currentTarget = getTargetEnemy();
-      if (!currentTarget || ally.hp <= 0) return;
+      const ally = resolveRuntimeAlly(allySnapshot);
+      if (!ally || ally.hp <= 0) return;
       if (hasStatus(ally, "stun")) {
         addLog("ALLY", `${ally.name} terkena Stun dan tidak bisa bergerak.`);
         tickStatuses(ally);
         refresh(state);
         return;
       }
-      const targetIndex = getEnemyIndex(currentTarget);
-      if (targetIndex < 0) return;
 
-      const skill = pickAllySkill(ally);
+      let skill = pickAllySkill(ally);
       let basePower = 3;
+      let usedSupportSkill = false;
       if (skill) {
-        ally.mp = clamp((ally.mp || 0) - (skill.mpCost || 0), 0, ally.maxMp || 0);
-        skill.cdLeft = skill.cooldown || 0;
-        basePower = Math.max(3, Number(skill.power) || 3);
+        const vals = resolveAllySkillValues(ally, skill);
+        if (vals.cdLeft > 0 || (ally.mp || 0) < vals.mpCost) {
+          skill = null;
+        }
+      }
+      if (skill) {
+        const vals = resolveAllySkillValues(ally, skill);
+        const skillRef = vals.skillRef || skill;
+        ally.mp = clamp((ally.mp || 0) - vals.mpCost, 0, ally.maxMp || 0);
+        skillRef.cdLeft = vals.cooldown;
+        basePower = Math.max(3, Number(skillRef.power) || 3);
+        skill = skillRef;
         addLog("SKILL", `${ally.name} • ${skill.name}`);
       }
 
-      const res = resolveAttack(ally, currentTarget, basePower);
-      if (res.missed) {
-        addLog("ALLY", `${ally.name} meleset.`);
-        tickStatuses(ally);
-        refresh(state);
-        return;
+      if (skill?.type === "heal") {
+        usedSupportSkill = true;
+        const alliesNow = getAliveAllies();
+        const party = [state.player, ...alliesNow];
+        party.forEach((member) => {
+          if (!member || typeof member.hp !== "number") return;
+          const healAmount = Math.max(1, Math.floor((ally.maxHp || 0) * 0.18));
+          const beforeHp = member.hp;
+          member.hp = clamp(member.hp + healAmount, 0, member.maxHp || 0);
+          const gained = Math.max(0, member.hp - beforeHp);
+          if (gained > 0) {
+            if (member === state.player) showDamageText("player", `+${gained}`);
+            else showAllyDamageText(`+${gained}`, member);
+          }
+        });
+        addLog("ALLY", `${ally.name} menggunakan ${skill.name}! Party dipulihkan.`);
+      } else if (skill?.type === "regen") {
+        usedSupportSkill = true;
+        const alliesNow = getAliveAllies();
+        const party = [state.player, ...alliesNow];
+        party.forEach((member) => addStatusEffect(member, { type: "healingArea", turns: 2, pct: 2, debuff: false }));
+        addLog("ALLY", `${ally.name} menciptakan area regenerasi untuk party selama 2 turn.`);
       }
 
-      if (res.dmg > 0) {
-        currentTarget.hp = clamp(currentTarget.hp - res.dmg, 0, currentTarget.maxHp);
-        playEnemyCritShake(targetIndex);
-      }
-      if (skill?.type === "buff") {
-        addStatusEffect(ally, { type: "guardStance", turns: 2, debuff: false });
-        addStatusEffect(ally, { type: "stance", turns: 2, debuff: false });
-      }
-      if (skill?.type === "debuff") {
-        addStatusEffect(currentTarget, { type: "armorBreak", turns: 2, debuff: true });
-      }
+      let res = null;
+      let targetIndex = -1;
+      if (!usedSupportSkill) {
+        const currentTarget = getTargetEnemy();
+        if (!currentTarget) {
+          tickStatuses(ally);
+          refresh(state);
+          return;
+        }
+        targetIndex = getEnemyIndex(currentTarget);
+        if (targetIndex < 0) {
+          tickStatuses(ally);
+          refresh(state);
+          return;
+        }
 
-      if (res.reflected > 0) {
-        ally.hp = clamp(ally.hp - res.reflected, 0, ally.maxHp);
-        addLog("ALLY", `${ally.name} terkena pantulan ${res.reflected} damage.`);
+        res = resolveAttack(ally, currentTarget, basePower);
+        if (res.missed) {
+          addLog("ALLY", `${ally.name} meleset.`);
+          tickStatuses(ally);
+          refresh(state);
+          return;
+        }
+
+        if (res.dmg > 0) {
+          currentTarget.hp = clamp(currentTarget.hp - res.dmg, 0, currentTarget.maxHp);
+          playEnemyCritShake(targetIndex);
+        }
+        if (skill?.type === "buff") {
+          addStatusEffect(ally, { type: "guardStance", turns: 2, debuff: false });
+          addStatusEffect(ally, { type: "stance", turns: 2, debuff: false });
+        }
+        if (skill?.type === "debuff") {
+          addStatusEffect(currentTarget, { type: "armorBreak", turns: 2, debuff: true });
+        }
+
+        if (res.reflected > 0) {
+          ally.hp = clamp(ally.hp - res.reflected, 0, ally.maxHp);
+          addLog("ALLY", `${ally.name} terkena pantulan ${res.reflected} damage.`);
+        }
+        addLog("ALLY", `${ally.name} ${skill ? `menggunakan ${skill.name}` : "menyerang"}! Damage ${res.dmg}.`);
       }
-      addLog("ALLY", `${ally.name} ${skill ? `menggunakan ${skill.name}` : "menyerang"}! Damage ${res.dmg}.`);
       tickStatuses(ally);
-      setTimeout(() => {
-        showEnemyDamageText(formatDamageText(res, res.dmg), targetIndex);
-      }, skill ? 260 : 0);
+      if (res) {
+        setTimeout(() => {
+          showEnemyDamageText(formatDamageText(res, res.dmg), targetIndex);
+        }, skill ? 260 : 0);
+      }
       refresh(state);
     }, delay);
   });
@@ -5449,12 +5708,14 @@ function openAllyStatsModal(ally) {
     });
 
     (ally.activeSkills || []).forEach((skill, idx) => {
+      const cdLeft = Math.max(0, Number(skill?.cdLeft) || 0);
+      const cdMax = Math.max(0, Number(skill?.cooldown) || 0);
       cards.push({
         title: `Active ${idx + 1} • ${skill.name || "Skill"}`,
         iconFrameOnly: true,
-        cooldownBadge: (skill.cdLeft || 0) > 0 ? `${skill.cdLeft}` : "",
-        descHtml: `${escapeHtml(skill.desc || "-")}<br><span class="muted">MP ${skill.mpCost || 0} • Power ${skill.power || 0} • CD ${skill.cdLeft || 0}/${skill.cooldown || 0}</span>`,
-        meta: (skill.cdLeft || 0) > 0 ? `CD ${skill.cdLeft}` : "READY",
+        cooldownBadge: cdLeft > 0 ? `${cdLeft}` : "",
+        descHtml: `${escapeHtml(skill.desc || "-")}<br><span class="muted">MP ${skill.mpCost || 0} • Power ${skill.power || 0} • CD ${cdLeft}/${cdMax}</span>`,
+        meta: cdLeft > 0 ? `CD ${cdLeft}` : "READY",
         value: undefined,
         className: "allySkillRow allySkillCardRow",
         keepOpen: true,
@@ -5981,6 +6242,94 @@ function setAuthMsg(msg, isError=false){
   el.style.color = isError ? "#ffb4b4" : "";
 }
 
+function setAuthLoading(show, message=""){
+  const loader = byId("authLoading");
+  const textEl = byId("authLoadingText");
+  const userEl = byId("authUser");
+  const passEl = byId("authPass");
+  const btnLogin = byId("authLogin");
+  const btnRegister = byId("authRegister");
+
+  if (loader) loader.classList.toggle("hidden", !show);
+  if (textEl && message) textEl.textContent = message;
+
+  [userEl, passEl, btnLogin, btnRegister].forEach((el) => {
+    if (!el) return;
+    el.disabled = !!show;
+  });
+}
+
+const PRELOAD_ASSET_URLS = [
+  "./assets/logo.svg",
+  "./assets/ui/skill-frame.png",
+  "./assets/enemies/slime.png",
+  "./assets/enemies/goblin.png",
+  "./assets/enemies/bandit1.png",
+  "./assets/enemies/leaderbandit.png",
+  "./assets/enemies/wolf.png",
+  "./assets/enemies/skeleton.png",
+  "./assets/icons/coin.svg",
+  "./assets/icons/gem.svg",
+  "./assets/icons/mp.svg",
+  "./assets/icons/weapon.svg",
+  "./assets/icons/head.svg",
+  "./assets/icons/armor.svg",
+  "./assets/icons/pant.svg",
+  "./assets/icons/shoes.svg",
+  "./assets/icons/gender-male.svg",
+  "./assets/icons/gender-female.svg",
+  "./assets/icons/fire.svg",
+  "./assets/icons/wind.svg",
+  "./assets/icons/lightning.svg",
+  "./assets/icons/earth.svg",
+  "./assets/icons/water.svg",
+  "./assets/icons/physical.svg",
+  "./assets/icons/universal.svg",
+  "./assets/skills/fireball.svg",
+  "./assets/skills/spark.svg",
+  "./assets/skills/meteor.svg",
+  "./assets/skills/frost-bite.svg",
+  "./assets/skills/shadow-cut.svg",
+  "./assets/skills/earth-spike.svg"
+];
+
+let assetWarmupPromise = null;
+
+function preloadAsset(url){
+  if (!url) return Promise.resolve();
+  const cleanUrl = String(url).split("?")[0];
+  const isImage = /\.(png|jpe?g|gif|webp|svg)$/i.test(cleanUrl);
+
+  if (isImage){
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve();
+      img.onerror = () => resolve();
+      img.src = url;
+      if (img.decode) img.decode().then(resolve).catch(resolve);
+    });
+  }
+
+  return fetch(url, { cache: "force-cache" }).then(() => void 0).catch(() => void 0);
+}
+
+function warmupAssets(onProgress){
+  if (assetWarmupPromise) return assetWarmupPromise;
+
+  const urls = Array.from(new Set(PRELOAD_ASSET_URLS.filter(Boolean)));
+  const total = urls.length;
+  let loaded = 0;
+
+  assetWarmupPromise = urls.reduce((chain, url) => {
+    return chain.then(() => preloadAsset(url)).then(() => {
+      loaded += 1;
+      if (typeof onProgress === "function") onProgress(loaded, total);
+    });
+  }, Promise.resolve());
+
+  return assetWarmupPromise;
+}
+
 
 let pendingCreateSlot = 0;
 let selectedCharSlot = 0;
@@ -6298,6 +6647,7 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
   refresh(state);
 
   // Show character menu
+  setAuthLoading(false);
   showAuth(false);
   openCharacterMenu();
 
@@ -6335,23 +6685,37 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
       return;
     }
 
+    setAuthLoading(true, "Login...");
     setAuthMsg("Login...", false);
 
-    const { res, data } = await apiJson("/api/login", {
-      method: "POST",
-      body: JSON.stringify({ username, password })
-    });
+    try {
+      const { res, data } = await apiJson("/api/login", {
+        method: "POST",
+        body: JSON.stringify({ username, password })
+      });
 
-    if (!res.ok){
-      setAuthMsg(data?.message || "Login gagal.", true);
-      return;
+      if (!res.ok){
+        setAuthMsg(data?.message || "Login gagal.", true);
+        setAuthLoading(false);
+        return;
+      }
+
+      setAuthLoading(true, "Menyiapkan assets game...");
+      await warmupAssets((loaded, total) => {
+        setAuthLoading(true, `Menyiapkan assets game... (${loaded}/${total})`);
+      });
+
+      // refresh cached user after cookie is set
+      cloudUserCache = null;
+      await ensureCloudUser();
+
+      setAuthLoading(true, "Memuat profile cloud...");
+      await syncCloudOrLocalAndShowCharacterMenu();
+    } catch (e) {
+      console.error("[AUTH LOGIN] error", e);
+      setAuthMsg("Terjadi kendala saat login. Coba lagi.", true);
+      setAuthLoading(false);
     }
-
-    // refresh cached user after cookie is set
-    cloudUserCache = null;
-    await ensureCloudUser();
-
-    await syncCloudOrLocalAndShowCharacterMenu();
   };
 
   const doRegister = async () => {
@@ -6361,20 +6725,28 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
       return;
     }
 
+    setAuthLoading(true, "Membuat akun...");
     setAuthMsg("Register...", false);
 
-    const { res, data } = await apiJson("/api/register", {
-      method: "POST",
-      body: JSON.stringify({ username, password })
-    });
+    try {
+      const { res, data } = await apiJson("/api/register", {
+        method: "POST",
+        body: JSON.stringify({ username, password })
+      });
 
-    if (!res.ok){
-      setAuthMsg(data?.message || "Register gagal.", true);
-      return;
+      if (!res.ok){
+        setAuthMsg(data?.message || "Register gagal.", true);
+        setAuthLoading(false);
+        return;
+      }
+
+      // auto login after register
+      await doLogin();
+    } catch (e) {
+      console.error("[AUTH REGISTER] error", e);
+      setAuthMsg("Terjadi kendala saat register. Coba lagi.", true);
+      setAuthLoading(false);
     }
-
-    // auto login after register
-    await doLogin();
   };
 
   if (btnLogin) btnLogin.onclick = () => doLogin();
@@ -6393,13 +6765,19 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
       setAuthMsg("Cek login...", false);
       const me = await ensureCloudUser();
       if (me){
+        setAuthLoading(true, "Login terdeteksi. Menyiapkan assets...");
+        await warmupAssets((loaded, total) => {
+          setAuthLoading(true, `Login terdeteksi. Menyiapkan assets... (${loaded}/${total})`);
+        });
         setAuthMsg("Login terdeteksi. Memuat save...", false);
         await syncCloudOrLocalAndShowCharacterMenu();
       }else{
+        setAuthLoading(false);
         setAuthMsg("Silakan login / register untuk cloud save.", false);
       }
     }catch(e){
       console.error("[AUTH INIT] error", e);
+      setAuthLoading(false);
       setAuthMsg("Gagal cek session. Silakan login.", true);
     }
   })();
