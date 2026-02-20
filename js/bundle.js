@@ -31,7 +31,22 @@ const ITEMS = {
   banditsDagger: { name:"Bandit's Dagger", kind:"gear", slot:"hand", desc:"Dagger bandit. Basic attack punya 25% chance memberi Poison 3% selama 1 turn.", atk:17, level:10, basicPoisonChance:25, poisonPct:3, poisonTurns:1 },
   banditsHood: { name:"Bandit's Hood", kind:"gear", slot:"head", desc:"Hood bandit yang meningkatkan evasion.", evasion:4, level:10 },
   banditsArmour: { name:"Bandit's Armour", kind:"gear", slot:"armor", desc:"Armor bandit dengan pertahanan tinggi dan sedikit speed.", def:10, spd:2, level:10 },
-  banditsBoots: { name:"Bandit's Boots", kind:"gear", slot:"shoes", desc:"Boots bandit yang sangat ringan.", spd:7, level:10 }
+  banditsBoots: { name:"Bandit's Boots", kind:"gear", slot:"shoes", desc:"Boots bandit yang sangat ringan.", spd:7, level:10 },
+  wyrmScale: { name:"Wyrm Scale", kind:"material", desc:"Sisik naga purba yang masih menyimpan panas mana." },
+  moltenCore: { name:"Molten Core", kind:"material", desc:"Inti bara dari Ancient Wyrm." },
+  behemothHorn: { name:"Behemoth Horn", kind:"material", desc:"Tanduk keras milik Crimson Behemoth." },
+  bloodCrystal: { name:"Blood Crystal", kind:"material", desc:"Kristal merah pekat yang memuat energi brutal." },
+  eclipsedRunebreaker: {
+    name:"Eclipsed Runebreaker",
+    kind:"gear",
+    slot:"hand",
+    desc:"Pedang transenden hasil fusi Rune Blade dan relic boss. Saat tebasan dasar mengenai target, aura eclipse-nya menyesatkan pandangan musuh dan menurunkan Accuracy mereka 20%.",
+    atk:25,
+    penetrationDef:7,
+    basicAccDownPct:20,
+    basicAccDownTurns:1,
+    level:1,
+  }
 };
 const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton"];
 const ENEMY_AVATARS = {
@@ -249,7 +264,9 @@ function resolveAttack(att, def, basePower, opts = {}) {
   // opts: { dodgeBonus: number }
   const dodgeBonus = opts.dodgeBonus || 0;
 
-  const evasion = clamp((def.evasion || 0) + dodgeBonus, 0, 95);
+  const accuracyDown = hasStatus(att, "accuracyDown") ? 0.8 : 1;
+  const effectiveAcc = Math.max(0, (att.acc || 0) * accuracyDown);
+  const evasion = clamp(((def.evasion || 0) + dodgeBonus) - effectiveAcc, 0, 95);
   const rollEv = randInt(1, 100);
   if (rollEv <= evasion) {
     return { missed: true, crit: false, combustion: false, dmg: 0, evasion, rollEv, rollCrit: null, rollComb: null };
@@ -260,7 +277,8 @@ function resolveAttack(att, def, basePower, opts = {}) {
     : (att.atk || 0);
   const guardDefBoost = hasStatus(def, "guardStance") ? Math.round((def.def || 0) * 0.35) : 0;
   const armorBreakPenalty = hasStatus(def, "armorBreak") ? Math.round((def.def || 0) * 0.15) : 0;
-  const effectiveDef = Math.max(0, (def.def || 0) + guardDefBoost - armorBreakPenalty);
+  const penetrationDef = Math.max(0, Number(att.penetrationDef || 0));
+  const effectiveDef = Math.max(0, (def.def || 0) + guardDefBoost - armorBreakPenalty - penetrationDef);
   let dmg = calcDamage(atkPower, effectiveDef, basePower, false);
 
   const critChance = clamp(att.critChance || 0, 0, 100);
@@ -354,13 +372,14 @@ function newPlayer(){
     hp:60, mp:25,
     atk:10, def:4, spd:7,
     acc:0,
+    penetrationDef:0,
     critChance:5, critDamage:0, combustionChance:0, evasion:5,
     manaRegen:5,
     blockRate:0,
     escapeChance:0,
     statuses: [],
     equipment: { hand:null, head:null, pant:null, armor:null, shoes:null },
-    equipmentBonus: { atk:0, def:0, spd:0, evasion:0 },
+    equipmentBonus: { atk:0, def:0, spd:0, evasion:0, penetrationDef:0 },
 
     deprecatedSkillCooldown:0,
     xp:0, xpToLevel:50,
@@ -487,6 +506,7 @@ function normalizePlayer(p){
 
   // Derived / combat stats
   if (typeof p.acc !== "number") p.acc = 0;
+  if (typeof p.penetrationDef !== "number") p.penetrationDef = 0;
   if (typeof p.combustionChance !== "number") p.combustionChance = 0;
 
   if (typeof p.critDamage !== "number") {
@@ -513,12 +533,13 @@ function normalizePlayer(p){
     p.equipment.shoes ??= null;
   }
   if (!p.equipmentBonus || typeof p.equipmentBonus !== "object") {
-    p.equipmentBonus = { atk:0, def:0, spd:0, evasion:0 };
+    p.equipmentBonus = { atk:0, def:0, spd:0, evasion:0, penetrationDef:0 };
   } else {
     p.equipmentBonus.atk = Number(p.equipmentBonus.atk || 0);
     p.equipmentBonus.def = Number(p.equipmentBonus.def || 0);
     p.equipmentBonus.spd = Number(p.equipmentBonus.spd || 0);
     p.equipmentBonus.evasion = Number(p.equipmentBonus.evasion || 0);
+    p.equipmentBonus.penetrationDef = Number(p.equipmentBonus.penetrationDef || 0);
   }
   if (!Array.isArray(p.skills)) p.skills = [];
   p.skills = p.skills.map((skill) => {
@@ -584,7 +605,7 @@ function getItemRef(name, player){
 
 function calcEquipmentBonus(player){
   const p = player;
-  const bonus = { atk:0, def:0, spd:0, evasion:0 };
+  const bonus = { atk:0, def:0, spd:0, evasion:0, penetrationDef:0 };
   if (!p || !p.equipment) return bonus;
   Object.values(p.equipment).forEach((name) => {
     const it = getItemRef(name, p);
@@ -593,6 +614,7 @@ function calcEquipmentBonus(player){
     if (typeof it.def === "number") bonus.def += it.def;
     if (typeof it.spd === "number") bonus.spd += it.spd;
     if (typeof it.evasion === "number") bonus.evasion += it.evasion;
+    if (typeof it.penetrationDef === "number") bonus.penetrationDef += it.penetrationDef;
   });
   return bonus;
 }
@@ -600,12 +622,13 @@ function calcEquipmentBonus(player){
 function applyEquipmentStats(player){
   const p = player;
   if (!p) return;
-  const prev = p.equipmentBonus || { atk:0, def:0, spd:0, evasion:0 };
+  const prev = p.equipmentBonus || { atk:0, def:0, spd:0, evasion:0, penetrationDef:0 };
   const next = calcEquipmentBonus(p);
   p.atk = Math.max(0, (p.atk || 0) - (prev.atk || 0) + next.atk);
   p.def = Math.max(0, (p.def || 0) - (prev.def || 0) + next.def);
   p.spd = Math.max(0, (p.spd || 0) - (prev.spd || 0) + next.spd);
   p.evasion = clamp((p.evasion || 0) - (prev.evasion || 0) + next.evasion, 0, 100);
+  p.penetrationDef = Math.max(0, (p.penetrationDef || 0) - (prev.penetrationDef || 0) + (next.penetrationDef || 0));
   p.equipmentBonus = next;
 }
 
@@ -632,6 +655,7 @@ function newState(){
     autoBattleEnabled: false,
     autoBattleUseConsumable: false,
     _autoBattlePending: false,
+    monsterHuntSelectedBoss: "wyrm10",
     turn: "town",
     battleTurn: 0 // "town" | "player" | "enemy"
   };
@@ -2132,6 +2156,11 @@ const STATUS_DEFS = {
     desc: "Setiap akhir turn target, Max HP berkurang sebesar persentase poison.",
     kind: "debuff",
   },
+  accuracyDown: {
+    label: "Accuracy Down",
+    desc: (turns) => `Accuracy berkurang 20% selama ${turns} turn.`,
+    kind: "debuff",
+  },
   healingArea: {
     label: "Healing Area",
     desc: "Memulihkan HP di akhir turn.",
@@ -2863,6 +2892,8 @@ function setAllyPageVisible(show){
   const page = byId("allyPage");
   const marketPage = byId("marketPage");
   const skillPage = byId("skillShopPage");
+  const blacksmithPage = byId("blacksmithPage");
+  const huntPage = byId("monsterHuntPage");
   const wrap = document.querySelector(".wrap");
   if (!page || !wrap) return;
   if (show) {
@@ -2876,6 +2907,14 @@ function setAllyPageVisible(show){
     if (skillPage) {
       skillPage.classList.add("hidden");
       skillPage.setAttribute("aria-hidden", "true");
+    }
+    if (blacksmithPage) {
+      blacksmithPage.classList.add("hidden");
+      blacksmithPage.setAttribute("aria-hidden", "true");
+    }
+    if (huntPage) {
+      huntPage.classList.add("hidden");
+      huntPage.setAttribute("aria-hidden", "true");
     }
   } else {
     page.classList.add("hidden");
@@ -3448,6 +3487,8 @@ function setMarketPageVisible(show){
   const page = byId("marketPage");
   const skillPage = byId("skillShopPage");
   const allyPage = byId("allyPage");
+  const blacksmithPage = byId("blacksmithPage");
+  const huntPage = byId("monsterHuntPage");
   const wrap = document.querySelector(".wrap");
   if (!page || !wrap) return;
   if (show) {
@@ -3462,6 +3503,14 @@ function setMarketPageVisible(show){
       allyPage.classList.add("hidden");
       allyPage.setAttribute("aria-hidden", "true");
     }
+    if (blacksmithPage) {
+      blacksmithPage.classList.add("hidden");
+      blacksmithPage.setAttribute("aria-hidden", "true");
+    }
+    if (huntPage) {
+      huntPage.classList.add("hidden");
+      huntPage.setAttribute("aria-hidden", "true");
+    }
   } else {
     page.classList.add("hidden");
     page.setAttribute("aria-hidden", "true");
@@ -3473,6 +3522,8 @@ function setSkillShopPageVisible(show){
   const page = byId("skillShopPage");
   const marketPage = byId("marketPage");
   const allyPage = byId("allyPage");
+  const blacksmithPage = byId("blacksmithPage");
+  const huntPage = byId("monsterHuntPage");
   const wrap = document.querySelector(".wrap");
   if (!page || !wrap) return;
   if (show) {
@@ -3486,6 +3537,14 @@ function setSkillShopPageVisible(show){
     if (allyPage) {
       allyPage.classList.add("hidden");
       allyPage.setAttribute("aria-hidden", "true");
+    }
+    if (blacksmithPage) {
+      blacksmithPage.classList.add("hidden");
+      blacksmithPage.setAttribute("aria-hidden", "true");
+    }
+    if (huntPage) {
+      huntPage.classList.add("hidden");
+      huntPage.setAttribute("aria-hidden", "true");
     }
   } else {
     page.classList.add("hidden");
@@ -3979,6 +4038,368 @@ function openShopModal(mode = "menu"){
   }
 }
 
+const MONSTER_HUNT_BOSSES = [
+  {
+    id: "wyrm10",
+    level: 10,
+    name: "Ancient Wyrm",
+    avatar: "🐉",
+    note: "Boss starter untuk material craft dasar.",
+    story: "Wyrm kuno yang bangkit dari reruntuhan gua api. Sisiknya keras, tapi inti mana di dadanya mulai retak.",
+    drops: ["Wyrm Scale", "Ancient Bone", "Molten Core"],
+  },
+  {
+    id: "behemoth20",
+    level: 20,
+    name: "Crimson Behemoth",
+    avatar: "🦏",
+    note: "Boss elite dengan material craft langka.",
+    story: "Raksasa merah penjaga altar darah. Setiap hentakan kakinya mengguncang tanah dan memecah armor biasa.",
+    drops: ["Behemoth Horn", "Crimson Carapace", "Blood Crystal"],
+  },
+];
+
+const BLACKSMITH_RECIPES = [
+  {
+    id: "eclipsed-runebreaker",
+    resultName: "Eclipsed Runebreaker",
+    resultRef: ITEMS.eclipsedRunebreaker,
+    materials: [
+      { name: "Rune Blade", qty: 1 },
+      { name: "Wyrm Scale", qty: 3 },
+      { name: "Molten Core", qty: 1 },
+      { name: "Behemoth Horn", qty: 2 },
+      { name: "Blood Crystal", qty: 1 },
+    ],
+  },
+];
+
+function getInventoryQty(name){
+  return Math.max(0, Number(state.player?.inv?.[name]?.qty || 0));
+}
+
+function canCraftRecipe(recipe){
+  if (!recipe || !Array.isArray(recipe.materials)) return false;
+  return recipe.materials.every((m) => getInventoryQty(m.name) >= m.qty);
+}
+
+function consumeMaterial(name, qty){
+  const inv = state.player?.inv;
+  if (!inv || !inv[name]) return false;
+  inv[name].qty = Math.max(0, Number(inv[name].qty || 0) - qty);
+  if (inv[name].qty <= 0) delete inv[name];
+  return true;
+}
+
+function craftBlacksmithRecipe(recipeId){
+  const recipe = BLACKSMITH_RECIPES.find((r) => r.id === recipeId);
+  if (!recipe) return { ok:false, reason:"recipe" };
+  if (!canCraftRecipe(recipe)) return { ok:false, reason:"material" };
+  recipe.materials.forEach((m) => consumeMaterial(m.name, m.qty));
+  const resultName = recipe.resultName;
+  const inv = state.player.inv || (state.player.inv = {});
+  if (inv[resultName]) inv[resultName].qty += 1;
+  else inv[resultName] = { ...recipe.resultRef, qty:1 };
+  autosave(state);
+  return { ok:true, resultName };
+}
+
+function openBlacksmithRecipeDetail(recipeId){
+  const recipe = BLACKSMITH_RECIPES.find((r) => r.id === recipeId);
+  if (!recipe) return;
+  const canCraft = canCraftRecipe(recipe);
+  const levelBadge = Number(recipe.resultRef?.level || 1);
+  const mats = recipe.materials
+    .map((m) => {
+      const own = getInventoryQty(m.name);
+      return `${m.name} ${own}/${m.qty}`;
+    })
+    .join(" • ");
+
+  modal.open(
+    recipe.resultName,
+    [
+      {
+        title: `Lv ${levelBadge} Weapon`,
+        desc: recipe.resultRef?.desc || "",
+        meta: "",
+        value: undefined,
+        className: "readonly",
+      },
+      {
+        title: "Stat",
+        desc: "+25 ATK • +7 DEF Penetration • Basic Hit: Accuracy musuh -20% (1 turn)",
+        meta: "",
+        value: undefined,
+        className: "readonly",
+      },
+      {
+        title: "Resep",
+        desc: mats,
+        meta: "",
+        value: undefined,
+        className: "readonly",
+      },
+      {
+        title: canCraft ? "Forge" : "Material belum cukup",
+        desc: canCraft ? "Tempa senjata ini sekarang." : "Farm material dari Monster Hunting dulu.",
+        meta: "",
+        value: canCraft ? `forge:${recipe.id}` : undefined,
+        className: canCraft ? "" : "readonly",
+      },
+    ],
+    (pick) => {
+      if (!String(pick || "").startsWith("forge:")) return;
+      const targetId = String(pick).replace("forge:", "");
+      const res = craftBlacksmithRecipe(targetId);
+      if (!res.ok) {
+        showToast("Material belum cukup untuk forging.", "warn");
+        return;
+      }
+      addLog("FORGE", `${res.resultName} berhasil ditempa di Blacksmith.`);
+      showToast(`${res.resultName} forged!`, "good");
+      refresh(state);
+      renderBlacksmithPage();
+      openBlacksmithRecipeDetail(targetId);
+    }
+  );
+}
+
+function renderBlacksmithPage(){
+  const grid = byId("blacksmithCraftGrid");
+  if (!grid) return;
+  const goldEl = byId("blacksmithGoldValue");
+  const gemEl = byId("blacksmithGemValue");
+  if (goldEl) goldEl.textContent = String(state.player?.gold || 0);
+  if (gemEl) gemEl.textContent = String(state.player?.gems || 0);
+
+  grid.classList.add("blacksmithAvatarGrid");
+  grid.innerHTML = BLACKSMITH_RECIPES.map((recipe) => {
+    const levelBadge = Number(recipe.resultRef?.level || 1);
+    return `
+      <button type="button" class="blacksmithAvatarBtn" data-recipe-id="${escapeHtml(recipe.id)}" aria-label="${escapeHtml(recipe.resultName)}">
+        <span class="blacksmithLevelBadge">Lv ${levelBadge}</span>
+        <span class="blacksmithAvatarIcon" aria-hidden="true">⚔️</span>
+        <span class="blacksmithAvatarName">${escapeHtml(recipe.resultName)}</span>
+      </button>
+    `;
+  }).join("");
+
+  grid.querySelectorAll("[data-recipe-id]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const recipeId = btn.getAttribute("data-recipe-id") || "";
+      openBlacksmithRecipeDetail(recipeId);
+    });
+  });
+}
+
+function setBlacksmithPageVisible(show){
+  const page = byId("blacksmithPage");
+  const marketPage = byId("marketPage");
+  const skillPage = byId("skillShopPage");
+  const allyPage = byId("allyPage");
+  const huntPage = byId("monsterHuntPage");
+  const wrap = document.querySelector(".wrap");
+  if (!page || !wrap) return;
+  if (show) {
+    renderBlacksmithPage();
+    page.classList.remove("hidden");
+    page.setAttribute("aria-hidden", "false");
+    wrap.classList.add("hidden");
+    if (marketPage) marketPage.classList.add("hidden");
+    if (skillPage) skillPage.classList.add("hidden");
+    if (allyPage) allyPage.classList.add("hidden");
+    if (huntPage) huntPage.classList.add("hidden");
+  } else {
+    page.classList.add("hidden");
+    page.setAttribute("aria-hidden", "true");
+    wrap.classList.remove("hidden");
+  }
+}
+
+function createBossEnemy(level, name){
+  const lv = Math.max(1, Number(level) || 1);
+  const isAncientWyrm = String(name || "").toLowerCase() === "ancient wyrm";
+  const isCrimsonBehemoth = String(name || "").toLowerCase() === "crimson behemoth";
+  const enemy = {
+    name,
+    level: lv,
+    maxHp: 80 + lv * 14,
+    maxMp: 30 + lv * 5,
+    hp: 80 + lv * 14,
+    mp: 30 + lv * 5,
+    atk: 10 + lv * 3,
+    def: 5 + lv * 2,
+    spd: 6 + lv,
+    str: lv,
+    dex: Math.max(0, Math.floor(lv * 0.7)),
+    int: Math.max(0, Math.floor(lv * 0.7)),
+    vit: Math.max(0, Math.floor(lv * 1.4)),
+    critChance: clamp(8 + Math.floor(lv / 2), 8, 40),
+    critDamage: 0,
+    acc: Math.max(0, Math.floor(lv / 4)),
+    foc: 0,
+    combustionChance: 0,
+    evasion: clamp(4 + Math.floor(lv / 8), 4, 18),
+    baseBlockRate: 0,
+    baseEscapeChance: clamp(2 + Math.floor(lv / 10), 2, 14),
+    blockRate: 0,
+    escapeChance: 0,
+    manaRegen: 0,
+    statuses: [],
+    xpReward: 35 + lv * 8,
+    goldReward: 20 + lv * 5,
+  };
+
+  if (isAncientWyrm) {
+    enemy.maxHp = Math.round(enemy.maxHp * 1.9);
+    enemy.hp = enemy.maxHp;
+    enemy.def = Math.round(enemy.def * 1.8);
+  }
+
+  if (isCrimsonBehemoth) {
+    enemy.maxHp = Math.round(enemy.maxHp * 2.4);
+    enemy.hp = enemy.maxHp;
+    enemy.def = Math.round(enemy.def * 2.2);
+  }
+
+  applyDerivedStats(enemy);
+  enemy.blockRate = 0;
+  return enemy;
+}
+
+function startBossBattle(level, name){
+  setMonsterHuntPageVisible(false);
+  state.currentStageName = `Boss Hunt Lv${level}`;
+  state.enemyQueue = null;
+  state.enemy = createBossEnemy(level, name);
+  state.enemyTargetIndex = getDefaultEnemyTargetIndex([state.enemy]);
+  state.inBattle = true;
+  state._animateEnemyIn = true;
+  state.playerDefending = false;
+  state.battleTurn = 0;
+  clearStatuses(state.enemy);
+  clearStatuses(state.player);
+  ensureStatuses(state.enemy);
+  ensureStatuses(state.player);
+  const allies = ensureAllies();
+  allies.forEach((ally) => {
+    if (!ally) return;
+    clearStatuses(ally);
+    ensureStatuses(ally);
+    if (Array.isArray(ally.activeSkills)) {
+      ally.activeSkills.forEach((skill) => {
+        if (skill) skill.cdLeft = 0;
+      });
+    }
+  });
+  addLog("INFO", `Monster Hunting: ${state.enemy.name} (Lv${state.enemy.level}) muncul!`);
+  if (state.enemy.spd > state.player.spd) {
+    setTurn("enemy");
+    addLog("TURN", `${state.enemy.name} lebih cepat! Musuh duluan.`);
+    refresh(state);
+    setTimeout(() => {
+      enemyTurn();
+      refresh(state);
+    }, TURN_DELAY_MS);
+    return;
+  }
+  state.battleTurn = (state.battleTurn || 0) + 1;
+  beginPlayerTurn();
+  addLog("TURN", "Kamu lebih cepat!");
+  refresh(state);
+}
+
+function renderMonsterHuntPage(){
+  const stageList = byId("monsterHuntStageList");
+  const detailPane = byId("monsterHuntDetailPane");
+  if (!stageList || !detailPane) return;
+  byId("monsterHuntGoldValue").textContent = String(state.player?.gold || 0);
+  byId("monsterHuntGemValue").textContent = String(state.player?.gems || 0);
+  if (!state.monsterHuntSelectedBoss) state.monsterHuntSelectedBoss = MONSTER_HUNT_BOSSES[0]?.id || "";
+  const selectedId = state.monsterHuntSelectedBoss;
+  const selectedBoss = MONSTER_HUNT_BOSSES.find((row) => row.id === selectedId) || MONSTER_HUNT_BOSSES[0];
+
+  stageList.innerHTML = MONSTER_HUNT_BOSSES.map((boss) => `
+    <button type="button" class="monsterHuntStageBtn ${boss.id === selectedBoss.id ? "active" : ""}" data-boss-id="${escapeHtml(boss.id)}">
+      <div class="monsterHuntStageName">${escapeHtml(boss.name)}</div>
+      <div class="monsterHuntStageMeta">Stage Boss • Lv ${boss.level}</div>
+    </button>
+  `).join("");
+
+  detailPane.innerHTML = `
+    <div class="monsterHuntHead">
+      <div class="monsterHuntAvatar">${escapeHtml(selectedBoss.avatar || "👹")}</div>
+      <div>
+        <h3 class="monsterHuntName">${escapeHtml(selectedBoss.name)}</h3>
+        <p class="monsterHuntLevel">Boss Level ${selectedBoss.level}</p>
+        <p class="monsterHuntLevel">${escapeHtml(selectedBoss.note || "")}</p>
+      </div>
+    </div>
+    <div class="monsterHuntSection">
+      <h4>Story</h4>
+      <p>${escapeHtml(selectedBoss.story || "Belum ada cerita.")}</p>
+    </div>
+    <div class="monsterHuntSection">
+      <h4>Drop Material</h4>
+      <div class="monsterHuntDrops">
+        ${(selectedBoss.drops || []).map((drop) => `<span class="monsterHuntDropChip">${escapeHtml(drop)}</span>`).join("")}
+      </div>
+    </div>
+    <div class="monsterHuntBattleWrap">
+      <button type="button" class="marketActionBtn buy" id="monsterHuntBattleBtn">Battle ${escapeHtml(selectedBoss.name)}</button>
+    </div>
+  `;
+
+  stageList.querySelectorAll("[data-boss-id]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const boss = MONSTER_HUNT_BOSSES.find((row) => row.id === btn.getAttribute("data-boss-id"));
+      if (!boss) return;
+      state.monsterHuntSelectedBoss = boss.id;
+      renderMonsterHuntPage();
+    });
+  });
+
+  const battleBtn = byId("monsterHuntBattleBtn");
+  if (battleBtn) battleBtn.onclick = () => startBossBattle(selectedBoss.level, selectedBoss.name);
+}
+
+function setMonsterHuntPageVisible(show){
+  const page = byId("monsterHuntPage");
+  const marketPage = byId("marketPage");
+  const skillPage = byId("skillShopPage");
+  const allyPage = byId("allyPage");
+  const blacksmithPage = byId("blacksmithPage");
+  const wrap = document.querySelector(".wrap");
+  if (!page || !wrap) return;
+  if (show) {
+    renderMonsterHuntPage();
+    page.classList.remove("hidden");
+    page.setAttribute("aria-hidden", "false");
+    wrap.classList.add("hidden");
+    if (marketPage) marketPage.classList.add("hidden");
+    if (skillPage) skillPage.classList.add("hidden");
+    if (allyPage) allyPage.classList.add("hidden");
+    if (blacksmithPage) blacksmithPage.classList.add("hidden");
+  } else {
+    page.classList.add("hidden");
+    page.setAttribute("aria-hidden", "true");
+    wrap.classList.remove("hidden");
+  }
+}
+
+function openBlacksmithPage(){
+  if (state.inBattle) return;
+  modal.close();
+  setBlacksmithPageVisible(true);
+}
+
+function openMonsterHuntPage(){
+  if (state.inBattle) return;
+  modal.close();
+  setMonsterHuntPageVisible(true);
+}
+
 function openSkillLearnDetail(skillKey){
 
 }
@@ -4234,6 +4655,18 @@ function rollBattleDrops(enemy){
     if (randInt(1, 100) <= 4) drops.push({ ...ITEMS.banditsArmour, qty: 1 });
     if (randInt(1, 100) <= 4) drops.push({ ...ITEMS.banditsBoots, qty: 1 });
   }
+
+  const isBossHunt = String(state.currentStageName || "").startsWith("Boss Hunt");
+  if (isBossHunt && enemy?.name === "Ancient Wyrm") {
+    drops.push({ ...ITEMS.wyrmScale, qty: randInt(2, 4) });
+    if (randInt(1, 100) <= 75) drops.push({ ...ITEMS.moltenCore, qty: 1 });
+  }
+
+  if (isBossHunt && enemy?.name === "Crimson Behemoth") {
+    drops.push({ ...ITEMS.behemothHorn, qty: randInt(1, 2) });
+    drops.push({ ...ITEMS.bloodCrystal, qty: 1 });
+  }
+
   return drops;
 }
 
@@ -4348,7 +4781,8 @@ function winBattle() {
     return;
   }
 
-  const stageNumber = Number((state.currentStageName || "").replace(/\D+/g, ""));
+  const stageMatch = String(state.currentStageName || "").match(/^Stage\s+(\d+)$/i);
+  const stageNumber = stageMatch ? Number(stageMatch[1]) : NaN;
   if (Number.isFinite(stageNumber) && stageNumber > 0) {
     state.player.highestStageCleared = Math.max(Number(state.player.highestStageCleared) || 0, stageNumber);
     ensureGlennUnlockState({ source: `Stage ${stageNumber} clear` });
@@ -4897,6 +5331,18 @@ function tryApplyBasicAttackPoison(attacker, target){
   addLog("DEBUFF", `${target.name} terkena Poison ${poisonPct}% selama ${poisonTurns} turn.`);
 }
 
+function tryApplyBasicAttackAccuracyDown(attacker, target){
+  if (!attacker || !target || !attacker.equipment || !attacker.inv) return;
+  const weaponName = attacker.equipment.hand;
+  if (!weaponName) return;
+  const weapon = attacker.inv[weaponName];
+  const accDownPct = Math.max(0, Number(weapon?.basicAccDownPct || 0));
+  if (!weapon || accDownPct <= 0) return;
+  const turns = Math.max(1, Number(weapon.basicAccDownTurns || 1));
+  addStatusEffect(target, { type: "accuracyDown", turns, debuff: true, pct: accDownPct });
+  addLog("DEBUFF", `${target.name} kehilangan fokus! Accuracy turun ${accDownPct}% selama ${turns} turn.`);
+}
+
 function attack() {
   setTurn("player");
 
@@ -4916,6 +5362,7 @@ function attack() {
     e.hp = clamp(e.hp - res.dmg, 0, e.maxHp);
     playEnemyCritShake(targetIndex);
     tryApplyBasicAttackPoison(p, e);
+    tryApplyBasicAttackAccuracyDown(p, e);
   }
   if (res.reflected > 0) {
     p.hp = clamp(p.hp - res.reflected, 0, p.maxHp);
@@ -5943,6 +6390,17 @@ function openTownMenu(){
 /* --------------------------------- Bind -------------------------------- */
 
 function bind() {
+  const setClick = (id, handler) => {
+    const list = Array.from(document.querySelectorAll(`[id="${id}"]`));
+    if (!list.length) {
+      console.warn(`[BIND] elemen #${id} tidak ditemukan, skip binding.`);
+      return;
+    }
+    list.forEach((el) => {
+      el.onclick = handler;
+    });
+  };
+
   modal.bind();
   window.addEventListener("rpg:modal-closed", () => {
     if (!state.autoBattleEnabled) return;
@@ -5957,9 +6415,9 @@ function bind() {
   }
 
   // Town
-  byId("btnExplore").onclick = explore;
+  setClick("btnExplore", explore);
   const br=byId("btnRest"); if(br) br.onclick = rest;
-  byId("btnInventory").onclick = openInventoryReadOnly;
+  setClick("btnInventory", openInventoryReadOnly);
   const btnRecruit = byId("btnRecruit");
   if (btnRecruit) btnRecruit.onclick = openAllyPage;
   const allySlotBadge = byId("allySlotBadge");
@@ -5980,10 +6438,18 @@ function bind() {
   if (btnProfile) btnProfile.onclick = openProfileModal;
   const btnShop = byId("btnShop");
   if (btnShop) btnShop.onclick = () => openShopModal();
+  const btnBlacksmith = byId("btnBlacksmith");
+  if (btnBlacksmith) btnBlacksmith.onclick = openBlacksmithPage;
+  const btnMonsterHunt = byId("btnMonsterHunt");
+  if (btnMonsterHunt) btnMonsterHunt.onclick = openMonsterHuntPage;
   const marketBack = byId("marketBack");
   if (marketBack) marketBack.onclick = () => setMarketPageVisible(false);
   const skillShopBack = byId("skillShopBack");
   if (skillShopBack) skillShopBack.onclick = () => setSkillShopPageVisible(false);
+  const blacksmithBack = byId("blacksmithBack");
+  if (blacksmithBack) blacksmithBack.onclick = () => setBlacksmithPageVisible(false);
+  const monsterHuntBack = byId("monsterHuntBack");
+  if (monsterHuntBack) monsterHuntBack.onclick = () => setMonsterHuntPageVisible(false);
   const allyBack = byId("allyBack");
   if (allyBack) allyBack.onclick = () => setAllyPageVisible(false);
   const allyDetailClose = byId("allyDetailClose");
@@ -6079,11 +6545,11 @@ function bind() {
 
 
   // Battle
-  byId("btnAttack").onclick = () => {
+  setClick("btnAttack", () => {
     if (!state.inBattle || state.turn !== "player") return;
     attack();
     afterPlayerAction();
-  };
+  });
   const btnCharge = byId("btnCharge");
   if (btnCharge) btnCharge.onclick = () => {
     if (!state.inBattle || state.turn !== "player") return;
@@ -6132,10 +6598,10 @@ function bind() {
     };
   }
 
-  byId("btnRun").onclick = () => {
+  setClick("btnRun", () => {
     if (!state.inBattle || state.turn !== "player") return;
     openRunConfirm();
-  };
+  });
 
   if (runConfirm) {
     runConfirm.onclick = () => {
@@ -6146,10 +6612,10 @@ function bind() {
     };
   }
 
-  byId("btnItem").onclick = () => {
+  setClick("btnItem", () => {
     if (!state.inBattle || state.turn !== "player") return;
     openItemModal();
-  };
+  });
 }
 
 /* --------------------------------- Boot -------------------------------- */
@@ -6749,8 +7215,16 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
     }
   };
 
-  if (btnLogin) btnLogin.onclick = () => doLogin();
-  if (btnRegister) btnRegister.onclick = () => doRegister();
+  const bindAuthClick = (id, handler) => {
+    const list = Array.from(document.querySelectorAll(`[id="${id}"]`));
+    if (!list.length) return;
+    list.forEach((el) => {
+      el.onclick = handler;
+    });
+  };
+
+  bindAuthClick("authLogin", () => doLogin());
+  bindAuthClick("authRegister", () => doRegister());
 
   // Enter key triggers login
   if (passEl){
