@@ -194,7 +194,7 @@ function resolveAttack(att, def, basePower, opts = {}) {
   const dodgeBonus = opts.dodgeBonus || 0;
 
   const accuracyDown = hasStatus(att, "accuracyDown") ? 0.8 : 1;
-  const effectiveAcc = Math.max(0, Math.round((att.acc || 0) * accuracyDown));
+  const effectiveAcc = Math.max(0, (att.acc || 0) * accuracyDown);
   const evasion = clamp(((def.evasion || 0) + dodgeBonus) - effectiveAcc, 0, 95);
   const rollEv = randInt(1, 100);
   if (rollEv <= evasion) {
