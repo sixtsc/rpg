@@ -4547,7 +4547,8 @@ function winBattle() {
     return;
   }
 
-  const stageNumber = Number((state.currentStageName || "").replace(/\D+/g, ""));
+  const stageMatch = String(state.currentStageName || "").match(/^Stage\s+(\d+)$/i);
+  const stageNumber = stageMatch ? Number(stageMatch[1]) : NaN;
   if (Number.isFinite(stageNumber) && stageNumber > 0) {
     state.player.highestStageCleared = Math.max(Number(state.player.highestStageCleared) || 0, stageNumber);
     ensureGlennUnlockState({ source: `Stage ${stageNumber} clear` });
