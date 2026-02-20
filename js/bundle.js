@@ -2056,6 +2056,11 @@ const STATUS_DEFS = {
     desc: (turns) => `Accuracy berkurang 20% selama ${turns} turn.`,
     kind: "debuff",
   },
+  healingArea: {
+    label: "Healing Area",
+    desc: "Memulihkan HP di akhir turn.",
+    kind: "buff",
+  },
 };
 
 function getStatusDefinition(status) {
