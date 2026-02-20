@@ -22,6 +22,7 @@
       <div class="menuBtns">
         <button id="authLogin" class="btn primary">Login</button>
         <button id="authRegister" class="btn">Register</button>
+        <button id="authOffline" class="btn">Offline</button>
       </div>
 
       <p class="menuHint" id="authMsg">Tip: Setelah login, game akan otomatis load cloud save. Kalau cloud belum ada save, save lokal akan di-upload.</p>
@@ -311,6 +312,8 @@
                 <button id="btnRecruit">Ally</button>
                 <button id="btnProfile">Profile</button>
                 <button id="btnShop">Shop</button>
+                <button id="btnBlacksmith">Blacksmith</button>
+                <button id="btnMonsterHunt">Monster Hunting</button>
                 <button class="good" id="btnMenu">Menu</button>
               </div>
             </div>
@@ -445,6 +448,67 @@
 
     <div class="allyPageBody">
       <div id="allyGrid" class="allyGrid" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section id="blacksmithPage" class="marketPage hidden" aria-hidden="true">
+    <div class="marketPageHeader">
+      <div class="marketCurrency" aria-label="Mata uang saat ini">
+        <div class="pill currencyPill">
+          <img class="currencyIcon" src="./assets/icons/coin.svg" alt="" />
+          <span id="blacksmithGoldValue">0</span>
+        </div>
+        <div class="pill currencyPill">
+          <img class="currencyIcon" src="./assets/icons/gem.svg" alt="" />
+          <span id="blacksmithGemValue">0</span>
+        </div>
+      </div>
+      <div class="marketTitle">
+        <h2>Blacksmith</h2>
+        <p>Tempat menempa senjata legendaris dari material boss.</p>
+      </div>
+      <div class="marketActions">
+        <button class="marketBackBtn" id="blacksmithBack" type="button" aria-label="Tutup">
+          <span aria-hidden="true">✕</span>
+        </button>
+      </div>
+    </div>
+    <div class="marketPageBody">
+      <div id="blacksmithCraftGrid" class="blacksmithAvatarGrid"></div>
+    </div>
+  </section>
+
+  <section id="monsterHuntPage" class="marketPage hidden" aria-hidden="true">
+    <div class="marketPageHeader">
+      <div class="marketCurrency" aria-label="Mata uang saat ini">
+        <div class="pill currencyPill">
+          <img class="currencyIcon" src="./assets/icons/coin.svg" alt="" />
+          <span id="monsterHuntGoldValue">0</span>
+        </div>
+        <div class="pill currencyPill">
+          <img class="currencyIcon" src="./assets/icons/gem.svg" alt="" />
+          <span id="monsterHuntGemValue">0</span>
+        </div>
+      </div>
+      <div class="marketTitle">
+        <h2>Monster Hunting</h2>
+        <p>Lawan boss untuk mendapatkan material craft.</p>
+      </div>
+      <div class="marketActions">
+        <button class="marketBackBtn" id="monsterHuntBack" type="button" aria-label="Tutup">
+          <span aria-hidden="true">✕</span>
+        </button>
+      </div>
+    </div>
+    <div class="marketPageBody">
+      <div class="monsterHuntLayout">
+        <aside class="monsterHuntStagePane">
+          <div class="monsterHuntPaneTitle">Stage Boss</div>
+          <div id="monsterHuntStageList" class="monsterHuntStageList"></div>
+        </aside>
+        <div class="monsterHuntDivider" aria-hidden="true"></div>
+        <section class="monsterHuntDetailPane" id="monsterHuntDetailPane" aria-live="polite"></section>
+      </div>
     </div>
   </section>
 
