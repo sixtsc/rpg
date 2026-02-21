@@ -2315,12 +2315,14 @@ const modal = {
     body.classList.remove("equipmentGrid");
     body.classList.remove("marketSubCompact");
     body.classList.remove("confirmPopup");
+    body.classList.remove("adventureMenu");
     if (modalEl) modalEl.classList.remove("confirmPopup");
     const lowerTitle = String(title).toLowerCase();
     if (String(title).toLowerCase().includes("stats")) body.classList.add("statsGrid");
     if (lowerTitle.includes("stat")) body.classList.add("statModal");
     if (lowerTitle.includes("market") || lowerTitle.includes("inventory")) body.classList.add("marketGrid");
     if (String(title).toLowerCase().includes("equipment")) body.classList.add("equipmentGrid");
+    if (lowerTitle.includes("adventure")) body.classList.add("adventureMenu");
     if (choices.some((c) => String(c.className || "").includes("marketSub"))) {
       body.classList.add("marketSubCompact");
     }
@@ -5213,7 +5215,8 @@ function openAdventureLevels(){
     categories.map((cat) => ({
       title: cat.title,
       desc: cat.desc,
-      meta: "",
+      meta: "›",
+      className: "adventureRankRow",
       value: cat.key,
     })),
     (category) => {
@@ -5234,7 +5237,8 @@ function openAdventureLevels(){
                 : lv === 8
                   ? "Stage spesial: 2 musuh."
                   : "Pilih stage petualangan",
-          meta: "",
+          meta: `Lv ${lv}`,
+          className: "adventureStageRow",
           value: lv,
         })),
         (level) => {
