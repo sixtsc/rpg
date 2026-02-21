@@ -666,7 +666,11 @@ function newState(){
     _autoBattlePending: false,
     monsterHuntSelectedBoss: "wyrm10",
     turn: "town",
-    battleTurn: 0 // "town" | "player" | "enemy"
+    battleTurn: 0, // "town" | "player" | "enemy"
+    repeatFarmingEnabled: false,
+    lastAdventureStageLevel: null,
+    lastAdventureStageName: null,
+    _repeatFarmingTimer: null
   };
 }
 
@@ -1431,9 +1435,20 @@ function animateBattleRewardXpList(summary) {
   });
 }
 
-function showBattleResultOverlay(summary, onClose) {
+function showBattleResultOverlay(summary, options = {}) {
   const backdrop = $("battleResultBackdrop");
   if (!backdrop) return;
+  const onClose = typeof options.onClose === "function" ? options.onClose : null;
+  const onRetry = typeof options.onRetry === "function" ? options.onRetry : null;
+  const repeatEnabled = !!options.repeatEnabled;
+  const autoRetry = !!options.autoRetry;
+  const onRepeatChange = typeof options.onRepeatChange === "function" ? options.onRepeatChange : null;
+
+  if (state._repeatFarmingTimer) {
+    clearTimeout(state._repeatFarmingTimer);
+    state._repeatFarmingTimer = null;
+  }
+
   $("battleResultTitle").textContent = summary.outcome === "win" ? "Victory" : "Defeat";
   $("battleResultEnemy").textContent = summary.enemyName ? `Vs ${summary.enemyName}` : "";
 
@@ -1487,14 +1502,52 @@ function showBattleResultOverlay(summary, onClose) {
     }
   }
 
+  const farmControls = $("battleResultFarmControls");
+  const retryBtn = $("battleResultRetry");
+  const repeatToggle = $("battleRepeatFarmingToggle");
+  if (farmControls) {
+    farmControls.style.display = onRetry ? "flex" : "none";
+  }
+  if (repeatToggle) {
+    repeatToggle.checked = repeatEnabled;
+    repeatToggle.onchange = () => {
+      if (onRepeatChange) onRepeatChange(!!repeatToggle.checked);
+    };
+  }
+  if (retryBtn) {
+    retryBtn.onclick = onRetry
+      ? () => {
+          backdrop.style.display = "none";
+          if (state._repeatFarmingTimer) {
+            clearTimeout(state._repeatFarmingTimer);
+            state._repeatFarmingTimer = null;
+          }
+          onRetry();
+        }
+      : null;
+    retryBtn.disabled = !onRetry;
+  }
+
   backdrop.style.display = "flex";
   animateBattleRewardXpList(summary);
   const btn = $("battleResultClose");
   if (btn) {
     btn.onclick = () => {
       backdrop.style.display = "none";
+      if (state._repeatFarmingTimer) {
+        clearTimeout(state._repeatFarmingTimer);
+        state._repeatFarmingTimer = null;
+      }
       if (onClose) onClose();
     };
+  }
+
+  if (autoRetry && onRetry) {
+    state._repeatFarmingTimer = setTimeout(() => {
+      backdrop.style.display = "none";
+      state._repeatFarmingTimer = null;
+      onRetry();
+    }, 1100);
   }
 }
 
@@ -4282,6 +4335,8 @@ function createBossEnemy(level, name){
 function startBossBattle(level, name){
   setMonsterHuntPageVisible(false);
   state.currentStageName = `Boss Hunt Lv${level}`;
+  state.lastAdventureStageLevel = null;
+  state.lastAdventureStageName = null;
   state.enemyQueue = null;
   state.enemy = createBossEnemy(level, name);
   state.enemyTargetIndex = getDefaultEnemyTargetIndex([state.enemy]);
@@ -4527,18 +4582,46 @@ function beginEnemyTurn(){
   return true;
 }
 
+function hasAdventureFarmingTarget(){
+  return Number.isFinite(state.lastAdventureStageLevel) && !!state.lastAdventureStageName;
+}
+
+function restartAdventureFarming(reason){
+  if (!hasAdventureFarmingTarget()) {
+    finalizeBattle(reason);
+    return;
+  }
+  const stageLevel = state.lastAdventureStageLevel;
+  const stageName = state.lastAdventureStageName;
+  finalizeBattle(reason);
+  startAdventureBattle(stageLevel, stageName);
+}
+
 function endBattle(reason, summary) {
   addLog("INFO", reason);
   if (summary) {
     state.battleResult = summary;
     refresh(state);
-    showBattleResultOverlay(summary, () => finalizeBattle(reason));
+    const canRetryFarming = hasAdventureFarmingTarget();
+    showBattleResultOverlay(summary, {
+      onClose: () => finalizeBattle(reason),
+      onRetry: canRetryFarming ? () => restartAdventureFarming(reason) : null,
+      repeatEnabled: state.repeatFarmingEnabled,
+      autoRetry: canRetryFarming && state.repeatFarmingEnabled,
+      onRepeatChange: (enabled) => {
+        state.repeatFarmingEnabled = !!enabled;
+      },
+    });
     return;
   }
   finalizeBattle(reason);
 }
 
 function finalizeBattle(reason){
+  if (state._repeatFarmingTimer) {
+    clearTimeout(state._repeatFarmingTimer);
+    state._repeatFarmingTimer = null;
+  }
   state.inBattle = false;
   state.battleResult = null;
   state.enemyQueue = null;
@@ -5269,6 +5352,8 @@ function makeStageEnemy(targetLevel, name, config = {}) {
 function startAdventureBattle(targetLevel, stageName){
   const stageLv = clamp(Number(targetLevel) || 1, 1, MAX_STAGE_LEVEL);
   state.currentStageName = stageName;
+  state.lastAdventureStageLevel = stageLv;
+  state.lastAdventureStageName = stageName || `Stage ${stageLv}`;
   const specialStages = {
     10: () => [
       makeStageEnemy(stageLv, "Leader Bandit", { hpMult: 1.2, atkMult: 1.15, defMult: 1.1, spdMult: 1.05, xpMult: 1.25, goldMult: 1.2 }),
