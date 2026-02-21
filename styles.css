@@ -194,6 +194,37 @@ body.inBattle .repeatFarmingFloating{
   display:inline-flex;
 }
 
+.autoBattleSettingsPanel{
+  position:fixed;
+  top:66px;
+  right:64px;
+  z-index:43;
+  min-width:168px;
+  border:1px solid rgba(120,160,220,.45);
+  border-radius:12px;
+  background:rgba(10,16,28,.94);
+  box-shadow:0 10px 24px rgba(0,0,0,.45);
+  padding:8px;
+  display:none;
+  flex-direction:column;
+  gap:6px;
+}
+.autoBattleSettingBtn{
+  width:100%;
+  border-radius:10px;
+  padding:8px 10px;
+  font-size:12px;
+  text-align:left;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.04);
+  color:var(--text);
+}
+.autoBattleSettingBtn.on{
+  border-color:rgba(120,220,170,.7);
+  background:rgba(24,60,42,.78);
+  color:#d9ffe9;
+}
+
 .mailboxOverlay{
   position:fixed;
   inset:0;
