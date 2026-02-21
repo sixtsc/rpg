@@ -21,6 +21,7 @@ export function validatePlayerSnapshot(player) {
     ["xp", 0, 99999999],
     ["xpToLevel", 1, 99999999],
     ["gold", 0, 99999999],
+    ["gems", 0, 99999999],
   ];
 
   for (const [field, min, max] of numericChecks) {
@@ -63,6 +64,47 @@ function validateProfilePayload(data) {
   }
 
   return { ok: true };
+}
+
+function normalizeCurrency(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num) || num < 0) return 0;
+  return Math.floor(num);
+}
+
+export function harmonizeUniversalCurrencies(data) {
+  if (!isObj(data) || !Array.isArray(data.slots)) return data;
+
+  const activeIdx = typeof data.activeSlot === "number" ? data.activeSlot : 0;
+  const activeSlot = data.slots[activeIdx] && typeof data.slots[activeIdx] === "object" ? data.slots[activeIdx] : null;
+
+  const pickCurrency = (field) => {
+    if (activeSlot && Number.isFinite(Number(activeSlot[field]))) {
+      return normalizeCurrency(activeSlot[field]);
+    }
+
+    let maxValue = 0;
+    for (const slot of data.slots) {
+      if (!slot || typeof slot !== "object") continue;
+      maxValue = Math.max(maxValue, normalizeCurrency(slot[field]));
+    }
+    return maxValue;
+  };
+
+  const universalGold = pickCurrency("gold");
+  const universalGems = pickCurrency("gems");
+
+  return {
+    ...data,
+    slots: data.slots.map((slot) => {
+      if (!slot || typeof slot !== "object") return slot;
+      return {
+        ...slot,
+        gold: universalGold,
+        gems: universalGems,
+      };
+    }),
+  };
 }
 
 export function validateSavePayload(data) {

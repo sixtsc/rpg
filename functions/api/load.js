@@ -1,5 +1,6 @@
 import { json, authUserId } from "../_lib.js";
 import { normalizeProfile, applyCharacterUidsToProfile } from "../character-service.js";
+import { harmonizeUniversalCurrencies } from "../game-save.js";
 
 export async function onRequest({ request, env }) {
   if (request.method === "OPTIONS") {
@@ -35,6 +36,8 @@ export async function onRequest({ request, env }) {
     } catch {
       // keep raw string
     }
+
+    parsed = harmonizeUniversalCurrencies(parsed);
 
     const profile = normalizeProfile(parsed);
     if (profile) {

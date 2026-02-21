@@ -78,6 +78,12 @@ export async function onRequest({ request, env }) {
     const now = Math.floor(Date.now() / 1000);
     const expires = now + 60 * 60 * 24 * 30;
 
+    // Single active session per account: login baru akan mengeluarkan sesi lama
+    await env.DB
+      .prepare("DELETE FROM sessions WHERE user_id = ?1 OR expires_at <= ?2")
+      .bind(user.id, now)
+      .run();
+
     await env.DB
       .prepare("INSERT INTO sessions (token, user_id, expires_at, created_at) VALUES (?,?,?,?)")
       .bind(token, user.id, expires, now)

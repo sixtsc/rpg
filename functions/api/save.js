@@ -1,5 +1,5 @@
 import { json, authUserId, checkRateLimit, logSecurityEvent } from "../_lib.js";
-import { validateSavePayload, validateProgression } from "../game-save.js";
+import { validateSavePayload, validateProgression, harmonizeUniversalCurrencies } from "../game-save.js";
 import { normalizeProfile, syncCharacterUidsFromProfile } from "../character-service.js";
 
 export async function onRequest({ request, env }) {
@@ -46,6 +46,8 @@ export async function onRequest({ request, env }) {
     let data = body.data ?? null;
     if (data == null) return json({ message: "No data" }, { status: 400 });
 
+    data = harmonizeUniversalCurrencies(data);
+
     const validated = validateSavePayload(data);
     if (!validated.ok) {
       await logSecurityEvent(env, userId, "save_rejected", validated.message);
@@ -60,7 +62,7 @@ export async function onRequest({ request, env }) {
       } catch {
         prevParsed = null;
       }
-      const progression = validateProgression(prevParsed, data);
+      const progression = validateProgression(harmonizeUniversalCurrencies(prevParsed), data);
       if (!progression.ok) {
         await logSecurityEvent(env, userId, "save_rejected", progression.message);
         return json({ message: progression.message }, { status: 400 });
