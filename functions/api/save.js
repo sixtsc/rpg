@@ -1,6 +1,7 @@
 import { json, authUserId, checkRateLimit, logSecurityEvent } from "../_lib.js";
 import { validateSavePayload, validateProgression, harmonizeUniversalCurrencies } from "../game-save.js";
 import { normalizeProfile, syncCharacterUidsFromProfile } from "../character-service.js";
+import { fetchVerifiedItems, enforceVerifiedInventory } from "../item-registry.js";
 
 export async function onRequest({ request, env }) {
   if (request.method === "OPTIONS") {
@@ -47,6 +48,18 @@ export async function onRequest({ request, env }) {
     if (data == null) return json({ message: "No data" }, { status: 400 });
 
     data = harmonizeUniversalCurrencies(data);
+
+    const verifiedItemsById = await fetchVerifiedItems(env);
+    if (verifiedItemsById.size === 0) {
+      return json({ message: "Item registry belum tersedia di database." }, { status: 500 });
+    }
+
+    const enforcement = enforceVerifiedInventory(data, verifiedItemsById);
+    data = enforcement.payload;
+    if (enforcement.unknownIds.length > 0) {
+      await logSecurityEvent(env, userId, "save_rejected_unknown_item", `Unknown item IDs: ${enforcement.unknownIds.join(",")}`);
+      return json({ message: "Inventory mengandung item ID yang tidak terverifikasi database." }, { status: 400 });
+    }
 
     const validated = validateSavePayload(data);
     if (!validated.ok) {

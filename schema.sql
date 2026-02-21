@@ -114,3 +114,19 @@ CREATE TABLE IF NOT EXISTS character_friends (
 
 CREATE INDEX IF NOT EXISTS idx_character_friends_req ON character_friends(requester_uid, status, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_character_friends_add ON character_friends(addressee_uid, status, updated_at DESC);
+
+-- Registry item server-side untuk validasi inventory berdasarkan item ID
+CREATE TABLE IF NOT EXISTS game_items (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  amount INTEGER NOT NULL,
+  desc TEXT NOT NULL,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  updated_at INTEGER NOT NULL
+);
+
+INSERT OR IGNORE INTO game_items (id, name, kind, amount, desc, is_active, updated_at)
+VALUES
+  (1, 'Potion', 'heal_hp', 25, 'Memulihkan 25 HP', 1, unixepoch()),
+  (2, 'Ether', 'heal_mp', 10, 'Memulihkan 10 MP', 1, unixepoch());

@@ -1,6 +1,7 @@
 import { json, authUserId } from "../_lib.js";
 import { normalizeProfile, applyCharacterUidsToProfile } from "../character-service.js";
 import { harmonizeUniversalCurrencies } from "../game-save.js";
+import { fetchVerifiedItems, enforceVerifiedInventory } from "../item-registry.js";
 
 export async function onRequest({ request, env }) {
   if (request.method === "OPTIONS") {
@@ -38,6 +39,11 @@ export async function onRequest({ request, env }) {
     }
 
     parsed = harmonizeUniversalCurrencies(parsed);
+
+    const verifiedItemsById = await fetchVerifiedItems(env);
+    if (verifiedItemsById.size > 0) {
+      parsed = enforceVerifiedInventory(parsed, verifiedItemsById).payload;
+    }
 
     const profile = normalizeProfile(parsed);
     if (profile) {
