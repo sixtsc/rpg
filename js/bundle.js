@@ -2509,6 +2509,16 @@ function refresh(state) {
     btnAutoBattleSettingsFloating.setAttribute("title", autoItemLabel);
   }
 
+  const repeatFloatingLabel = state.repeatFarmingEnabled ? "Repeat Farming: ON (tap untuk stop)" : "Repeat Farming: OFF";
+  const btnRepeatFarmingFloating = $("btnRepeatFarmingFloating");
+  if (btnRepeatFarmingFloating) {
+    const showRepeat = !!state.inBattle && !!state.repeatFarmingEnabled && hasAdventureFarmingTarget();
+    btnRepeatFarmingFloating.style.display = showRepeat ? "inline-flex" : "none";
+    btnRepeatFarmingFloating.classList.toggle("active", !!state.repeatFarmingEnabled);
+    btnRepeatFarmingFloating.setAttribute("aria-label", repeatFloatingLabel);
+    btnRepeatFarmingFloating.setAttribute("title", repeatFloatingLabel);
+  }
+
   // Player title + name
   const pNameTitle = $("pNameTitle");
   if (pNameTitle) pNameTitle.textContent = p.name;
@@ -6747,6 +6757,16 @@ function bind() {
       if (!state.inBattle || !state.autoBattleEnabled) return;
       setAutoBattleUseConsumable(!state.autoBattleUseConsumable);
       addLog("INFO", state.autoBattleUseConsumable ? "Auto Battle: consumable aktif." : "Auto Battle: consumable nonaktif.");
+      refresh(state);
+    };
+  }
+
+  const btnRepeatFarmingFloating = byId("btnRepeatFarmingFloating");
+  if (btnRepeatFarmingFloating) {
+    btnRepeatFarmingFloating.onclick = () => {
+      if (!state.repeatFarmingEnabled) return;
+      state.repeatFarmingEnabled = false;
+      addLog("INFO", "Repeat Farming dimatikan.");
       refresh(state);
     };
   }
