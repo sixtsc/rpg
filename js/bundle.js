@@ -48,14 +48,22 @@ const ITEMS = {
     level:1,
   }
 };
-const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton"];
+const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton","Orc Raider","Dark Mage","Lizardman","Shadow Assassin","Hell Hound"];
 const ENEMY_AVATARS = {
   Slime: { image: "./assets/enemies/slime.png" },
   Goblin: { image: "./assets/enemies/goblin.png" },
   Bandit: { image: "./assets/enemies/bandit1.png" },
   "Leader Bandit": { image: "./assets/enemies/leaderbandit.png" },
   Wolf: { image: "./assets/enemies/wolf.png" },
-  Skeleton: { image: "./assets/enemies/skeleton.png" }
+  Skeleton: { image: "./assets/enemies/skeleton.png" },
+  "Orc Raider": { image: "./assets/enemies/bandit1.png" },
+  "Dark Mage": { image: "./assets/enemies/skeleton.png" },
+  Lizardman: { image: "./assets/enemies/goblin.png" },
+  "Shadow Assassin": { image: "./assets/enemies/wolf.png" },
+  "Hell Hound": { image: "./assets/enemies/wolf.png" },
+  "Abyss Knight": { image: "./assets/enemies/leaderbandit.png" },
+  "Dread Captain": { image: "./assets/enemies/leaderbandit.png" },
+  "Void Reaper": { image: "./assets/enemies/skeleton.png" }
 };
 const ALLY_AVATARS = {
   Guardian: { icon: "🛡️", bg: "linear-gradient(135deg, #7ad5ff, #1f4b78)" },
@@ -179,7 +187,8 @@ const randFloat = (a,b) => (Math.random()*(b-a))+a;
 const pick = (arr) => arr[Math.floor(Math.random()*arr.length)];
 const MAX_CHAR_SLOTS = 6;
 const STAT_POINTS_PER_LEVEL = 1;
-const MAX_LEVEL = 10;
+const MAX_PLAYER_LEVEL = 20;
+const MAX_STAGE_LEVEL = 20;
 const MAX_ALLIES = 2;
 const TURN_DELAY_MS = 650;
 const ALLY_ACTION_GAP_MS = 420;
@@ -217,7 +226,7 @@ function getDailyLoginReward(day){
   return { gold: 1000, gems: 0 };
 }
 function genEnemy(plv){
-  const lvl = clamp(plv + pick([-1,0,0,1]), 1, MAX_LEVEL);
+  const lvl = clamp(plv + pick([-1,0,0,1]), 1, MAX_STAGE_LEVEL);
   const name = pick(ENEMY_NAMES);
   const enemy = {
     name,
@@ -329,7 +338,7 @@ function dodgeChance(p,e){
 function createStarterAlly(allyId = "glenn", level = 0){
   const key = String(allyId || "glenn").toLowerCase();
   const baseAlly = ALLY_BASES[key] || GLENN_BASE;
-  const lv = clamp(Number(level) || 0, 0, MAX_LEVEL);
+  const lv = clamp(Number(level) || 0, 0, MAX_PLAYER_LEVEL);
   const levelDelta = lv - 1;
   const maxHp = baseAlly.maxHp + levelDelta * 10;
   const maxMp = baseAlly.maxMp + levelDelta * 4;
@@ -403,7 +412,7 @@ function normalizeAlly(ally){
   if (!ally) return null;
   const allyId = String(ally.id || ally.name || "glenn").toLowerCase();
   const baseAlly = ALLY_BASES[allyId] || GLENN_BASE;
-  const level = clamp(Number(ally.level) || 0, 0, MAX_LEVEL);
+  const level = clamp(Number(ally.level) || 0, 0, MAX_PLAYER_LEVEL);
   const maxHp = Math.max(1, Number(ally.maxHp) || 1);
   const maxMp = Math.max(0, Number(ally.maxMp) || 0);
   const hpRaw = Number(ally.hp);
@@ -1351,8 +1360,8 @@ function renderBattleRewardXpList(summary) {
     const afterToLevel = Math.max(1, Number(entry.afterXpToLevel) || beforeToLevel);
     const beforeXpRaw = Number(entry.beforeXp) || 0;
     const afterXpRaw = Number(entry.afterXp) || 0;
-    const maxedBefore = beforeLevel >= MAX_LEVEL;
-    const maxedAfter = afterLevel >= MAX_LEVEL;
+    const maxedBefore = beforeLevel >= MAX_PLAYER_LEVEL;
+    const maxedAfter = afterLevel >= MAX_PLAYER_LEVEL;
     const resetOnLevelUp = !maxedAfter && afterLevel > beforeLevel;
     const startXp = maxedBefore ? beforeToLevel : clamp(resetOnLevelUp ? 0 : beforeXpRaw, 0, resetOnLevelUp ? afterToLevel : beforeToLevel);
     const startToLevel = resetOnLevelUp ? afterToLevel : beforeToLevel;
@@ -2487,7 +2496,7 @@ function refresh(state) {
   const prevPlayerHp = (typeof p._prevHp === "number") ? p._prevHp : p.hp;
   $("hpText").textContent = `${p.hp}/${p.maxHp}`;
   $("mpText").textContent = `${p.mp}/${p.maxMp}`;
-  $("xpText").textContent = (p.level >= MAX_LEVEL) ? "MAX" : `${p.xp}/${p.xpToLevel}`;
+  $("xpText").textContent = (p.level >= MAX_PLAYER_LEVEL) ? "MAX" : `${p.xp}/${p.xpToLevel}`;
 
   const playerHpBar = $("hpBar");
   setBar(playerHpBar, p.hp, p.maxHp);
@@ -2505,7 +2514,7 @@ function refresh(state) {
   }
   p._prevHp = p.hp;
   setBar($("mpBar"), p.mp, p.maxMp);
-  setBar($("xpBar"), (p.level >= MAX_LEVEL ? p.xpToLevel : p.xp), p.xpToLevel);
+  setBar($("xpBar"), (p.level >= MAX_PLAYER_LEVEL ? p.xpToLevel : p.xp), p.xpToLevel);
   renderSkillSlots();
   const skillShopPage = $("skillShopPage");
   if (skillShopPage && !skillShopPage.classList.contains("hidden")) {
@@ -2931,7 +2940,7 @@ function setAllyPageVisible(show){
 function levelUpAlly(allyIndex){
   const ally = getRosterAllies()[allyIndex];
   if (!ally) return { ok:false, message:"Ally tidak ditemukan." };
-  if ((ally.level || 0) >= MAX_LEVEL) return { ok:false, message:"Level Glenn sudah maksimal." };
+  if ((ally.level || 0) >= MAX_PLAYER_LEVEL) return { ok:false, message:"Level Glenn sudah maksimal." };
   const cost = (ally.level + 1) * 120;
   if ((state.player.gold || 0) < cost) return { ok:false, message:`Gold tidak cukup. Butuh ${cost}.` };
 
@@ -3029,12 +3038,12 @@ function openAllyDetailPopup(ally, idx = 0){
   }
   const currentXp = Math.max(0, Number(ally.xp) || 0);
   const nextXp = Math.max(1, Number(ally.xpToLevel) || 1);
-  const xpPct = (Number(ally.level) || 0) >= MAX_LEVEL ? 100 : clamp((currentXp / nextXp) * 100, 0, 100);
-  if (xpText) xpText.textContent = (Number(ally.level) || 0) >= MAX_LEVEL ? "MAX" : `${currentXp}/${nextXp}`;
+  const xpPct = (Number(ally.level) || 0) >= MAX_PLAYER_LEVEL ? 100 : clamp((currentXp / nextXp) * 100, 0, 100);
+  if (xpText) xpText.textContent = (Number(ally.level) || 0) >= MAX_PLAYER_LEVEL ? "MAX" : `${currentXp}/${nextXp}`;
   if (xpBar) xpBar.style.width = `${xpPct}%`;
   if (levelBtn) {
-    levelBtn.textContent = (Number(ally.level) || 0) >= MAX_LEVEL ? "Level Max (Lv10)" : `Level Up (Cost ${(Number(ally.level) + 1) * 120} Gold)`;
-    levelBtn.disabled = (Number(ally.level) || 0) >= MAX_LEVEL;
+    levelBtn.textContent = (Number(ally.level) || 0) >= MAX_PLAYER_LEVEL ? "Level Max (Lv20)" : `Level Up (Cost ${(Number(ally.level) + 1) * 120} Gold)`;
+    levelBtn.disabled = (Number(ally.level) || 0) >= MAX_PLAYER_LEVEL;
     levelBtn.onclick = () => {
       const result = levelUpAlly(idx);
       addLog(result.ok ? "INFO" : "WARN", result.message);
@@ -4565,7 +4574,7 @@ function finalizeBattle(reason){
 function levelUp() {
   const p = state.player;
   if (!p) return;
-  if (p.level >= MAX_LEVEL) return;
+  if (p.level >= MAX_PLAYER_LEVEL) return;
 
   const prevMaxHp = p.maxHp;
   const prevMaxMp = p.maxMp;
@@ -4595,7 +4604,7 @@ function gainXp(amount) {
   const p = state.player;
 
   // Freeze XP at max level
-  if (p.level >= MAX_LEVEL) {
+  if (p.level >= MAX_PLAYER_LEVEL) {
     p.xp = p.xpToLevel;
     return;
   }
@@ -4603,13 +4612,13 @@ function gainXp(amount) {
   addLog("XP", `+${amount} XP`);
   p.xp += amount;
 
-  while (p.level < MAX_LEVEL && p.xp >= p.xpToLevel) {
+  while (p.level < MAX_PLAYER_LEVEL && p.xp >= p.xpToLevel) {
     p.xp -= p.xpToLevel;
     levelUp();
   }
 
   // If we just hit cap, lock XP bar
-  if (p.level >= MAX_LEVEL) {
+  if (p.level >= MAX_PLAYER_LEVEL) {
     p.xp = p.xpToLevel;
   }
 }
@@ -4621,12 +4630,12 @@ function gainAllyXp(amount) {
   const share = Math.max(1, Math.floor(amount * 0.7));
   allies.forEach((ally) => {
     if (!ally) return;
-    if ((ally.level || 0) >= MAX_LEVEL) {
+    if ((ally.level || 0) >= MAX_PLAYER_LEVEL) {
       ally.xp = ally.xpToLevel;
       return;
     }
     ally.xp = (ally.xp || 0) + share;
-    while ((ally.level || 0) < MAX_LEVEL && ally.xp >= (ally.xpToLevel || 1)) {
+    while ((ally.level || 0) < MAX_PLAYER_LEVEL && ally.xp >= (ally.xpToLevel || 1)) {
       ally.xp -= ally.xpToLevel;
       ally.level += 1;
       ally.xpToLevel = Math.round((ally.xpToLevel || 50) * 1.2);
@@ -4639,7 +4648,7 @@ function gainAllyXp(amount) {
       ally.mp = ally.maxMp;
           addLog("ALLY", `${ally.name} naik ke Lv${ally.level} dari EXP battle!`);
     }
-    if ((ally.level || 0) >= MAX_LEVEL) ally.xp = ally.xpToLevel;
+    if ((ally.level || 0) >= MAX_PLAYER_LEVEL) ally.xp = ally.xpToLevel;
   });
 }
 
@@ -5195,51 +5204,126 @@ function explore() {
 }
 
 function openAdventureLevels(){
-  const stages = [1, 3, 5, 7, 8, 10];
+  const categories = [
+    { key: "1-10", title: "Stage 1-10", desc: "Petualangan awal sampai menengah." },
+    { key: "11-20", title: "Stage 11-20", desc: "Area hard mode dengan musuh tier baru." }
+  ];
   modal.open(
-    "Adventure - Level",
-    stages.map((lv) => ({
-      title: `Stage ${lv}`,
-      desc: lv === 10
-        ? "Stage spesial: 3 musuh."
-        : lv === 8
-          ? "Stage spesial: 2 musuh."
-          : "Pilih stage petualangan",
+    "Adventure - Kategori",
+    categories.map((cat) => ({
+      title: cat.title,
+      desc: cat.desc,
       meta: "",
-      value: lv,
+      value: cat.key,
     })),
-    (level) => {
-      const targetLv = clamp(Number(level) || 1, 1, MAX_LEVEL);
-      startAdventureBattle(targetLv, `Stage ${targetLv}`);
+    (category) => {
+      const stageRange = category === "11-20"
+        ? [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+        : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+      modal.open(
+        `Adventure - ${category}`,
+        stageRange.map((lv) => ({
+          title: `Stage ${lv}`,
+          desc: lv === 20
+            ? "Stage boss akhir: 3 musuh elite."
+            : lv === 19 || lv === 17 || lv === 16 || lv === 15 || lv === 13 || lv === 11
+              ? "Stage spesial dengan komposisi musuh unik."
+              : lv === 10
+                ? "Stage spesial: 3 musuh."
+                : lv === 8
+                  ? "Stage spesial: 2 musuh."
+                  : "Pilih stage petualangan",
+          meta: "",
+          value: lv,
+        })),
+        (level) => {
+          const targetLv = clamp(Number(level) || 1, 1, MAX_STAGE_LEVEL);
+          startAdventureBattle(targetLv, `Stage ${targetLv}`);
+        }
+      );
     }
   );
 }
 
+function applyEliteEnemyScaling(enemy, config = {}) {
+  const hpMult = Number(config.hpMult || 1);
+  const atkMult = Number(config.atkMult || 1);
+  const defMult = Number(config.defMult || 1);
+  const spdMult = Number(config.spdMult || 1);
+  const xpMult = Number(config.xpMult || 1);
+  const goldMult = Number(config.goldMult || 1);
+  enemy.maxHp = Math.max(1, Math.round(enemy.maxHp * hpMult));
+  enemy.hp = enemy.maxHp;
+  enemy.atk = Math.max(1, Math.round(enemy.atk * atkMult));
+  enemy.def = Math.max(0, Math.round(enemy.def * defMult));
+  enemy.spd = Math.max(1, Math.round(enemy.spd * spdMult));
+  enemy.xpReward = Math.max(1, Math.round(enemy.xpReward * xpMult));
+  enemy.goldReward = Math.max(1, Math.round(enemy.goldReward * goldMult));
+  return enemy;
+}
+
+function makeStageEnemy(targetLevel, name, config = {}) {
+  return applyEliteEnemyScaling(genEnemyWithName(targetLevel, name), config);
+}
+
 function startAdventureBattle(targetLevel, stageName){
+  const stageLv = clamp(Number(targetLevel) || 1, 1, MAX_STAGE_LEVEL);
   state.currentStageName = stageName;
-  if (targetLevel === 8 || targetLevel === 10) {
-    if (targetLevel === 10) {
-      const leaderBandit = genEnemyWithName(targetLevel, "Leader Bandit");
-      leaderBandit.maxHp = Math.round(leaderBandit.maxHp * 1.2);
-      leaderBandit.hp = leaderBandit.maxHp;
-      leaderBandit.atk = Math.round(leaderBandit.atk * 1.15);
-      leaderBandit.def = Math.round(leaderBandit.def * 1.1);
-      leaderBandit.spd = Math.round(leaderBandit.spd * 1.05);
-      leaderBandit.xpReward = Math.round(leaderBandit.xpReward * 1.25);
-      leaderBandit.goldReward = Math.round(leaderBandit.goldReward * 1.2);
-      state.enemyQueue = [
-        leaderBandit,
-        genEnemyWithName(targetLevel, "Bandit"),
-        genEnemyWithName(targetLevel, "Bandit")
-      ];
-    } else {
-      state.enemyQueue = Array.from({ length: 2 }, () => genEnemy(targetLevel));
-    }
+  const specialStages = {
+    10: () => [
+      makeStageEnemy(stageLv, "Leader Bandit", { hpMult: 1.2, atkMult: 1.15, defMult: 1.1, spdMult: 1.05, xpMult: 1.25, goldMult: 1.2 }),
+      makeStageEnemy(stageLv, "Bandit"),
+      makeStageEnemy(stageLv, "Bandit")
+    ],
+    11: () => [
+      makeStageEnemy(stageLv, "Orc Raider", { hpMult: 1.12 }),
+      makeStageEnemy(stageLv, "Lizardman", { spdMult: 1.08 })
+    ],
+    13: () => [
+      makeStageEnemy(stageLv, "Dark Mage", { atkMult: 1.14, spdMult: 1.06 }),
+      makeStageEnemy(stageLv, "Skeleton", { defMult: 1.12 })
+    ],
+    15: () => [
+      makeStageEnemy(stageLv, "Hell Hound", { spdMult: 1.2, atkMult: 1.1 }),
+      makeStageEnemy(stageLv, "Shadow Assassin", { spdMult: 1.22, atkMult: 1.08 })
+    ],
+    16: () => [
+      makeStageEnemy(stageLv, "Abyss Knight", { hpMult: 1.2, defMult: 1.18, atkMult: 1.1 })
+    ],
+    17: () => [
+      makeStageEnemy(stageLv, "Abyss Knight", { hpMult: 1.12, defMult: 1.12 }),
+      makeStageEnemy(stageLv, "Dark Mage", { atkMult: 1.15 })
+    ],
+    19: () => [
+      makeStageEnemy(stageLv, "Dread Captain", { hpMult: 1.2, atkMult: 1.15, defMult: 1.12 }),
+      makeStageEnemy(stageLv, "Orc Raider", { hpMult: 1.1 }),
+      makeStageEnemy(stageLv, "Shadow Assassin", { spdMult: 1.15 })
+    ],
+    20: () => [
+      makeStageEnemy(stageLv, "Void Reaper", { hpMult: 1.45, atkMult: 1.25, defMult: 1.2, spdMult: 1.1, xpMult: 1.45, goldMult: 1.35 }),
+      makeStageEnemy(stageLv, "Abyss Knight", { hpMult: 1.25, defMult: 1.15 }),
+      makeStageEnemy(stageLv, "Dark Mage", { atkMult: 1.18 })
+    ],
+  };
+
+  if (specialStages[stageLv]) {
+    state.enemyQueue = specialStages[stageLv]();
     state.enemy = state.enemyQueue[0];
     state.enemyTargetIndex = getDefaultEnemyTargetIndex(state.enemyQueue);
+  } else if (stageLv === 8) {
+    state.enemyQueue = Array.from({ length: 2 }, () => genEnemy(stageLv));
+    state.enemy = state.enemyQueue[0];
+    state.enemyTargetIndex = getDefaultEnemyTargetIndex(state.enemyQueue);
+  } else if (stageLv >= 11) {
+    const highTierNames = ["Orc Raider", "Dark Mage", "Lizardman", "Shadow Assassin", "Hell Hound"];
+    const highEnemy = genEnemyWithName(stageLv, pick(highTierNames));
+    applyEliteEnemyScaling(highEnemy, { hpMult: 1.08, atkMult: 1.08, defMult: 1.06, xpMult: 1.12, goldMult: 1.12 });
+    state.enemyQueue = null;
+    state.enemy = highEnemy;
+    state.enemyTargetIndex = getDefaultEnemyTargetIndex([state.enemy]);
   } else {
     state.enemyQueue = null;
-    state.enemy = genEnemy(targetLevel);
+    state.enemy = genEnemy(stageLv);
     state.enemyTargetIndex = getDefaultEnemyTargetIndex([state.enemy]);
   }
   state.inBattle = true;

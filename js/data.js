@@ -45,7 +45,7 @@ export const ITEMS = {
   ether:  { name:"Ether", kind:"heal_mp", amount:10, desc:"Memulihkan 10 MP", id:2 }
 };
 
-export const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton"];
+export const ENEMY_NAMES = ["Slime","Goblin","Bandit","Wolf","Skeleton","Orc Raider","Dark Mage","Lizardman","Shadow Assassin","Hell Hound"];
 export const ENEMY_AVATARS = {
   Slime: { image: "./assets/enemies/slime.png" },
   Goblin: { image: "./assets/enemies/goblin.png" },
@@ -53,6 +53,14 @@ export const ENEMY_AVATARS = {
   "Leader Bandit": { image: "./assets/enemies/leaderbandit.png" },
   Wolf: { image: "./assets/enemies/wolf.png" },
   Skeleton: { image: "./assets/enemies/skeleton.png" },
+  "Orc Raider": { image: "./assets/enemies/bandit1.png" },
+  "Dark Mage": { image: "./assets/enemies/skeleton.png" },
+  Lizardman: { image: "./assets/enemies/goblin.png" },
+  "Shadow Assassin": { image: "./assets/enemies/wolf.png" },
+  "Hell Hound": { image: "./assets/enemies/wolf.png" },
+  "Abyss Knight": { image: "./assets/enemies/leaderbandit.png" },
+  "Dread Captain": { image: "./assets/enemies/leaderbandit.png" },
+  "Void Reaper": { image: "./assets/enemies/skeleton.png" },
 };
 
 export const RECRUIT_TEMPLATES = [
