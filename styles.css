@@ -224,6 +224,9 @@ body.inBattle .repeatFarmingFloating{
   background:rgba(24,60,42,.78);
   color:#d9ffe9;
 }
+.autoBattleSettingBtn:disabled{
+  opacity:.5;
+}
 
 .mailboxOverlay{
   position:fixed;
