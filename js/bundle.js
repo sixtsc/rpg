@@ -2793,6 +2793,8 @@ function ensureQuestState(){
   p.questWeekly.wins = Math.max(0, Number(p.questWeekly.wins) || 0);
   p.questDaily.claimed = !!p.questDaily.claimed;
   p.questWeekly.claimed = !!p.questWeekly.claimed;
+}
+
 function hasElaraUnlockRequirements(){
   const player = state.player;
   if (!player) return false;
@@ -7276,5 +7278,6 @@ async function syncCloudOrLocalAndShowCharacterMenu(){
 
   refresh(state);
 })();
+
 
 })();
