@@ -5205,8 +5205,8 @@ function explore() {
 
 function openAdventureLevels(){
   const categories = [
-    { key: "1-10", title: "Rank F", desc: "Petualangan awal sampai menengah." },
-    { key: "11-20", title: "Rank E", desc: "Area hard mode dengan musuh tier baru." }
+    { key: "11-20", title: "Rank E", desc: "Area hard mode dengan musuh tier baru." },
+    { key: "1-10", title: "Rank F", desc: "Petualangan awal sampai menengah." }
   ];
   modal.open(
     "Adventure - Kategori",
