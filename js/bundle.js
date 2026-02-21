@@ -3322,12 +3322,31 @@ function getMarketSellGoods(){
   return keys.filter((name) => {
     const ref = inv[name];
     if (!ref) return false;
+    if (getSellableQty(name) <= 0) return false;
     if (category === "equipment") {
       const slot = equipCategory === "weapon" ? "hand" : equipCategory;
       return ref.kind === "gear" && ref.slot === slot;
     }
     return ref.kind !== "gear";
   });
+}
+
+function getEquippedUsageCount(name){
+  const p = state.player;
+  if (!p || !name) return 0;
+  let used = 0;
+  if (p.equipment && typeof p.equipment === "object") {
+    Object.values(p.equipment).forEach((equippedName) => {
+      if (equippedName === name) used += 1;
+    });
+  }
+  return used;
+}
+
+function getSellableQty(name){
+  const invQty = Number(state.player?.inv?.[name]?.qty || 0);
+  if (invQty <= 0) return 0;
+  return Math.max(0, invQty - getEquippedUsageCount(name));
 }
 
 function openMarketConfirm(mode, name){
@@ -3339,7 +3358,8 @@ function openMarketConfirm(mode, name){
   if (isBuy && !g) return openShopModal(mode);
   const basePrice = g?.price || 10;
   const gain = Math.max(1, Math.floor(basePrice / 2));
-  const maxQty = !isBuy ? Math.max(1, Number(inv[name]?.qty || 1)) : 1;
+  const maxQty = !isBuy ? getSellableQty(name) : 1;
+  if (!isBuy && maxQty <= 0) return openShopModal("sell");
   const startQty = !isBuy ? Math.min(Math.max(1, Number(state.marketSellQty || 1)), maxQty) : 1;
   state.marketSellQty = startQty;
   const priceValue = isBuy ? basePrice : gain * startQty;
@@ -3457,7 +3477,8 @@ function sellItem(name, qty = 1){
   const inv = p.inv[name];
   const base = getShopItem(name)?.price || 10;
   const gain = Math.max(1, Math.floor(base / 2));
-  const sellQty = Math.min(Math.max(1, Number(qty || 1)), inv.qty);
+  const sellableQty = getSellableQty(name);
+  const sellQty = Math.min(Math.max(1, Number(qty || 1)), sellableQty);
   if (!sellQty) return false;
   inv.qty -= sellQty;
   if (inv.qty <= 0) delete p.inv[name];
@@ -4018,7 +4039,8 @@ function openShopModal(mode = "menu"){
     const rows = sellKeys.length
       ? sellKeys.map((k) => {
           const price = Math.max(1, Math.floor((getShopItem(k)?.price || 10) / 2));
-          return { title: `${k} x${inv[k].qty}`, desc: inv[k].desc || "Item", meta: `+${price} gold`, value: `sell:${k}` };
+          const qty = getSellableQty(k);
+          return { title: `${k} x${qty}`, desc: inv[k].desc || "Item", meta: `+${price} gold`, value: `sell:${k}` };
         })
       : [{ title: "Tidak ada item", desc: "Inventory kosong.", meta: "", value: undefined, className: "readonly" }];
 
