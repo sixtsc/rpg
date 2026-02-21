@@ -1605,6 +1605,46 @@ body.inBattle .enemyMiniMeta .muted{
 .choice .desc{ color:var(--muted); font-size:12px; }
 .choice .right{ text-align:right; }
 
+
+/* Adventure modal redesign: cleaner rank list (less card-like) */
+.modalBody.adventureMenu{
+  gap:0;
+  padding:8px 14px;
+}
+.modalBody.adventureMenu .choice{
+  background:transparent;
+  border:none;
+  border-bottom:1px solid rgba(148,163,184,.22);
+  border-radius:0;
+  padding:12px 4px;
+  box-shadow:none;
+}
+.modalBody.adventureMenu .choice:last-child{ border-bottom:none; }
+.modalBody.adventureMenu .choice .titleRow b{
+  font-size:14px;
+  letter-spacing:.2px;
+}
+.modalBody.adventureMenu .choice .desc{
+  font-size:12px;
+  color:#9fb0c3;
+}
+.modalBody.adventureMenu .choice .right{
+  font-weight:800;
+  color:#7dc3ff;
+}
+.modalBody.adventureMenu .choice.adventureRankRow{
+  padding-top:14px;
+  padding-bottom:14px;
+}
+.modalBody.adventureMenu .choice.adventureRankRow .titleRow b{
+  font-size:15px;
+}
+.modalBody.adventureMenu .choice.adventureStageRow .right{
+  min-width:52px;
+  text-align:right;
+  color:#b8c8dc;
+}
+
 .choice.danger{
   border-color: rgba(255, 120, 120, .55);
 }

@@ -2315,12 +2315,14 @@ const modal = {
     body.classList.remove("equipmentGrid");
     body.classList.remove("marketSubCompact");
     body.classList.remove("confirmPopup");
+    body.classList.remove("adventureMenu");
     if (modalEl) modalEl.classList.remove("confirmPopup");
     const lowerTitle = String(title).toLowerCase();
     if (String(title).toLowerCase().includes("stats")) body.classList.add("statsGrid");
     if (lowerTitle.includes("stat")) body.classList.add("statModal");
     if (lowerTitle.includes("market") || lowerTitle.includes("inventory")) body.classList.add("marketGrid");
     if (String(title).toLowerCase().includes("equipment")) body.classList.add("equipmentGrid");
+    if (lowerTitle.includes("adventure")) body.classList.add("adventureMenu");
     if (choices.some((c) => String(c.className || "").includes("marketSub"))) {
       body.classList.add("marketSubCompact");
     }
@@ -5227,23 +5229,25 @@ function explore() {
 
 function openAdventureLevels(){
   const categories = [
-    { key: "1-10", title: "Stage 1-10", desc: "Petualangan awal sampai menengah." },
-    { key: "11-20", title: "Stage 11-20", desc: "Area hard mode dengan musuh tier baru." }
+    { key: "11-20", title: "Rank E", desc: "Area hard mode dengan musuh tier baru." },
+    { key: "1-10", title: "Rank F", desc: "Petualangan awal sampai menengah." }
   ];
   modal.open(
     "Adventure - Kategori",
     categories.map((cat) => ({
       title: cat.title,
       desc: cat.desc,
-      meta: "",
+      meta: "›",
+      className: "adventureRankRow",
       value: cat.key,
     })),
     (category) => {
       const stageRange = category === "11-20"
-        ? [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
-        : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        ? [11, 12, 14, 15, 16, 18, 19, 20]
+        : [1, 2, 3, 4, 6, 7, 9, 10];
+      const categoryTitle = category === "11-20" ? "Rank E" : "Rank F";
       modal.open(
-        `Adventure - ${category}`,
+        `Adventure - ${categoryTitle}`,
         stageRange.map((lv) => ({
           title: `Stage ${lv}`,
           desc: lv === 20
@@ -5255,7 +5259,8 @@ function openAdventureLevels(){
                 : lv === 8
                   ? "Stage spesial: 2 musuh."
                   : "Pilih stage petualangan",
-          meta: "",
+          meta: `Lv ${lv}`,
+          className: "adventureStageRow",
           value: lv,
         })),
         (level) => {
@@ -5284,8 +5289,15 @@ function applyEliteEnemyScaling(enemy, config = {}) {
   return enemy;
 }
 
+const ADVENTURE_ENEMY_HP_MULT = 1.45;
+function applyAdventureEnemyHpBuff(enemy) {
+  enemy.maxHp = Math.max(1, Math.round(enemy.maxHp * ADVENTURE_ENEMY_HP_MULT));
+  enemy.hp = enemy.maxHp;
+  return enemy;
+}
+
 function makeStageEnemy(targetLevel, name, config = {}) {
-  return applyEliteEnemyScaling(genEnemyWithName(targetLevel, name), config);
+  return applyAdventureEnemyHpBuff(applyEliteEnemyScaling(genEnemyWithName(targetLevel, name), config));
 }
 
 function startAdventureBattle(targetLevel, stageName){
@@ -5333,19 +5345,20 @@ function startAdventureBattle(targetLevel, stageName){
     state.enemy = state.enemyQueue[0];
     state.enemyTargetIndex = getDefaultEnemyTargetIndex(state.enemyQueue);
   } else if (stageLv === 8) {
-    state.enemyQueue = Array.from({ length: 2 }, () => genEnemy(stageLv));
+    state.enemyQueue = Array.from({ length: 2 }, () => applyAdventureEnemyHpBuff(genEnemy(stageLv)));
     state.enemy = state.enemyQueue[0];
     state.enemyTargetIndex = getDefaultEnemyTargetIndex(state.enemyQueue);
   } else if (stageLv >= 11) {
     const highTierNames = ["Orc Raider", "Dark Mage", "Lizardman", "Shadow Assassin", "Hell Hound"];
     const highEnemy = genEnemyWithName(stageLv, pick(highTierNames));
     applyEliteEnemyScaling(highEnemy, { hpMult: 1.08, atkMult: 1.08, defMult: 1.06, xpMult: 1.12, goldMult: 1.12 });
+    applyAdventureEnemyHpBuff(highEnemy);
     state.enemyQueue = null;
     state.enemy = highEnemy;
     state.enemyTargetIndex = getDefaultEnemyTargetIndex([state.enemy]);
   } else {
     state.enemyQueue = null;
-    state.enemy = genEnemy(stageLv);
+    state.enemy = applyAdventureEnemyHpBuff(genEnemy(stageLv));
     state.enemyTargetIndex = getDefaultEnemyTargetIndex([state.enemy]);
   }
   state.inBattle = true;
