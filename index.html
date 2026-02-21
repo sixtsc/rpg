@@ -339,7 +339,11 @@
   </div>
 
   <button id="btnAutoBattleFloating" class="autoBattleFloating" type="button" aria-label="Auto Battle OFF" title="Auto Battle OFF">⚙️</button>
-  <button id="btnAutoBattleSettingsFloating" class="autoBattleSettingsFloating" type="button" aria-label="Auto Item OFF" title="Auto Item OFF">🧪</button>
+  <button id="btnAutoBattleSettingsFloating" class="autoBattleSettingsFloating" type="button" aria-label="Auto Battle Settings" title="Auto Battle Settings">🔁</button>
+  <div id="autoBattleSettingsPanel" class="autoBattleSettingsPanel" style="display:none;">
+    <button class="autoBattleSettingBtn" id="btnAutoBattleSettingItem" type="button">Auto Item: OFF</button>
+    <button class="autoBattleSettingBtn" id="btnAutoBattleSettingRepeat" type="button">Auto Retry: OFF</button>
+  </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <div id="battleResultBackdrop" class="battleResultBackdrop" style="display:none;">
@@ -352,6 +356,14 @@
         <div class="battleRewardXpList" id="battleRewardXpList"></div>
         <div class="battleDropTitle" id="battleDropTitle">Drop Item</div>
         <div class="battleRewardGrid battleDropGrid" id="battleRewardDropGrid"></div>
+      </div>
+
+      <div class="battleResultFarmControls" id="battleResultFarmControls" style="display:none;">
+        <label class="battleRepeatToggle">
+          <input type="checkbox" id="battleRepeatFarmingToggle" />
+          <span>Repeat Farming</span>
+        </label>
+        <button class="battleResultBtn alt" id="battleResultRetry" type="button">Retry Farming</button>
       </div>
 
       <button class="battleResultBtn" id="battleResultClose">Continue</button>
